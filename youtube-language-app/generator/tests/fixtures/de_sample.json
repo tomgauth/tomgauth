@@ -1,0 +1,24 @@
+{
+  "video_id": "abcdefghijk",
+  "language": "de",
+  "is_generated": true,
+  "snippets": [
+    {"text": "[Musik]", "start": 0.0, "duration": 2.0},
+    {"text": "hallo leute und herzlich willkommen", "start": 2.1, "duration": 2.4},
+    {"text": "zu einem neuen video", "start": 4.5, "duration": 1.4},
+    {"text": "heute reden wir über das thema", "start": 7.2, "duration": 2.0},
+    {"text": "wohnungssuche in berlin", "start": 9.2, "duration": 1.6},
+    {"text": "ich habe keine ahnung wie das geht", "start": 11.0, "duration": 2.2},
+    {"text": "ehrlich gesagt", "start": 13.2, "duration": 0.8},
+    {"text": "aber wir probieren es einfach mal aus", "start": 15.1, "duration": 2.3},
+    {"text": "die mietpreise sind echt krass gestiegen", "start": 17.6, "duration": 2.5},
+    {"text": "in den letzten jahren", "start": 20.1, "duration": 1.2},
+    {"text": "man muss unglaublich viele bewerbungen schreiben", "start": 22.4, "duration": 2.8},
+    {"text": "und meistens bekommt man gar keine antwort", "start": 25.2, "duration": 2.4},
+    {"text": "das ist schon ziemlich frustrierend", "start": 28.5, "duration": 1.9},
+    {"text": "ok", "start": 31.9, "duration": 0.4},
+    {"text": "schauen wir uns mal die erste wohnung an", "start": 32.5, "duration": 2.4},
+    {"text": "die Kaltmiete beträgt neunhundert euro ohne Nebenkosten", "start": 35.4, "duration": 3.1},
+    {"text": "das ist für zwei zimmer eigentlich noch okay", "start": 38.5, "duration": 2.6}
+  ]
+}

@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+
+# Node
+node_modules/
+app/dist/
+app/dev-dist/
+
+# Local decks and transcripts
+*.local.json
+decks/
