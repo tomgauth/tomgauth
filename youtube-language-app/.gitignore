@@ -14,4 +14,4 @@ app/dev-dist/
 
 # Local decks and transcripts
 *.local.json
-decks/
+/decks/

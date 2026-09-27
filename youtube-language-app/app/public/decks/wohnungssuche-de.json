@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "sample-wohnungssuche-de",
+  "title": "Wohnungssuche in Berlin (sample)",
+  "lang": "de",
+  "translationLang": "en",
+  "level": "B1",
+  "videoId": "abcdefghijk",
+  "videoUrl": "https://www.youtube.com/watch?v=abcdefghijk",
+  "createdAt": "2026-09-27T00:00:00+00:00",
+  "source": { "captions": "auto", "captionLanguage": "de", "note": "Demo deck built from the generator test fixture; the video id is a placeholder, so the clip will not load." },
+  "cards": [
+    { "id": "s01", "text": "hallo leute und herzlich willkommen zu einem neuen video", "start": 2.1, "end": 5.9, "translation": "Hi everyone and a warm welcome to a new video", "note": "'Leute' is the go-to casual word for 'guys / folks'. 'Herzlich willkommen' is the fixed welcome formula.", "keyWords": ["Leute", "herzlich willkommen"], "level": "A2", "score": 44.5, "hardestWords": ["herzlich", "willkommen", "hallo"], "tags": ["de", "A2"] },
+    { "id": "s02", "text": "heute reden wir über das thema wohnungssuche in berlin", "start": 7.2, "end": 10.8, "translation": "Today we're talking about the topic of flat hunting in Berlin", "note": "'reden über' + accusative = talk about. 'Wohnungssuche' is a compound: Wohnung + Suche.", "keyWords": ["reden über", "die Wohnungssuche"], "level": "A2", "score": 39.5, "hardestWords": ["wohnungssuche", "reden", "thema"], "tags": ["de", "A2"] },
+    { "id": "s03", "text": "ich habe keine ahnung wie das geht ehrlich gesagt", "start": 11.0, "end": 14.0, "translation": "I have no idea how that works, to be honest", "note": "'keine Ahnung' = no idea (very common). 'ehrlich gesagt' = honestly / to be honest, often tacked on at the end.", "keyWords": ["keine Ahnung", "ehrlich gesagt"], "level": "A2", "score": 42.2, "hardestWords": ["ahnung", "ehrlich", "gesagt"], "tags": ["de", "A2"] },
+    { "id": "s04", "text": "aber wir probieren es einfach mal aus", "start": 15.1, "end": 17.4, "translation": "But let's just give it a try", "note": "'ausprobieren' is a separable verb: 'aus' jumps to the end. 'einfach mal' softens it: just, casually.", "keyWords": ["ausprobieren", "einfach mal"], "level": "A1", "score": 23.4, "hardestWords": ["probieren", "einfach", "aber"], "tags": ["de", "A1"] },
+    { "id": "s05", "text": "die mietpreise sind echt krass gestiegen in den letzten jahren", "start": 17.6, "end": 21.3, "translation": "Rents have gone up like crazy in the last few years", "note": "'krass' is youth slang for extreme / insane. 'gestiegen' is the participle of 'steigen' (to rise), used with 'sein'.", "keyWords": ["die Mietpreise", "krass", "steigen"], "level": "B2", "score": 55.4, "hardestWords": ["mietpreise", "krass", "gestiegen"], "tags": ["de", "B2"] },
+    { "id": "s06", "text": "man muss unglaublich viele bewerbungen schreiben und meistens bekommt man gar keine antwort", "start": 22.4, "end": 27.6, "translation": "You have to write an incredible number of applications and most of the time you get no reply at all", "note": "'man' = generic 'you / one'. 'gar keine' intensifies 'keine': none at all.", "keyWords": ["die Bewerbung", "meistens", "gar keine"], "level": "B2", "score": 54.4, "hardestWords": ["bewerbungen", "meistens", "unglaublich"], "tags": ["de", "B2"] },
+    { "id": "s07", "text": "das ist schon ziemlich frustrierend", "start": 28.5, "end": 30.4, "translation": "That's pretty frustrating, honestly", "note": "'schon' here is a modal particle adding emphasis, not 'already'.", "keyWords": ["ziemlich", "frustrierend"], "level": "A2", "score": 31.8, "hardestWords": ["frustrierend", "ziemlich", "schon"], "tags": ["de", "A2"] },
+    { "id": "s08", "text": "ok schauen wir uns mal die erste wohnung an", "start": 31.9, "end": 34.9, "translation": "OK, let's take a look at the first flat", "note": "'sich etwas anschauen' = to take a look at something. Verb-first 'schauen wir' = let's.", "keyWords": ["sich anschauen"], "level": "A2", "score": 40.5, "hardestWords": ["schauen", "wohnung", "erste"], "tags": ["de", "A2"] },
+    { "id": "s09", "text": "das ist für zwei zimmer eigentlich noch okay", "start": 38.5, "end": 41.1, "translation": "For two rooms that's actually still okay", "note": "German counts rooms, not bedrooms: a 'Zwei-Zimmer-Wohnung' has one bedroom plus a living room.", "keyWords": ["das Zimmer", "eigentlich"], "level": "A2", "score": 40.4, "hardestWords": ["zimmer", "eigentlich", "okay"], "tags": ["de", "A2"] }
+  ]
+}
