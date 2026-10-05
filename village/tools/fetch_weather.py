@@ -37,7 +37,8 @@ def rows(d):
 
 history = {r["date"]: r for r in rows(hist)}
 for r in rows(fc):
-    history.setdefault(r["date"], r)  # les jours récents viennent du forecast (past_days)
+    if r["date"] <= today.isoformat():
+        history.setdefault(r["date"], r)  # les jours récents viennent du forecast (past_days)
 
 result = {
     "fetched_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
