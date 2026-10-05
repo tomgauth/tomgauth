@@ -2,8 +2,12 @@ name: Météo Berlin (village)
 
 on:
   schedule:
-    - cron: "17 4,16 * * *"   # deux fois par jour (UTC)
+    - cron: "17 4,16 * * *"   # deux fois par jour (UTC), branche par défaut seulement
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/weather.yml"
+      - "village/tools/fetch_weather.py"
 
 permissions:
   contents: write
