@@ -3,7 +3,7 @@
 compact : conditions actuelles, prévisions 7 jours, historique 150 jours.
 Tourne dans GitHub Actions (le container de dev n'a pas accès à Open-Meteo).
 """
-import json, sys, urllib.request, datetime as dt
+import json, os, sys, urllib.request, datetime as dt
 
 LAT, LON = 52.52, 13.405
 out = sys.argv[1] if len(sys.argv) > 1 else "weather.json"
@@ -47,5 +47,6 @@ result = {
     "daily": rows(fc),
     "history": sorted(history.values(), key=lambda r: r["date"]),
 }
+os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
 json.dump(result, open(out, "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", out, len(result["history"]), "jours")
