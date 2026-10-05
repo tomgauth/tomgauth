@@ -1,0 +1,988 @@
+<title>Village de Tom</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Layout : une fenêtre de jeu (canvas) encadrée comme un écran de RPG 16-bit,
+   un bandeau de statut en haut, une boîte de dialogue en bas, un panneau latéral
+   qui s'ouvre quand on entre dans un bâtiment. Un seul univers visuel, sombre. */
+:root{
+  --bg:#141423;          /* nuit d'encre autour de l'écran */
+  --frame:#2a2340;       /* cadre violet-brun de l'interface */
+  --frame-2:#3b3156;
+  --paper:#f3e6c8;       /* parchemin des panneaux */
+  --paper-2:#e4d2a8;
+  --ink:#2b1d16;         /* encre sur parchemin */
+  --ink-2:#6b5340;
+  --fg:#f1e9d6;          /* texte sur fond sombre */
+  --fg-2:#b9ad95;
+  --accent:#ffb347;      /* orange des toits et du feu */
+  --accent-2:#5ad6c8;    /* turquoise des fenêtres */
+  --good:#6fcf5a; --warn:#f2c14e; --bad:#e2574c;
+  --s1:#ffb347; --s2:#5ad6c8; --s3:#c678dd; --s4:#8fd3ff;
+  --display:'Press Start 2P', 'Courier New', monospace;
+  --body:'Pixelify Sans', 'Trebuchet MS', system-ui, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.35;padding-inline:16px;padding-block:10px}
+#app{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:10px;min-height:calc(100% - 20px)}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.5}
+h1{font-size:14px;margin:0;letter-spacing:.5px}
+h2{font-size:12px;margin:0 0 8px;color:var(--ink)}
+h3{font-size:10px;margin:18px 0 6px;color:var(--ink-2);text-transform:uppercase}
+button{font-family:var(--body);font-size:15px;cursor:pointer;border:2px solid var(--frame-2);background:var(--frame);color:var(--fg);padding:6px 12px;border-radius:4px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.35)}
+button:hover,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button.on{background:var(--accent);color:var(--ink);border-color:#c97f1f}
+/* HUD */
+#hud{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;background:var(--frame);border:3px solid var(--frame-2);border-radius:6px;padding:8px 12px;box-shadow:0 4px 0 #0a0a14}
+#hud .stat{display:flex;align-items:center;gap:6px;font-size:15px;white-space:nowrap}
+#hud .stat b{font-family:var(--display);font-size:10px;color:var(--accent)}
+#hud .meter{width:84px;height:10px;background:#0f0e1a;border:2px solid #0a0a14;position:relative}
+#hud .meter i{display:block;height:100%;background:var(--good)}
+#hud .spacer{flex:1}
+#live{font-family:var(--display);font-size:9px;padding:4px 8px;border:2px solid var(--frame-2);border-radius:3px;color:var(--fg-2)}
+#live.on{color:var(--good);border-color:var(--good)}
+#modes{display:flex;gap:6px}
+/* Scène */
+#main{display:grid;grid-template-columns:1fr;gap:10px;align-items:start}
+#main.with-panel{grid-template-columns:minmax(0,1fr) minmax(300px,420px)}
+#stage{position:relative;background:#0b0b14;border:4px solid var(--frame-2);border-radius:8px;overflow:hidden;box-shadow:0 6px 0 #0a0a14, inset 0 0 0 2px #0a0a14;touch-action:none;min-width:0}
+#game{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+#bubbles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.bubble{position:absolute;transform:translate(-50%,-100%);background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:6px;padding:4px 7px;font-size:14px;line-height:1.2;max-width:200px;box-shadow:2px 2px 0 rgba(0,0,0,.35);white-space:normal}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-7px;width:8px;height:8px;background:var(--paper);border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateX(-50%) rotate(45deg)}
+.bubble.thought{border-style:dashed;font-style:italic}
+#dialog{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(20,18,34,.94);border:3px solid var(--paper);border-radius:6px;padding:12px 14px;min-height:74px;box-shadow:0 0 0 2px #0a0a14}
+#dialog[hidden]{display:none}
+#dialog .who{font-family:var(--display);font-size:9px;color:var(--accent);margin-bottom:6px}
+#dialog .txt{font-size:17px;line-height:1.35;min-height:44px}
+#dialog .more{position:absolute;right:12px;bottom:6px;font-size:12px;color:var(--fg-2);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+#hint{position:absolute;left:8px;top:6px;background:rgba(20,18,34,.7);padding:4px 6px;border-radius:3px;font-family:var(--display);font-size:8px;color:#fff;text-shadow:1px 1px 0 #000,0 0 6px #000;line-height:1.8;pointer-events:none}
+#clock{position:absolute;right:8px;top:6px;background:rgba(20,18,34,.7);padding:4px 6px;border-radius:3px;font-family:var(--display);font-size:9px;color:#fff;text-shadow:1px 1px 0 #000,0 0 6px #000;text-align:right;line-height:1.8;pointer-events:none}
+#dpad{position:absolute;left:10px;bottom:96px;display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:2px;opacity:.85}
+#dpad button{padding:0;font-size:18px;border-radius:6px;background:rgba(42,35,64,.9)}
+#btnA{position:absolute;right:14px;bottom:100px;width:58px;height:58px;border-radius:50%;font-family:var(--display);font-size:12px;background:rgba(255,179,71,.92);color:var(--ink);border-color:#c97f1f;opacity:.9}
+@media (hover:hover) and (pointer:fine){#dpad,#btnA{display:none}}
+/* Panneau parchemin */
+#panel{background:var(--paper);color:var(--ink);border:4px solid #6b4a2b;border-radius:8px;box-shadow:0 6px 0 #0a0a14, inset 0 0 0 3px var(--paper-2);padding:14px 16px 20px;min-width:0;max-height:min(84vh,900px);overflow:auto;position:relative}
+#panel .close{position:absolute;right:10px;top:10px;background:var(--ink);color:var(--paper);border-color:var(--ink);padding:4px 9px}
+#panel p,#dash p{margin:6px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:8px 0 4px}
+.kpi{background:var(--paper-2);border:2px solid #c9b38a;border-radius:4px;padding:8px 10px}
+.kpi .v{font-family:var(--display);font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:13px;color:var(--ink-2);margin-top:4px}
+.kpi.good .v{color:#2f7a2a}.kpi.warn .v{color:#9a6b00}.kpi.bad .v{color:#9a2c25}
+.bar{height:12px;background:#d9c7a1;border:2px solid #b89d72;position:relative;margin:4px 0 2px}
+.bar i{display:block;height:100%;background:#2f7a2a}
+.bar.warn i{background:#c89200}.bar.bad i{background:#b93a30}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.muted{color:var(--ink-2);font-size:14px}
+table.t{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0;font-variant-numeric:tabular-nums}
+table.t th{font-family:var(--display);font-size:8px;text-align:left;color:var(--ink-2);padding:4px 6px 4px 0;border-bottom:2px solid #c9b38a;letter-spacing:.3px}
+table.t td{padding:4px 6px 4px 0;border-bottom:1px dashed #d4c29c;vertical-align:top}
+table.t td.n{text-align:right;white-space:nowrap}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:12px;background:#e8d7ad;border:1px solid #c9b38a;border-radius:3px;padding:1px 6px}
+.quote{border-left:4px solid var(--accent);padding:4px 10px;margin:6px 0;background:rgba(255,179,71,.12);font-size:15px}
+details{margin:6px 0}summary{cursor:pointer;font-weight:600}
+svg.chart{width:100%;height:auto;display:block;margin:4px 0 8px}
+svg.chart text{font-family:var(--body);font-size:11px;fill:var(--ink-2)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);margin-bottom:2px}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:4px;vertical-align:-1px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 18px}
+/* Mode tableau de bord */
+#dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+#dash section{background:var(--paper);color:var(--ink);border:4px solid #6b4a2b;border-radius:8px;padding:12px 14px 16px;box-shadow:inset 0 0 0 3px var(--paper-2);min-width:0}
+#foot{font-size:13px;color:var(--fg-2);text-align:center;padding:6px}
+@media (max-width:760px){
+  body{font-size:16px}
+  #main.with-panel{grid-template-columns:1fr}
+  #hud .stat .meter{width:60px}
+  #panel{max-height:none}
+}
+@media (prefers-reduced-motion:reduce){.bubble,#dialog .more{animation:none}}
+</style>
+
+<div id="app">
+  <header id="hud">
+    <h1>VILLAGE DE TOM</h1>
+    <div class="stat" title="Santé mentale : moyenne pondérée des 14 derniers jours (bonheur, stabilité, anxiété, énergie). C'est elle qui décide de la végétation."><b>❤ SANTÉ</b><span class="meter"><i id="m-mental"></i></span><span id="v-mental">…</span></div>
+    <div class="stat" title="Trésor perso = N26 + SG + LEP + Qonto (audit du 4 octobre). Wise SOLV n'est pas compté."><b>🪙 TRÉSOR</b><span id="v-gold">…</span></div>
+    <div class="stat" title="Habitants : amis, participants, équipe. Maisons : une par client payeur en 2026."><b>👥</b><span id="v-pop">…</span> <b>🏠</b><span id="v-houses">…</span></div>
+    <div class="stat" title="Karma Todoist et série de jours"><b>⚡ XP</b><span id="v-xp">…</span></div>
+    <div class="spacer"></div>
+    <span id="live" title="Snapshot ou données rafraîchies via tes connecteurs">SNAPSHOT</span>
+    <div id="modes"><button id="b-village" class="on">Village</button><button id="b-dash">Tableau de bord</button></div>
+  </header>
+
+  <div id="main">
+    <div id="stage">
+      <canvas id="game" width="640" height="400"></canvas>
+      <div id="bubbles"></div>
+      <div id="hint">FLÈCHES / ZQSD : MARCHER · E : ENTRER, PARLER · ÉCHAP : FERMER<br>CLIC SUR UN BÂTIMENT : OUVRIR</div>
+      <div id="clock"></div>
+      <div id="dpad"><span></span><button data-d="up" aria-label="haut">▲</button><span></span><button data-d="left" aria-label="gauche">◀</button><span></span><button data-d="right" aria-label="droite">▶</button><span></span><button data-d="down" aria-label="bas">▼</button><span></span></div>
+      <button id="btnA" aria-label="action">E</button>
+      <div id="dialog" hidden><div class="who"></div><div class="txt"></div><div class="more">E ▼</div></div>
+    </div>
+    <aside id="panel" hidden aria-live="polite"></aside>
+  </div>
+
+  <section id="dash" hidden></section>
+  <div id="foot">Sprites : Super Retro World par Gif (@gif_not_jif), Noiracide (@Noiracide) et Romi (@DessRomaric). Données : Coda, Todoist, Google Calendar, Open-Meteo via GitHub Actions.</div>
+</div>
+
+<script id="snapshot" type="application/json">/*__DATA__*/</script>
+<script>
+'use strict';
+/* ================================================================
+   0. Données
+   ================================================================ */
+const ASSETS = /*__ASSETS__*/ {atlas:'assets/atlas.png',water:'assets/water.png',fire:'assets/campfire.png',chests:'assets/chests.png',icons1:'assets/icons1.png',icons2:'assets/icons2.png'} /*__ASSETS_END__*/;
+let S = {};
+try { S = JSON.parse(document.getElementById('snapshot').textContent || '{}') || {}; } catch (e) { S = {}; }
+for (const k of ['daily','reviews','weeks','predictions','income','expenses','friends','wheel','kpis','goals90','northstar','german','habits','todoist','calendar']) if (!Array.isArray(S[k])) S[k] = [];
+S.money = S.money || {monthly:{}, perso_cats_since_aug:[], recent:[]};
+S.balances = S.balances || {accounts:[], rules:[], perso_blocks:[]};
+S.productivity = S.productivity || {};
+S.kpi_live = S.kpi_live || {};
+
+const TILE = 16, MAPW = 52, MAPH = 34;
+const fmtEur = n => (n == null || isNaN(n)) ? '–' : Math.round(n).toLocaleString('fr-FR') + ' €';
+const fmtNum = (n, d = 0) => (n == null || isNaN(n)) ? '–' : Number(n).toLocaleString('fr-FR', {maximumFractionDigits: d, minimumFractionDigits: d});
+const fmtDate = s => { if (!s) return '–'; const d = new Date(s + (s.length === 10 ? 'T12:00:00' : '')); return isNaN(d) ? s : d.toLocaleDateString('fr-FR', {day:'numeric', month:'short'}); };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const avg = arr => { const a = arr.filter(v => typeof v === 'number' && !isNaN(v)); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
+const last = (arr, n) => arr.slice(Math.max(0, arr.length - n));
+const trunc = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+const firstName = s => { s = String(s || '').trim(); if (s.includes('@')) s = s.split('@')[0].replace(/[\d._-]+/g, ' ').trim(); s = s.split(/\s+/)[0] || s; return s.charAt(0).toUpperCase() + s.slice(1); };
+function mulberry(seed) { let t = seed >>> 0; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ (t >>> 15), 1 | t); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+const hash = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const todayISO = () => new Date().toLocaleDateString('sv-SE', {timeZone: 'Europe/Berlin'});
+
+/* ---------- Modèle dérivé : ce que le village lit ---------- */
+const M = {};
+function deriveModel() {
+  const daily = S.daily.filter(d => d.date).sort((a, b) => a.date < b.date ? -1 : 1);
+  S.daily = daily;
+  const recent = last(daily.filter(d => d.happy != null || d.stab != null || d.energy != null), 14);
+  let num = 0, den = 0;
+  for (const d of recent) {
+    if (d.happy != null) { num += 0.4 * d.happy / 10; den += 0.4; }
+    if (d.stab != null) { num += 0.25 * d.stab / 10; den += 0.25; }
+    if (d.anx != null) { num += 0.2 * (1 - clamp(d.anx, 0, 10) / 10); den += 0.2; }
+    if (d.energy != null) { num += 0.15 * d.energy / 10; den += 0.15; }
+  }
+  M.mental = den ? clamp(num / den, 0, 1) : 0.6;
+  M.recent14 = recent;
+  M.lastDay = daily[daily.length - 1] || {};
+  M.happy14 = avg(recent.map(d => d.happy));
+  M.anx14 = avg(recent.map(d => d.anx));
+  M.energy14 = avg(recent.map(d => d.energy));
+  M.sleep14 = avg(recent.map(d => d.sleeph));
+  M.steps14 = avg(recent.map(d => d.steps));
+
+  // Argent
+  const acc = S.balances.accounts || [];
+  M.persoCash = acc.filter(a => !/Wise/i.test(a[0])).reduce((s, a) => s + (a[1] || 0), 0);
+  M.lep = (acc.find(a => /LEP/.test(a[0])) || [0, 0])[1];
+  M.wise = (acc.find(a => /Wise/.test(a[0])) || [0, 0])[1];
+  const months = Object.keys(S.money.monthly || {}).sort();
+  M.months = months;
+  M.in2026 = months.reduce((s, m) => s + (S.money.monthly[m].in || 0), 0);
+  M.out2026 = months.reduce((s, m) => s + (S.money.monthly[m].out || 0), 0);
+  M.runway = M.persoCash / 2500;
+
+  // Clients 2026 → maisons
+  const clients = {};
+  for (const r of S.income) {
+    if (!r.date || r.date < '2026-01-01' || !(r.amount > 1)) continue;
+    const name = r.client && r.client.trim() ? r.client : (r.nature || 'Inconnu');
+    const k = firstName(name).toLowerCase();
+    const c = clients[k] = clients[k] || {name: firstName(name), full: name, total: 0, n: 0, first: r.date, last: r.date, program: '2PaP'};
+    c.total += r.amount; c.n++; if (r.date < c.first) c.first = r.date; if (r.date > c.last) c.last = r.date;
+  }
+  for (const t of (S.money.recent || []).concat([])) { /* placeholder : SOLV ajouté ci-dessous */ }
+  // SOLV : payeurs Stripe SOLV dans les transactions
+  const solvPayers = {};
+  for (const t of (S.money.solv_payers || [])) solvPayers[t.name] = t;
+  M.clients = Object.values(clients).sort((a, b) => b.total - a.total);
+  M.sales2pap = S.income.filter(r => r.date >= '2026-01-01' && r.amount >= 1500).length;
+  M.sales2papQ = S.income.filter(r => r.date >= '2026-08-31' && r.amount >= 1500).length;
+  M.income2026 = S.income.filter(r => r.date >= '2026-01-01').reduce((s, r) => s + r.amount, 0);
+  M.incomeQ = S.income.filter(r => r.date >= '2026-09-01').reduce((s, r) => s + r.amount, 0);
+  M.solvIn2026 = months.reduce((s, m) => s + (S.money.monthly[m].solv_in || 0), 0);
+
+  // Objectifs du trimestre
+  M.ns = S.northstar.find(n => n.quarter && /Sep-Nov/.test(n.quarter)) || S.northstar[S.northstar.length - 1] || {};
+  M.goalsQ = S.goals90.filter(g => g.period && /09\.01/.test(g.period));
+  M.kpisQ = S.kpis.filter(k => k.period && /Sep-Nov/.test(k.period));
+  M.weeks = S.weeks.slice().sort((a, b) => a.start < b.start ? -1 : 1);
+  M.week = M.weeks[M.weeks.length - 1] || {};
+  M.review = S.reviews[S.reviews.length - 1] || {};
+
+  // Météo
+  M.weather = S.weather || null;
+  M.pop = 0; M.houseCount = 0;
+}
+deriveModel();
+
+/* ================================================================
+   1. Sprites (atlas Super Retro World) : nom → [x, y, w, h]
+   ================================================================ */
+const SPR = {
+  houseA:[0,16,64,48], house1:[0,304,72,64], house2:[0,368,72,48], house3:[0,416,72,48], house4:[0,464,72,48],
+  house5:[128,256,64,48], house6:[192,256,64,48], house7:[128,304,64,48], house8:[192,304,64,48],
+  house9:[176,352,72,48], house10:[176,400,72,64], house11:[176,464,72,48],
+  hutG:[256,272,48,64], hutO:[320,272,48,64], hutB:[272,336,48,64],
+  pineBig:[64,16,32,48], pineS:[96,32,20,32], pineB:[384,72,32,40], pineC:[384,112,32,48], pineHuge:[384,192,48,56],
+  roundTree:[416,96,48,48], palm:[464,96,40,44],
+  bigbush1:[128,16,64,48], bigbush2:[208,16,48,48], bushM:[128,64,48,32], bushR:[112,48,16,16],
+  tuft1:[0,112,16,16], tuft2:[16,112,16,16], tuft3:[32,112,16,16], tuft4:[48,112,16,16],
+  plant1:[416,64,16,16], plant2:[432,64,16,16], plant3:[448,64,16,16], flower1:[416,80,16,16], flower2:[432,80,16,16], flower3:[448,80,16,16],
+  sprout:[448,160,16,16], pumpkin:[448,176,16,16], carrots:[464,176,16,16], rocks:[416,144,48,48], rock1:[0,128,16,16], rock2:[16,128,16,16],
+  fenceH:[80,96,48,16], fenceV:[96,112,16,48], crate:[80,128,16,16], signpost:[96,128,16,16], bucket:[80,144,16,16], sign2:[96,144,16,16], barrel:[80,160,16,16], sign3:[96,160,16,16],
+  lamp1:[640,32,16,32], lamp2:[640,64,16,32], lamp3:[640,96,16,32], signPub:[688,64,24,16], signInn:[712,64,24,16], signShop:[736,64,24,16],
+  flowerbox:[688,80,48,16], crates:[672,48,96,16], pond:[256,432,80,80], boat:[256,256,32,80],
+  grass:[576,16,32,32], dark:[592,64,16,16], sand:[528,16,32,32], stone:[48,176,32,32], sandA:[528,48,48,48], stoneA:[48,208,48,48], darkA:[576,48,48,48],
+};
+
+/* ================================================================
+   2. Personnages procéduraux (le pack n'a pas de PNJ)
+   ================================================================ */
+// 12 x 16, lettres : H cheveux, S peau, E œil, T haut, P pantalon, F pieds, O contour, . vide, W main
+const BODY = {
+  down: [
+    '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HSSSSSSH..','..HSESSESH..','...SSSSSS...','....SSSS....','...TTTTTT...',
+    '..TTTTTTTT..','..STTTTTTS..','..S.TTTT.S..','....TTTT....','....PPPP....','....PPPP....','...PP..PP...','...FF..FF...'],
+  up: [
+    '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HHHHHHHH..','..HHHHHHHH..','...HHHHHH...','....SSSS....','...TTTTTT...',
+    '..TTTTTTTT..','..STTTTTTS..','..S.TTTT.S..','....TTTT....','....PPPP....','....PPPP....','...PP..PP...','...FF..FF...'],
+  side: [
+    '....HHHH....','...HHHHHH...','...HHHHHH...','...HHSSSH...','...HHSESH...','....SSSS....','....SSS.....','....TTTT....',
+    '...TTTTTT...','...TTTTTS...','...TTTT.S...','....TTTT....','....PPPP....','....PPPP....','....PPPP....','....FFF.....'],
+};
+const PAL = {
+  hair: ['#3b2a20', '#1c1612', '#d9a441', '#b5542b', '#8a8a8a', '#5a3a2a', '#e3c38a', '#2c3e6b'],
+  shirt: ['#d94a3d', '#3f7fd6', '#4caf7d', '#e0a030', '#8e5bd6', '#2b9ea8', '#c45c8a', '#6b7f3a', '#e86f2a', '#4a4a5e'],
+  pants: ['#2b3a6b', '#3a3a3a', '#6b4a2b', '#4a5a7a', '#2f5f4f'],
+  skin: ['#f1c9a5', '#e0ac86', '#c8865c', '#8d5a3b', '#f6d6b8'],
+};
+const spriteCache = new Map();
+function makeActorSprites(look) {
+  const key = JSON.stringify(look);
+  if (spriteCache.has(key)) return spriteCache.get(key);
+  const out = {};
+  const colors = {H: look.hair, S: look.skin, E: '#1a1a1a', T: look.shirt, P: look.pants, F: '#2a1a12', W: look.skin};
+  for (const face of ['down', 'up', 'side']) {
+    out[face] = [];
+    for (let f = 0; f < 2; f++) {
+      const c = document.createElement('canvas'); c.width = 12; c.height = 16;
+      const g = c.getContext('2d');
+      const rows = BODY[face].map(r => r);
+      if (f === 1) { // pas de marche : jambes décalées
+        if (face === 'side') { rows[14] = '...PP.PP....'; rows[15] = '..FF...FF...'; }
+        else { rows[13] = '...PPP.PP...'; rows[14] = '...PP...PP..'; rows[15] = '..FF.....FF.'; }
+      }
+      rows.forEach((row, y) => { for (let x = 0; x < 12; x++) { const ch = row[x]; if (ch !== '.' && colors[ch]) { g.fillStyle = colors[ch]; g.fillRect(x, y, 1, 1); } } });
+      if (look.hat) { g.fillStyle = look.hat; g.fillRect(2, 0, 8, 2); g.fillRect(1, 2, 10, 1); }
+      // contour sombre léger (ombre sous les pieds)
+      out[face].push(c);
+    }
+  }
+  spriteCache.set(key, out);
+  return out;
+}
+function lookFor(name, overrides) {
+  const h = hash(name);
+  return Object.assign({hair: PAL.hair[h % PAL.hair.length], shirt: PAL.shirt[(h >> 3) % PAL.shirt.length], pants: PAL.pants[(h >> 6) % PAL.pants.length], skin: PAL.skin[(h >> 9) % PAL.skin.length]}, overrides || {});
+}
+
+/* ================================================================
+   3. Monde : bâtiments, PNJ, décor
+   ================================================================ */
+const world = {grid: [], solid: [], buildings: [], decor: [], actors: [], lamps: [], fires: [], ponds: []};
+const BUILDINGS = [
+  {id:'mairie', name:'Mairie', spr:'house1', tx:24, ty:4, sign:'signInn', desc:'North Star, objectifs 90 jours, semaine en cours'},
+  {id:'banque', name:'Banque', spr:'house10', tx:35, ty:5, desc:'Soldes, revenus 2026, règles'},
+  {id:'temple', name:'Temple', spr:'house5', tx:7, ty:5, desc:'Humeur, sommeil, énergie : la santé mentale'},
+  {id:'taverne', name:'Taverne', spr:'house6', tx:15, ty:14, sign:'signPub', desc:'Amis, vie sociale, amour'},
+  {id:'atelier', name:'Atelier 2PaP', spr:'house8', tx:32, ty:14, sign:'signShop', desc:'Leads, vidéos, webinaires, ventes'},
+  {id:'dojo', name:'Dojo', spr:'hutO', tx:43, ty:13, desc:'Muay Thai, pas, cœur'},
+  {id:'ecole', name:'Sprachschule', spr:'house7', tx:5, ty:14, desc:'Allemand : fluency et compréhension'},
+  {id:'observatoire', name:'Observatoire', spr:'hutB', tx:44, ty:3, desc:'Prédictions et calibration'},
+  {id:'marche', name:'Marché', spr:'hutG', tx:24, ty:22, desc:'Dépenses'},
+  {id:'meteo', name:'Station météo', spr:'house3', tx:38, ty:23, desc:'Météo de Berlin'},
+];
+// Maisons résidentielles (une par client payeur), le long des rues
+const HOUSE_SLOTS = [[2,24],[7,24],[12,24],[2,29],[7,29],[12,29],[17,29],[30,29],[35,29],[40,29],[45,29],[17,24],[46,22],[44,8],[12,8],[17,8],[2,10],[29,8]];
+const HOUSE_SPRS = ['house2','house9','house4','house11','houseA','house3','house2','house9','house4','houseA','house11','house2','house9','house4','house2','house9','houseA','house11'];
+
+function footprint(b) {
+  const r = SPR[b.spr];
+  const w = Math.ceil(r[2] / TILE), h = Math.ceil(r[3] / TILE);
+  const solidH = Math.max(1, h - 1); // le toit déborde : on peut passer derrière la rangée du haut
+  return {x: b.tx, y: b.ty + (h - solidH), w, h: solidH, fullH: h, door: {x: b.tx + Math.floor(w / 2), y: b.ty + h}};
+}
+
+function buildWorld() {
+  const rnd = mulberry(20261005);
+  world.grid = []; world.solid = []; world.buildings = []; world.decor = []; world.actors = []; world.lamps = []; world.fires = []; world.ponds = [];
+  for (let y = 0; y < MAPH; y++) { world.grid.push(new Array(MAPW).fill(1)); world.solid.push(new Array(MAPW).fill(false)); }
+  const G = world.grid, SO = world.solid;
+  const setSolid = (x, y, w, h, v = true) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (G[j] && i >= 0 && i < MAPW) SO[j][i] = v; };
+  // 1 = herbe, 2 = chemin sable, 3 = pavé, 4 = herbe sombre, 5 = eau
+  // Rues : une grande rue horizontale, deux verticales, une place centrale pavée
+  const road = (x, y, w, h, v = 2) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (G[j] && i >= 0 && i < MAPW) G[j][i] = v; };
+  road(1, 11, MAPW - 2, 2); road(1, 20, MAPW - 2, 2);
+  road(20, 2, 2, 30); road(41, 2, 2, 30); road(10, 2, 2, 30);
+  road(22, 12, 12, 8, 3); // place centrale pavée
+  road(23, 13, 10, 6, 3);
+  // Bâtiments repères
+  for (const b of BUILDINGS) {
+    const f = footprint(b);
+    world.buildings.push(Object.assign({}, b, {fp: f, kind: 'landmark'}));
+    setSolid(f.x, f.y, f.w, f.h);
+    road(f.door.x, f.door.y, 1, Math.max(1, 11 - f.door.y > 0 && f.door.y < 11 ? 11 - f.door.y : (f.door.y < 20 ? 20 - f.door.y : 1)), 2);
+  }
+  // Maisons des clients
+  const clients = M.clients.slice(0, HOUSE_SLOTS.length);
+  clients.forEach((c, i) => {
+    const [tx, ty] = HOUSE_SLOTS[i];
+    const b = {id: 'maison-' + i, name: 'Maison de ' + c.name, spr: HOUSE_SPRS[i % HOUSE_SPRS.length], tx, ty, client: c, kind: 'house'};
+    b.fp = footprint(b);
+    world.buildings.push(b); setSolid(b.fp.x, b.fp.y, b.fp.w, b.fp.h);
+    const dy = b.fp.door.y; const target = dy <= 11 ? 11 : (dy <= 20 ? 20 : 20);
+    if (dy < target) road(b.fp.door.x, dy, 1, target - dy, 2); else if (dy > 21) road(b.fp.door.x, 22, 1, dy - 22 + 1, 2);
+  });
+  M.houseCount = clients.length;
+  // Étang
+  const pond = {x: 2, y: 2, w: 5, h: 5}; world.ponds.push(pond); setSolid(pond.x, pond.y, pond.w, pond.h);
+  const pond2 = {x: 28, y: 25, w: 3, h: 3, small: true}; world.ponds.push(pond2); setSolid(pond2.x, pond2.y, pond2.w, pond2.h);
+  // Feu de camp sur la place
+  world.fires.push({x: 27, y: 16}); setSolid(27, 16, 1, 1);
+  // Lampadaires le long des rues
+  for (const x of [4, 14, 24, 34, 46]) { world.lamps.push({x, y: 10}); world.lamps.push({x: x + 1, y: 19}); }
+  // Décor : végétation = santé mentale
+  const mental = M.mental;
+  const nTrees = 10 + Math.round(mental * 46), nBush = 8 + Math.round(mental * 34), nFlow = Math.round(mental * 60), nRock = Math.round((1 - mental) * 30), nBare = Math.round((1 - mental) * 14);
+  const trees = ['pineBig', 'pineB', 'pineC', 'roundTree', 'pineHuge', 'pineS', 'roundTree', 'pineBig'];
+  const free = (x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) { if (!G[j] || i < 0 || i >= MAPW || G[j][i] !== 1 || SO[j][i]) return false; } return true; };
+  const place = (spr, solid, tries = 60, margin = 1) => {
+    const r = SPR[spr]; const w = Math.ceil(r[2] / TILE), h = Math.ceil(r[3] / TILE);
+    for (let t = 0; t < tries; t++) {
+      const x = margin + Math.floor(rnd() * (MAPW - w - margin * 2)), y = margin + Math.floor(rnd() * (MAPH - h - margin * 2));
+      if (!free(x - 1, y, w + 2, h + 1)) continue;
+      world.decor.push({spr, x, y, w, h, solid}); if (solid) setSolid(x, y + Math.max(0, h - 2), w, Math.min(h, 2)); return true;
+    }
+    return false;
+  };
+  // Forêt sur les bords
+  for (let i = 0; i < MAPW; i += 2) { for (const yy of [0, MAPH - 3]) if (free(i, yy, 2, 3)) { world.decor.push({spr: trees[Math.floor(rnd() * 3)], x: i, y: yy, w: 2, h: 3, solid: true}); setSolid(i, yy + 1, 2, 2); } }
+  for (let j = 0; j < MAPH; j += 3) { for (const xx of [0, MAPW - 2]) if (free(xx, j, 2, 3)) { world.decor.push({spr: 'pineB', x: xx, y: j, w: 2, h: 3, solid: true}); setSolid(xx, j + 1, 2, 2); } }
+  for (let i = 0; i < nTrees; i++) place(trees[Math.floor(rnd() * trees.length)], true);
+  for (let i = 0; i < nBush; i++) place(['bushM', 'bushR', 'bigbush2', 'bushR', 'bushR'][Math.floor(rnd() * 5)], true);
+  for (let i = 0; i < nFlow; i++) place(['flower1', 'flower2', 'flower3', 'plant1', 'plant2', 'tuft1', 'tuft2', 'tuft3'][Math.floor(rnd() * 8)], false);
+  for (let i = 0; i < nRock; i++) place(['rock1', 'rock2', 'rocks'][Math.floor(rnd() * 3)], true);
+  for (let i = 0; i < nBare; i++) place('rocks', true);
+  // Potager près du marché, tonneaux près de la taverne
+  const kitchen = [[22, 26, 'sprout'], [23, 26, 'carrots'], [22, 27, 'pumpkin'], [23, 27, 'sprout'], [21, 26, 'fenceV']];
+  for (const [x, y, spr] of kitchen) if (free(x, y, 1, 1)) world.decor.push({spr, x, y, w: 1, h: 1, solid: false});
+  for (const [x, y, spr] of [[19, 17, 'barrel'], [19, 18, 'crate'], [34, 17, 'crates'], [25, 25, 'bucket'], [26, 25, 'barrel']]) if (free(x, y, SPR[spr][2] / 16, 1)) { world.decor.push({spr, x, y, w: SPR[spr][2] / 16, h: 1, solid: true}); setSolid(x, y, SPR[spr][2] / 16, 1); }
+  // Panneau indicateur sur la place
+  world.decor.push({spr: 'signpost', x: 22, y: 12, w: 1, h: 1, solid: true, label: 'place'}); setSolid(22, 12, 1, 1);
+  buildActors(rnd);
+}
+
+/* ---------- PNJ : amis, participants, équipe, personnages de service ---------- */
+function buildActors(rnd) {
+  const A = world.actors;
+  const freeCell = (nearX, nearY, r = 6) => { for (let t = 0; t < 80; t++) { const x = clamp(nearX + Math.floor((rnd() - 0.5) * r * 2), 1, MAPW - 2), y = clamp(nearY + Math.floor((rnd() - 0.5) * r * 2), 1, MAPH - 2); if (!world.solid[y][x]) return [x, y]; } return [nearX, nearY]; };
+  const add = (name, lines, opts) => {
+    const [x, y] = freeCell(opts.x ?? 26, opts.y ?? 16, opts.r ?? 6);
+    const look = lookFor(name, opts.look);
+    A.push({name, lines: lines.filter(Boolean), x: x * TILE, y: y * TILE, home: {x, y, r: opts.r ?? 6}, face: 'down', frame: 0, speed: opts.speed ?? 0.35, wait: rnd() * 3, target: null, sprites: makeActorSprites(look), role: opts.role || '', player: !!opts.player, bubble: null, bubbleT: 0, thought: !!opts.thought});
+    return A[A.length - 1];
+  };
+  // Tom
+  const wins = S.daily.filter(d => d.wins).map(d => d.wins);
+  const tomLines = [].concat(last(wins, 6).map(w => trunc(w, 140)), [M.review.brief ? trunc(M.review.brief.split('\n')[0], 160) : null, M.week.domino ? 'Lead domino : ' + trunc(M.week.domino, 120) : null]).filter(Boolean);
+  const tom = add('Tom', tomLines, {x: 26, y: 18, player: true, speed: 1.15, look: {hair: '#2a1d16', shirt: '#e86f2a', pants: '#2b3a6b', skin: '#f1c9a5'}, thought: true});
+  // Amis (Friend CRM)
+  const bx = {taverne: 17, atelier: 34, ecole: 7, dojo: 44, mairie: 26};
+  for (const f of S.friends) {
+    const lines = [f.next ? '« ' + trunc(f.next, 150) + ' »' : null, f.life ? trunc(f.life, 150) : null, f.last ? 'Dernier contact le ' + fmtDate(f.last) + (f.channel ? ' (' + f.channel + ')' : '') + '.' : 'On ne s\'est pas parlé depuis un moment.', f.means ? trunc(f.means, 140) : null, f.where ? 'Je suis à ' + trunc(f.where, 60) + '.' : null];
+    add(firstName(f.name), lines, {x: bx.taverne + 2, y: 17, r: 7, role: 'ami'});
+  }
+  // Participants 2PaP (clients 2026) devant leur maison
+  world.buildings.filter(b => b.kind === 'house').forEach(b => {
+    const c = b.client;
+    const lines = ['Je suis dans De Prof à Pro depuis le ' + fmtDate(c.first) + '. ' + fmtEur(c.total) + ' versés en ' + c.n + ' paiement' + (c.n > 1 ? 's' : '') + '.', c.last >= '2026-08-15' ? 'Dernier paiement le ' + fmtDate(c.last) + '.' : 'Mon dernier paiement date du ' + fmtDate(c.last) + '.', 'Ma maison, c\'est ta trésorerie.'];
+    add(c.name, lines, {x: b.fp.door.x, y: b.fp.door.y + 1, r: 3, role: 'participant'});
+  });
+  // Équipe SOLV
+  add('Lilian', ['Les ventes SOLV, c\'est moi. Toi, tu construis le flux 2PaP.', 'Le tuto flashcards SOLV, tu l\'enregistres quand ?', 'SOLV a encaissé ' + fmtEur(M.solvIn2026) + ' depuis janvier.'], {x: 36, y: 17, r: 4, role: 'équipe', look: {shirt: '#2b9ea8'}});
+  add('Clarisse', ['Les quatre vidéos sont enregistrées. Je monte et je publie les trois autres.', 'Les miniatures Facebook, puis LinkedIn : je m\'en occupe.', 'Les pages Témoignages et Travailler avec Tom sont dans la file.'], {x: 33, y: 18, r: 4, role: 'équipe', look: {shirt: '#c45c8a'}});
+  add('Inès', ['Mes élèves SOLV progressent. 200 € par mois, et on tient le rythme.'], {x: 30, y: 18, r: 4, role: 'équipe', look: {shirt: '#4caf7d'}});
+  // Personnages de service
+  const todayEv = eventsOn(todayISO());
+  const tomorrowEv = eventsOn(shiftDate(todayISO(), 1));
+  add('Le Héraut', [todayEv.length ? 'Aujourd\'hui : ' + todayEv.map(e => (e.start.length > 10 ? e.start.slice(11, 16) + ' ' : '') + trunc(e.title, 40)).slice(0, 3).join(' · ') : 'Rien d\'inscrit au calendrier aujourd\'hui.', tomorrowEv.length ? 'Demain : ' + tomorrowEv.map(e => (e.start.length > 10 ? e.start.slice(11, 16) + ' ' : '') + trunc(e.title, 40)).slice(0, 3).join(' · ') : null, 'Oyez ! ' + S.todoist.filter(t => (t.due || '').slice(0, 10) <= todayISO()).length + ' tâches Todoist pour aujourd\'hui ou en retard.'], {x: 25, y: 13, r: 2, role: 'héraut', look: {shirt: '#e0a030', hat: '#d94a3d'}});
+  add('La Trésorière', ['Trésor perso : ' + fmtEur(M.persoCash) + '. Soit ' + fmtNum(M.runway, 1) + ' mois de vie à 2 500 € par mois.', 'LEP à ' + fmtEur(M.lep) + '. Ligne rouge : 7 500 €.', 'Wise SOLV : ' + fmtEur(M.wise) + ', trésorerie de l\'OÜ, pas ton argent. Ta règle.', 'Chaque 1er du mois : compléter N26 à 2 500 € une fois le loyer passé.'], {x: 38, y: 9, r: 3, role: 'trésor', look: {shirt: '#4a4a5e', hair: '#8a8a8a'}});
+  add('Aron', ['Le loyer de novembre, 829,50 €, part du N26 dans quatre semaines.', 'Laszlo habite tout près maintenant. Vous êtes quasiment voisins.'], {x: 14, y: 26, r: 4, role: 'coloc', look: {shirt: '#6b7f3a'}});
+  add('Frau Wetter', weatherLines(), {x: 40, y: 27, r: 3, role: 'météo', look: {shirt: '#8fd3ff', hair: '#e3c38a'}});
+  const gl = last(S.german, 1)[0];
+  add('Yogi', [gl ? 'Du schwimmst gut. Dernier cours : fluency ' + fmtNum(gl.fluency) + '/100, compréhension ' + fmtNum(gl.comprehension) + '/100.' : 'Wie bitte ? Seit wann ?', 'Quand un détail n\'est pas sûr : Wie bitte ? Seit wann ? Demander plutôt que deviner.', 'Tu veux réserver un nouveau paquet de cours depuis Berlin. Cinq ou dix.'], {x: 8, y: 17, r: 4, role: 'prof', look: {shirt: '#3f7fd6'}});
+  add('Nora', ['Jut, wa ? Freuste dich uff Berlin ?', 'Ick hab dit jeschafft. Et toi, tu dis quoi ?', 'Der Hammer ! Mais tu m\'as demandé « wie bitte » cinq fois.'], {x: 6, y: 18, r: 4, role: 'agent vocal', look: {shirt: '#8e5bd6', hair: '#1c1612'}});
+  add('Le Maître', ['Muay Thai Basics ce soir à 19 h. Prends les gants.', M.steps14 ? fmtNum(M.steps14) + ' pas par jour en moyenne sur 14 jours.' : null, 'Relax, relax, jab jab, right hook, elbow, knee.'], {x: 45, y: 18, r: 3, role: 'dojo', look: {shirt: '#d94a3d', hair: '#1c1612'}});
+  add('L\'Oracle', predictionLines(), {x: 45, y: 8, r: 3, role: 'oracle', look: {shirt: '#2c3e6b', hair: '#8a8a8a', hat: '#8e5bd6'}});
+  M.pop = A.length - 1;
+  world.player = tom;
+}
+function shiftDate(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function eventsOn(iso) { return S.calendar.filter(e => (e.start || '').slice(0, 10) === iso).sort((a, b) => a.start < b.start ? -1 : 1); }
+function weatherLines() {
+  const w = M.weather;
+  if (!w || !w.current) return ['Le bulletin n\'est pas encore arrivé : la GitHub Action météo n\'a pas encore tourné.', 'En attendant, je regarde le ciel : ' + sunLine() + '.'];
+  const c = w.current, d = (w.daily || []).find(x => x.date === todayISO()) || {};
+  return [wmoLabel(c.weather_code) + ', ' + fmtNum(c.temperature_2m, 1) + ' °C (ressenti ' + fmtNum(c.apparent_temperature, 1) + '), vent ' + fmtNum(c.wind_speed_10m) + ' km/h.', d.temperature_2m_max != null ? 'Aujourd\'hui : ' + fmtNum(d.temperature_2m_min) + ' à ' + fmtNum(d.temperature_2m_max) + ' °C, ' + fmtNum((d.sunshine_duration || 0) / 3600, 1) + ' h de soleil.' : null, sunLine() + '.'];
+}
+function predictionLines() {
+  const res = S.predictions.filter(p => p.resolved === true || p.resolved === 'True');
+  const open = S.predictions.filter(p => !(p.resolved === true || p.resolved === 'True'));
+  const acc = avg(res.map(p => Number(p.acc)));
+  return [res.length ? res.length + ' prédictions résolues, justesse moyenne ' + fmtNum(acc) + '/100.' : 'Aucune prédiction résolue.', open.length ? 'Ouverte : « ' + trunc(open[0].q, 110) + ' » à ' + fmtNum(open[0].conf) + ' %.' : null, 'Le futur se révise toutes les trois semaines.'];
+}
+
+/* ================================================================
+   4. Astronomie et météo (sans réseau)
+   ================================================================ */
+const LAT = 52.52, LON = 13.405;
+function berlinNow() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Berlin', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false, year: 'numeric', month: 'numeric', day: 'numeric'}).formatToParts(now);
+  const o = {}; for (const p of parts) o[p.type] = p.value;
+  const h = (+o.hour % 24) + (+o.minute) / 60 + (+o.second) / 3600;
+  // décalage Berlin/UTC en heures
+  const asUTC = Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour % 24, +o.minute, +o.second);
+  const offset = Math.round((asUTC - now.getTime()) / 36e5);
+  return {h, offset, date: `${o.year}-${String(o.month).padStart(2, '0')}-${String(o.day).padStart(2, '0')}`, now};
+}
+function sunTimes(dateISO, offsetH) { // NOAA simplifié : heures locales de lever/coucher
+  const d = new Date(dateISO + 'T12:00:00Z');
+  const n = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5);
+  const toRad = Math.PI / 180;
+  const calc = rising => {
+    const lngHour = LON / 15, t = n + ((rising ? 6 : 18) - lngHour) / 24;
+    const Mn = (0.9856 * t) - 3.289;
+    let L = Mn + (1.916 * Math.sin(Mn * toRad)) + (0.020 * Math.sin(2 * Mn * toRad)) + 282.634; L = (L + 360) % 360;
+    let RA = Math.atan(0.91764 * Math.tan(L * toRad)) / toRad; RA = (RA + 360) % 360;
+    RA += (Math.floor(L / 90) * 90 - Math.floor(RA / 90) * 90); RA /= 15;
+    const sinDec = 0.39782 * Math.sin(L * toRad), cosDec = Math.cos(Math.asin(sinDec));
+    const cosH = (Math.cos(90.833 * toRad) - (sinDec * Math.sin(LAT * toRad))) / (cosDec * Math.cos(LAT * toRad));
+    if (cosH > 1 || cosH < -1) return null;
+    let H = rising ? 360 - Math.acos(cosH) / toRad : Math.acos(cosH) / toRad; H /= 15;
+    const T = H + RA - (0.06571 * t) - 6.622;
+    return (((T - lngHour) % 24) + 24 + offsetH) % 24;
+  };
+  return {rise: calc(true), set: calc(false)};
+}
+function sunLine() { const b = berlinNow(); const s = sunTimes(b.date, b.offset); const f = h => h == null ? '–' : String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor((h % 1) * 60)).padStart(2, '0'); return 'lever ' + f(s.rise) + ', coucher ' + f(s.set) + ', ' + fmtNum(s.set - s.rise, 1) + ' h de jour'; }
+function wmoLabel(code) { const c = +code; if (c === 0) return 'Ciel dégagé'; if (c <= 2) return 'Peu nuageux'; if (c === 3) return 'Couvert'; if (c <= 48) return 'Brouillard'; if (c <= 57) return 'Bruine'; if (c <= 67) return 'Pluie'; if (c <= 77) return 'Neige'; if (c <= 82) return 'Averses'; if (c <= 86) return 'Averses de neige'; return 'Orage'; }
+function wmoIcon(code) { const c = +code; if (c === 0) return '☀'; if (c <= 2) return '🌤'; if (c === 3) return '☁'; if (c <= 48) return '🌫'; if (c <= 67) return '🌧'; if (c <= 77) return '🌨'; if (c <= 82) return '🌦'; if (c <= 86) return '🌨'; return '⛈'; }
+function weatherKind() { const c = M.weather && M.weather.current ? +M.weather.current.weather_code : -1; if (c >= 51 && c <= 67 || c >= 80 && c <= 82 || c >= 95) return 'rain'; if (c >= 71 && c <= 86) return 'snow'; if (c === 45 || c === 48) return 'fog'; if (c === 3) return 'cloud'; return c < 0 ? 'none' : 'clear'; }
+
+/* ================================================================
+   5. Moteur de rendu
+   ================================================================ */
+const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+const stage = document.getElementById('stage'), bubblesEl = document.getElementById('bubbles');
+const IMG = {}; let imagesReady = false;
+function loadImages() {
+  const names = Object.keys(ASSETS); let left = names.length;
+  names.forEach(n => { const im = new Image(); im.onload = im.onerror = () => { if (im.naturalWidth) IMG[n] = im; if (--left === 0) imagesReady = true; }; im.src = ASSETS[n]; });
+}
+loadImages();
+let scale = 3, camX = 0, camY = 0, viewW = 0, viewH = 0, dpr = 1;
+function resize() {
+  const w = stage.clientWidth; const h = clamp(Math.round(w * 0.6), 300, Math.min(700, window.innerHeight - 170));
+  stage.style.height = h + 'px';
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  scale = w >= 1000 ? 3 : 2;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  viewW = Math.ceil(w / scale); viewH = Math.ceil(h / scale);
+}
+window.addEventListener('resize', resize); resize();
+
+const groundCanvas = document.createElement('canvas'); let groundReady = false;
+function drawTile(g, spr, dx, dy, sx = 0, sy = 0, w = TILE, h = TILE) { const r = SPR[spr]; if (!IMG.atlas) { g.fillStyle = '#5a9a3a'; g.fillRect(dx, dy, w, h); return; } g.drawImage(IMG.atlas, r[0] + sx, r[1] + sy, w, h, dx, dy, w, h); }
+function drawSprite(g, spr, dx, dy) { const r = SPR[spr]; if (!IMG.atlas) { g.fillStyle = '#8a6a4a'; g.fillRect(dx, dy, r[2], r[3]); return; } g.drawImage(IMG.atlas, r[0], r[1], r[2], r[3], dx, dy, r[2], r[3]); }
+function renderGround() {
+  groundCanvas.width = MAPW * TILE; groundCanvas.height = MAPH * TILE;
+  const g = groundCanvas.getContext('2d'); g.imageSmoothingEnabled = false;
+  const G = world.grid; const rnd = mulberry(7);
+  const at = (x, y) => (G[y] && G[y][x] != null) ? G[y][x] : 1;
+  // Autotile sable/pavé : coins et bords depuis le bloc 48x48 (3x3 de 16px)
+  const edgeTile = (x, y, v, spr) => {
+    const u = at(x, y - 1) === v, d = at(x, y + 1) === v, l = at(x - 1, y) === v, r = at(x + 1, y) === v;
+    let sx = 16, sy = 16; if (!u) sy = 0; else if (!d) sy = 32; if (!l) sx = 0; else if (!r) sx = 32;
+    if (sx === 16 && sy === 16 && rnd() < 0.5) { sx = 16; sy = 16; }
+    drawTile(g, spr, x * TILE, y * TILE, sx, sy);
+  };
+  for (let y = 0; y < MAPH; y++) for (let x = 0; x < MAPW; x++) {
+    const v = at(x, y);
+    const gx = (x % 2) * 16, gy = (y % 2) * 16;
+    drawTile(g, 'grass', x * TILE, y * TILE, gx, gy); // herbe de base
+    if (v === 2) edgeTile(x, y, 2, 'sandA');
+    else if (v === 3) edgeTile(x, y, 3, 'stoneA');
+    else if (v === 4) drawTile(g, 'dark', x * TILE, y * TILE);
+  }
+  // Variations d'herbe sombre par zones (santé mentale haute = herbe plus riche)
+  const n = Math.round(M.mental * 50);
+  for (let i = 0; i < n; i++) { const x = Math.floor(rnd() * MAPW), y = Math.floor(rnd() * MAPH); if (at(x, y) === 1) drawTile(g, 'darkA', x * TILE, y * TILE, 16, 16); }
+  groundReady = true;
+}
+
+// Entrées
+const keys = {}; let wantAction = false;
+addEventListener('keydown', e => { if (e.target.closest && e.target.closest('input,textarea')) return; const k = e.key.toLowerCase(); keys[k] = true; if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) e.preventDefault(); if (k === 'e' || k === 'enter' || k === ' ') { wantAction = true; } if (k === 'escape') { closePanel(); hideDialog(); } });
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+document.querySelectorAll('#dpad button').forEach(b => { const d = b.dataset.d; const on = ev => { ev.preventDefault(); keys['pad' + d] = true; }; const off = ev => { ev.preventDefault(); keys['pad' + d] = false; }; b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off); });
+document.getElementById('btnA').addEventListener('click', () => { wantAction = true; });
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const wx = (e.clientX - rect.left) / scale + camX, wy = (e.clientY - rect.top) / scale + camY;
+  const b = world.buildings.find(b => wx >= b.tx * TILE && wx < b.tx * TILE + SPR[b.spr][2] && wy >= b.ty * TILE && wy < b.ty * TILE + SPR[b.spr][3]);
+  if (b) { openBuilding(b); return; }
+  const a = world.actors.find(a => !a.player && wx >= a.x - 2 && wx < a.x + 14 && wy >= a.y - 4 && wy < a.y + 16);
+  if (a) talkTo(a);
+});
+
+function moveDir() {
+  let dx = 0, dy = 0;
+  if (keys.arrowleft || keys.q || keys.a || keys.padleft) dx -= 1; if (keys.arrowright || keys.d || keys.padright) dx += 1;
+  if (keys.arrowup || keys.z || keys.w || keys.padup) dy -= 1; if (keys.arrowdown || keys.s || keys.paddown) dy += 1;
+  return [dx, dy];
+}
+function blocked(px, py) { // boîte de collision : pieds du personnage (12 x 6)
+  const pts = [[px + 1, py + 10], [px + 10, py + 10], [px + 1, py + 15], [px + 10, py + 15]];
+  for (const [x, y] of pts) { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (tx < 0 || ty < 0 || tx >= MAPW || ty >= MAPH || world.solid[ty][tx]) return true; }
+  return false;
+}
+function actorBlocked(a, nx, ny) { if (blocked(nx, ny)) return true; for (const o of world.actors) { if (o === a) continue; if (Math.abs(o.x - nx) < 9 && Math.abs(o.y - ny) < 9) return true; } return false; }
+
+let lastT = performance.now(), anim = 0, dialogOpen = false;
+function step(dt) {
+  anim += dt;
+  const P = world.player;
+  // Joueur
+  if (!dialogOpen) {
+    const [dx, dy] = moveDir();
+    if (dx || dy) {
+      const sp = P.speed * dt * 60; let nx = P.x + dx * sp, ny = P.y + dy * sp;
+      if (!actorBlocked(P, nx, P.y)) P.x = nx; if (!actorBlocked(P, P.x, ny)) P.y = ny;
+      P.face = dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down'; P.walking = true;
+    } else P.walking = false;
+  }
+  // PNJ : errance
+  for (const a of world.actors) {
+    if (a.player) continue;
+    if (a.talkingT > 0) { a.talkingT -= dt; a.walking = false; continue; }
+    if (!a.target || a.wait > 0) { a.wait -= dt; a.walking = false; if (a.wait <= 0 && !a.target) { const ang = Math.random() * Math.PI * 2, r = Math.random() * a.home.r * TILE; a.target = {x: clamp(a.home.x * TILE + Math.cos(ang) * r, TILE, (MAPW - 2) * TILE), y: clamp(a.home.y * TILE + Math.sin(ang) * r, TILE, (MAPH - 2) * TILE)}; } if (a.wait > 0) continue; }
+    const vx = a.target.x - a.x, vy = a.target.y - a.y, dist = Math.hypot(vx, vy);
+    if (dist < 2) { a.target = null; a.wait = 1 + Math.random() * 4; a.walking = false; continue; }
+    const sp = a.speed * dt * 60, mx = vx / dist * sp, my = vy / dist * sp; let moved = false;
+    if (!actorBlocked(a, a.x + mx, a.y)) { a.x += mx; moved = true; } if (!actorBlocked(a, a.x, a.y + my)) { a.y += my; moved = true; }
+    if (!moved) { a.target = null; a.wait = 0.5 + Math.random() * 2; }
+    a.face = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : (vy < 0 ? 'up' : 'down'); a.walking = moved;
+  }
+  // Action
+  if (wantAction) {
+    wantAction = false;
+    if (dialogOpen) advanceDialog();
+    else {
+      const near = nearestInteractable();
+      if (near) { if (near.actor) talkTo(near.actor); else openBuilding(near.building); }
+      else if (P.lines.length) { showDialog('Tom (pensée)', P.lines[Math.floor(Math.random() * P.lines.length)]); }
+    }
+  }
+  // Bulles spontanées
+  bubbleTimer -= dt;
+  if (bubbleTimer <= 0) { bubbleTimer = 3.5 + Math.random() * 3; const cands = world.actors.filter(a => (!a.player || Math.random() < 0.25) && a.lines.length && onScreen(a)); if (cands.length) { const a = cands[Math.floor(Math.random() * cands.length)]; a.bubble = a.lines[Math.floor(Math.random() * a.lines.length)]; a.bubbleT = 4.5; a.talkingT = 2.5; } }
+  for (const a of world.actors) if (a.bubbleT > 0) { a.bubbleT -= dt; if (a.bubbleT <= 0) a.bubble = null; }
+  // Caméra
+  const mapPxW = MAPW * TILE, mapPxH = MAPH * TILE;
+  camX = clamp(P.x + 6 - viewW / 2, 0, Math.max(0, mapPxW - viewW)); camY = clamp(P.y + 8 - viewH / 2, 0, Math.max(0, mapPxH - viewH));
+  if (viewW > mapPxW) camX = -(viewW - mapPxW) / 2; if (viewH > mapPxH) camY = -(viewH - mapPxH) / 2;
+  camX = Math.round(camX); camY = Math.round(camY);
+}
+let bubbleTimer = 2;
+function onScreen(a) { return a.x > camX - 16 && a.x < camX + viewW + 16 && a.y > camY - 16 && a.y < camY + viewH + 16; }
+function nearestInteractable() {
+  const P = world.player; const px = P.x + 6, py = P.y + 12; let best = null, bd = 26;
+  for (const a of world.actors) { if (a.player) continue; const d = Math.hypot(a.x + 6 - px, a.y + 12 - py); if (d < bd) { bd = d; best = {actor: a, d}; } }
+  for (const b of world.buildings) { const dx = b.fp.door.x * TILE + 8, dy = b.fp.door.y * TILE + 4; const d = Math.hypot(dx - px, dy - py); if (d < bd) { bd = d; best = {building: b, d}; } }
+  return best;
+}
+
+function render() {
+  const g = ctx; g.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0); g.imageSmoothingEnabled = false;
+  g.fillStyle = '#0b0b14'; g.fillRect(0, 0, viewW + 2, viewH + 2);
+  if (!imagesReady || !groundReady) { if (imagesReady && !groundReady) renderGround(); g.fillStyle = '#f1e9d6'; g.font = '8px "Press Start 2P", monospace'; g.fillText('CHARGEMENT DU VILLAGE…', 20, 40); return; }
+  g.save(); g.translate(-camX, -camY);
+  g.drawImage(groundCanvas, 0, 0);
+  // Étangs animés (4 frames de 48x48)
+  const wf = Math.floor(anim * 3) % 4;
+  for (const p of world.ponds) {
+    if (IMG.water) { if (p.small) g.drawImage(IMG.water, wf * 48, 32, 48, 48, p.x * TILE, p.y * TILE, 48, 48); else { g.drawImage(IMG.water, wf * 48, 32, 48, 48, p.x * TILE, p.y * TILE, 80, 80); } }
+    else { g.fillStyle = '#39c3e6'; g.fillRect(p.x * TILE, p.y * TILE, p.w * TILE, p.h * TILE); }
+  }
+  // Objets triés par y (bas du sprite)
+  const items = [];
+  for (const d of world.decor) { const r = SPR[d.spr]; items.push({y: d.y * TILE + r[3], draw: () => drawSprite(g, d.spr, d.x * TILE, d.y * TILE)}); }
+  for (const b of world.buildings) { const r = SPR[b.spr]; items.push({y: b.ty * TILE + r[3] - 2, draw: () => { drawSprite(g, b.spr, b.tx * TILE, b.ty * TILE); if (b.sign) drawSprite(g, b.sign, b.tx * TILE + 4, b.ty * TILE + r[3] - 26); if (isNight()) { g.fillStyle = 'rgba(255,210,120,0.55)'; g.fillRect(b.tx * TILE + 10, b.ty * TILE + r[3] - 18, 10, 8); g.fillRect(b.tx * TILE + r[2] - 22, b.ty * TILE + r[3] - 18, 10, 8); } }}); }
+  for (const l of world.lamps) items.push({y: l.y * TILE + 32, draw: () => drawSprite(g, 'lamp1', l.x * TILE, l.y * TILE)});
+  for (const f of world.fires) { const ff = Math.floor(anim * 8) % 3; items.push({y: f.y * TILE + 20, draw: () => { if (IMG.fire) g.drawImage(IMG.fire, ff * 16, 64, 16, 32, f.x * TILE, f.y * TILE - 16, 16, 32); }}); }
+  for (const a of world.actors) {
+    items.push({y: a.y + 16, draw: () => {
+      const face = a.face === 'left' || a.face === 'right' ? 'side' : a.face; const fr = a.walking ? (Math.floor(anim * 8) % 2) : 0;
+      const img = a.sprites[face][fr];
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(Math.round(a.x) + 2, Math.round(a.y) + 14, 8, 2);
+      if (a.face === 'right') { g.save(); g.translate(Math.round(a.x) + 12, Math.round(a.y)); g.scale(-1, 1); g.drawImage(img, 0, 0); g.restore(); } else g.drawImage(img, Math.round(a.x), Math.round(a.y));
+      if (a.player) { g.fillStyle = '#fff'; g.fillRect(Math.round(a.x) + 5, Math.round(a.y) - 5 + Math.round(Math.sin(anim * 4)), 2, 2); }
+    }});
+  }
+  items.sort((p, q) => p.y - q.y); for (const it of items) it.draw();
+  // Nom des bâtiments (petites étiquettes)
+  g.font = '5px "Press Start 2P", monospace'; g.textAlign = 'center';
+  for (const b of world.buildings) { if (b.kind !== 'landmark') continue; const r = SPR[b.spr]; const x = b.tx * TILE + r[2] / 2, y = b.ty * TILE - 3; const w = g.measureText(b.name).width + 6; g.fillStyle = 'rgba(20,18,34,0.75)'; g.fillRect(x - w / 2, y - 6, w, 8); g.fillStyle = '#ffe9b8'; g.fillText(b.name, x, y); }
+  g.textAlign = 'left';
+  // Indicateur d'interaction
+  const near = nearestInteractable();
+  if (near && !dialogOpen) { const x = near.actor ? near.actor.x + 4 : near.building.fp.door.x * TILE + 4, y = near.actor ? near.actor.y - 10 : near.building.fp.door.y * TILE - 10; g.fillStyle = '#ffb347'; g.font = '6px "Press Start 2P", monospace'; g.fillText('E', x + 1, y + Math.round(Math.sin(anim * 5))); }
+  g.restore();
+  overlay(g);
+  renderBubbles();
+}
+function isNight() { const b = berlinNow(); const s = sunTimes(b.date, b.offset); return s.rise == null || b.h < s.rise - 0.3 || b.h > s.set + 0.3; }
+function overlay(g) {
+  const b = berlinNow(); const s = sunTimes(b.date, b.offset);
+  let dark = 0;
+  if (s.rise != null) { if (b.h < s.rise - 1 || b.h > s.set + 1) dark = 0.62; else if (b.h < s.rise) dark = 0.62 * (s.rise - b.h); else if (b.h > s.set) dark = 0.62 * (b.h - s.set); }
+  const kind = weatherKind();
+  if (kind === 'cloud' || kind === 'rain' || kind === 'snow') dark = Math.max(dark, 0.14);
+  if (dark > 0) { g.fillStyle = `rgba(16,20,60,${dark})`; g.fillRect(0, 0, viewW + 2, viewH + 2); }
+  if (dark > 0.3) { g.save(); g.globalCompositeOperation = 'lighter'; for (const l of world.lamps.concat(world.fires)) { const x = l.x * TILE + 8 - camX, y = l.y * TILE + 8 - camY; const grd = g.createRadialGradient(x, y, 2, x, y, 40); grd.addColorStop(0, 'rgba(255,190,90,0.45)'); grd.addColorStop(1, 'rgba(255,190,90,0)'); g.fillStyle = grd; g.fillRect(x - 40, y - 40, 80, 80); } g.restore(); }
+  if (kind === 'rain' || kind === 'snow') {
+    g.fillStyle = kind === 'rain' ? 'rgba(180,210,255,0.55)' : 'rgba(255,255,255,0.85)';
+    for (let i = 0; i < 140; i++) { const t = anim * (kind === 'rain' ? 160 : 30) + i * 97; const x = (i * 53 + (kind === 'rain' ? t * 0.2 : Math.sin(t / 50 + i) * 10)) % (viewW + 20) - 10, y = (t + i * 31) % (viewH + 20) - 10; if (kind === 'rain') g.fillRect(x, y, 1, 5); else g.fillRect(x, y, 2, 2); }
+  }
+  if (kind === 'fog') { g.fillStyle = 'rgba(220,225,235,0.28)'; g.fillRect(0, 0, viewW + 2, viewH + 2); }
+}
+function renderBubbles() {
+  const rect = canvas.getBoundingClientRect();
+  let html = '';
+  for (const a of world.actors) {
+    if (!a.bubble) continue;
+    const sx = (a.x + 6 - camX) * scale, sy = (a.y - 4 - camY) * scale;
+    if (sx < -100 || sx > rect.width + 100 || sy < -20 || sy > rect.height) continue;
+    html += `<div class="bubble ${a.thought ? 'thought' : ''}" style="left:${sx}px;top:${sy}px">${esc(trunc(a.bubble, 90))}</div>`;
+  }
+  bubblesEl.innerHTML = html;
+}
+function loop(t) { const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t; if (!document.getElementById('dash').hidden) { requestAnimationFrame(loop); return; } step(dt); render(); requestAnimationFrame(loop); }
+
+/* ---------- Dialogue RPG (machine à écrire) ---------- */
+const dlg = document.getElementById('dialog'); let dlgQueue = [], dlgTimer = null;
+function showDialog(who, text, queue) {
+  dialogOpen = true; dlg.hidden = false; dlg.querySelector('.who').textContent = who; const tx = dlg.querySelector('.txt'); tx.textContent = '';
+  dlgQueue = queue || []; let i = 0; clearInterval(dlgTimer);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) { tx.textContent = text; return; }
+  dlgTimer = setInterval(() => { i += 2; tx.textContent = text.slice(0, i); if (i >= text.length) clearInterval(dlgTimer); }, 18);
+}
+function advanceDialog() { const tx = dlg.querySelector('.txt'); if (dlgTimer && tx.textContent.length < (tx.dataset.full || '').length) { } if (dlgQueue.length) { const n = dlgQueue.shift(); showDialog(n.who, n.text, dlgQueue); } else hideDialog(); }
+function hideDialog() { dialogOpen = false; dlg.hidden = true; clearInterval(dlgTimer); }
+function talkTo(a) { if (!a.lines.length) return; a.talkingT = 6; a.face = world.player.x < a.x ? 'left' : 'right'; const lines = a.lines.slice(0, 3); showDialog(a.name + (a.role ? ' · ' + a.role : ''), lines[0], lines.slice(1).map(t => ({who: a.name, text: t}))); }
+
+/* ================================================================
+   6. Panneaux : le contenu de chaque bâtiment
+   ================================================================ */
+const panel = document.getElementById('panel'), mainEl = document.getElementById('main');
+function openBuilding(b) {
+  const html = b.kind === 'house' ? houseHTML(b) : (PANELS[b.id] ? PANELS[b.id]() : '<p>Rien ici.</p>');
+  panel.innerHTML = `<button class="close" aria-label="Fermer">✕</button><h2>${esc(b.name)}</h2><p class="muted">${esc(b.desc || '')}</p>${html}`;
+  panel.hidden = false; mainEl.classList.add('with-panel'); panel.querySelector('.close').onclick = closePanel; panel.scrollTop = 0; resize();
+  if (window.innerWidth < 760) panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+function closePanel() { panel.hidden = true; mainEl.classList.remove('with-panel'); resize(); }
+
+// Petits graphiques SVG (une échelle, étiquettes lisibles, texte en encre)
+function lineChart(series, opts = {}) {
+  const W = 320, H = opts.height || 110, padL = 30, padR = 8, padT = 8, padB = 18;
+  const all = series.flatMap(s => s.values.filter(v => v != null));
+  if (!all.length) return '<p class="muted">Pas assez de données.</p>';
+  let min = opts.min != null ? opts.min : Math.min(...all), max = opts.max != null ? opts.max : Math.max(...all); if (max === min) max = min + 1;
+  const n = Math.max(...series.map(s => s.values.length));
+  const X = i => padL + (n <= 1 ? 0 : i / (n - 1) * (W - padL - padR)), Y = v => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || '')}">`;
+  for (const t of [min, (min + max) / 2, max]) svg += `<line x1="${padL}" x2="${W - padR}" y1="${Y(t)}" y2="${Y(t)}" stroke="#d4c29c" stroke-width="1"/><text x="${padL - 4}" y="${Y(t) + 4}" text-anchor="end">${fmtNum(t, t % 1 ? 1 : 0)}</text>`;
+  const cols = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)'];
+  series.forEach((s, si) => {
+    const pts = s.values.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean);
+    if (!pts.length) return;
+    const col = s.color || cols[si % cols.length];
+    if (series.length === 1) svg += `<path d="M${pts[0][0]},${Y(min)} ` + pts.map(p => `L${p[0]},${p[1]}`).join(' ') + ` L${pts[pts.length - 1][0]},${Y(min)} Z" fill="${col}" opacity="0.18"/>`;
+    svg += `<polyline fill="none" stroke="${col}" stroke-width="2" points="${pts.map(p => p.join(',')).join(' ')}"/>`;
+    const e = pts[pts.length - 1]; svg += `<circle cx="${e[0]}" cy="${e[1]}" r="3" fill="${col}" stroke="#f3e6c8" stroke-width="2"/>`;
+  });
+  if (opts.labels) { svg += `<text x="${padL}" y="${H - 4}">${esc(opts.labels[0])}</text><text x="${W - padR}" y="${H - 4}" text-anchor="end">${esc(opts.labels[1])}</text>`; }
+  svg += '</svg>';
+  const legend = series.length > 1 ? `<div class="legend">${series.map((s, i) => `<span><i style="background:${s.color || cols[i % cols.length]}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+  return legend + svg;
+}
+function barChart(values, labels, opts = {}) {
+  const W = 320, H = opts.height || 110, padL = 34, padR = 6, padT = 8, padB = 20;
+  const vals = values.map(v => v == null ? 0 : v); const max = opts.max || Math.max(1, ...vals);
+  const n = vals.length, bw = (W - padL - padR) / n;
+  const Y = v => padT + (1 - v / max) * (H - padT - padB);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || '')}">`;
+  for (const t of [0, max / 2, max]) svg += `<line x1="${padL}" x2="${W - padR}" y1="${Y(t)}" y2="${Y(t)}" stroke="#d4c29c"/><text x="${padL - 4}" y="${Y(t) + 4}" text-anchor="end">${fmtNum(t)}</text>`;
+  vals.forEach((v, i) => { const x = padL + i * bw + 1, h = Y(0) - Y(v); const col = opts.colors ? opts.colors[i] : (opts.color || 'var(--s1)'); svg += `<rect x="${x}" y="${Y(v)}" width="${Math.max(1, bw - 2)}" height="${Math.max(0, h)}" fill="${col}" rx="1"/>`; if (labels && (n <= 8 || i % Math.ceil(n / 8) === 0)) svg += `<text x="${x + (bw - 2) / 2}" y="${H - 5}" text-anchor="middle">${esc(labels[i])}</text>`; });
+  svg += '</svg>';
+  return svg;
+}
+function groupedBars(groups, labels, names, opts = {}) {
+  const W = 320, H = opts.height || 120, padL = 36, padR = 6, padT = 8, padB = 20;
+  const max = Math.max(1, ...groups.flat()); const n = groups.length, k = names.length, gw = (W - padL - padR) / n, bw = (gw - 4) / k;
+  const Y = v => padT + (1 - v / max) * (H - padT - padB); const cols = ['var(--s1)', 'var(--s2)', 'var(--s3)'];
+  let svg = `<div class="legend">${names.map((s, i) => `<span><i style="background:${cols[i]}"></i>${esc(s)}</span>`).join('')}</div><svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  for (const t of [0, max / 2, max]) svg += `<line x1="${padL}" x2="${W - padR}" y1="${Y(t)}" y2="${Y(t)}" stroke="#d4c29c"/><text x="${padL - 4}" y="${Y(t) + 4}" text-anchor="end">${fmtNum(t / 1000, 1)}k</text>`;
+  groups.forEach((gr, i) => { gr.forEach((v, j) => { const x = padL + i * gw + 2 + j * bw; svg += `<rect x="${x}" y="${Y(v)}" width="${Math.max(1, bw - 1)}" height="${Math.max(0, Y(0) - Y(v))}" fill="${cols[j]}"/>`; }); svg += `<text x="${padL + i * gw + gw / 2}" y="${H - 5}" text-anchor="middle">${esc(labels[i])}</text>`; });
+  return svg + '</svg>';
+}
+const kpi = (v, l, cls = '') => `<div class="kpi ${cls}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+const bar = (p, cls = '') => `<div class="bar ${cls}"><i style="width:${clamp(p, 0, 100)}%"></i></div>`;
+const statusCls = p => p >= 0.66 ? 'good' : p >= 0.33 ? 'warn' : 'bad';
+const monthLabel = m => new Date(m + '-15').toLocaleDateString('fr-FR', {month: 'short'});
+
+const PANELS = {
+  mairie() {
+    const ns = M.ns; const g = M.goalsQ;
+    const prog = {leads: (S.kpi_live.leads_since_sept || 0) / 500, ventes: M.sales2papQ / 6, webinaires: (S.kpi_live.webinars_held || 0) / 3, lep: M.lep / 10000};
+    let h = `<div class="quote"><b>${esc(ns.theme || '')}</b><br>${esc(ns.win || '')}</div>`;
+    h += `<div class="kpis">${kpi((S.kpi_live.leads_since_sept || 0) + '<small>/500</small>', 'leads depuis le 1er sept.' + (S.kpi_live.as_of ? ' (au ' + fmtDate(S.kpi_live.as_of) + ')' : ''), statusCls(prog.leads * 3))}${kpi(M.sales2papQ + '<small>/6</small>', 'ventes 2PaP du trimestre', statusCls(prog.ventes * 2))}${kpi((S.kpi_live.webinars_held || 0) + '<small>/3</small>', 'webinaires tenus', statusCls(prog.webinaires * 1.5))}${kpi(fmtEur(M.lep), 'LEP (objectif 10 000)', statusCls(prog.lep))}</div>`;
+    h += '<h3>Objectifs 90 jours (sept. → nov.)</h3>';
+    for (const x of g) { const p = x.goal.includes('leads') ? prog.leads : x.goal.includes('ventes') ? prog.ventes : x.goal.includes('webinaires') ? prog.webinaires : x.goal.includes('LEP') ? prog.lep : null; h += `<div class="row"><span>${esc(x.goal)}</span><span class="muted">${x.due ? 'échéance ' + fmtDate(x.due) : ''}${x.conf ? ' · confiance ' + x.conf + '/10' : ''}</span></div>${p != null ? bar(p * 100, statusCls(p)) : ''}<details><summary class="muted">Critère</summary><p class="muted">${esc(x.criteria || '')}</p></details>`; }
+    h += '<h3>Semaine en cours</h3>';
+    const w = M.week; h += `<p><b>Semaine ${esc(w.week || '')}</b> (${fmtDate(w.start)} → ${fmtDate(w.end)})</p><p>${esc(w.focus || '')}</p>${w.domino ? `<div class="quote">Lead domino : ${esc(w.domino)}</div>` : ''}${w.kpi ? `<p class="muted">KPI : ${esc(w.kpi)}</p>` : ''}${w.progress ? `<p>${esc(w.progress)}</p>` : ''}${w.decisions ? `<p class="muted">Décisions : ${esc(w.decisions)}</p>` : ''}`;
+    const prev = M.weeks.filter(x => x.exec).slice(-6);
+    if (prev.length) h += '<h3>Score d\'exécution des dernières semaines</h3>' + barChart(prev.map(x => +x.exec || 0), prev.map(x => 'S' + x.week), {max: 10, label: 'Score d\'exécution par semaine'});
+    if (M.review.brief) h += `<h3>Dernier brief (${fmtDate(M.review.date)})</h3><details><summary>${esc(trunc(M.review.brief, 140))}</summary><p>${esc(M.review.brief).replace(/\n/g, '<br>')}</p></details>`;
+    h += `<h3>Ne pas faire</h3><p class="muted">${esc(ns.nottodo || '').replace(/\n/g, '<br>')}</p><details><summary>Contraintes et point cash du 30/08</summary><p class="muted">${esc(ns.constraints || '').replace(/\n/g, '<br>')}</p></details>`;
+    return h;
+  },
+  banque() {
+    const b = S.balances; const months = M.months;
+    let h = `<div class="kpis">${kpi(fmtEur(M.persoCash), 'trésor perso (hors Wise)', statusCls(M.persoCash / 15000))}${kpi(fmtNum(M.runway, 1) + ' mois', 'autonomie à 2 500 €/mois', statusCls(M.runway / 6))}${kpi(fmtEur(M.lep), 'LEP, ligne rouge 7 500', M.lep >= 7500 ? 'good' : 'bad')}${kpi(fmtEur(M.wise), 'Wise SOLV (pas ton argent)')}</div>`;
+    h += `<p class="muted">Soldes au ${fmtDate(b.as_of)}, d'après l'audit financier.</p><table class="t"><tr><th>Compte</th><th>Solde</th><th>Nature</th></tr>${(b.accounts || []).map(a => `<tr><td>${esc(a[0])}</td><td class="n">${fmtEur(a[1])}</td><td class="muted">${esc(a[2])}</td></tr>`).join('')}</table>`;
+    if (months.length) {
+      h += '<h3>Flux 2026 par mois (hors transferts internes)</h3>' + groupedBars(months.map(m => [S.money.monthly[m].solv_in, S.money.monthly[m].pap_in, S.money.monthly[m].perso_out]), months.map(monthLabel), ['SOLV entrées', '2PaP entrées', 'Perso sorties']);
+      h += `<div class="kpis">${kpi(fmtEur(M.solvIn2026), 'SOLV encaissé 2026')}${kpi(fmtEur(M.income2026), '2PaP encaissé 2026 (livre des recettes)')}${kpi(fmtEur(months.reduce((s, m) => s + S.money.monthly[m].perso_out, 0)), 'dépenses perso janv.-août')}</div>`;
+    }
+    h += '<h3>2PaP : qui a payé en 2026</h3><table class="t"><tr><th>Client</th><th>Total</th><th>Paiements</th><th>Depuis</th></tr>' + M.clients.slice(0, 14).map(c => `<tr><td>${esc(c.name)}</td><td class="n">${fmtEur(c.total)}</td><td class="n">${c.n}</td><td class="muted">${fmtDate(c.first)}</td></tr>`).join('') + '</table>';
+    const inc = S.income.filter(r => r.date >= '2026-01-01');
+    const byM = {}; for (const r of inc) { const m = r.date.slice(0, 7); byM[m] = (byM[m] || 0) + r.amount; }
+    const ms = Object.keys(byM).sort();
+    if (ms.length) h += '<h3>Encaissements 2PaP par mois</h3>' + barChart(ms.map(m => byM[m]), ms.map(monthLabel), {label: 'Encaissements 2PaP par mois', color: 'var(--s2)'});
+    h += '<h3>Les règles</h3><ul>' + (b.rules || []).map(r => `<li>${esc(r)}</li>`).join('') + '</ul>';
+    return h;
+  },
+  temple() {
+    const d = S.daily; const n = d.length; const lab = [fmtDate(d[0] && d[0].date), fmtDate(d[n - 1] && d[n - 1].date)];
+    let h = `<div class="kpis">${kpi(fmtNum(M.mental * 100) + '%', 'santé mentale (14 j)', statusCls(M.mental))}${kpi(fmtNum(M.happy14, 1), 'bonheur moyen /10', statusCls(M.happy14 / 10))}${kpi(fmtNum(M.anx14, 1), 'anxiété moyenne /10', M.anx14 <= 2 ? 'good' : M.anx14 <= 4 ? 'warn' : 'bad')}${kpi(fmtNum(M.sleep14, 1) + ' h', 'sommeil moyen (Apple Health)', statusCls((M.sleep14 || 0) / 8))}</div>`;
+    h += `<p class="muted">La végétation du village suit cet indice : ${fmtNum(M.mental * 100)} % → ${10 + Math.round(M.mental * 46)} arbres, ${Math.round(M.mental * 60)} fleurs, ${Math.round((1 - M.mental) * 30)} rochers.</p>`;
+    h += '<h3>Bonheur et énergie</h3>' + lineChart([{name: 'Bonheur', values: d.map(x => x.happy)}, {name: 'Énergie', values: d.map(x => x.energy)}], {min: 0, max: 10, labels: lab, label: 'Bonheur et énergie sur 120 jours'});
+    h += '<h3>Stabilité et anxiété</h3>' + lineChart([{name: 'Stabilité', values: d.map(x => x.stab), color: 'var(--s3)'}, {name: 'Anxiété', values: d.map(x => x.anx), color: 'var(--bad)'}], {min: 0, max: 10, labels: lab, label: 'Stabilité et anxiété sur 120 jours'});
+    h += '<h3>Sommeil (heures, Apple Health) et qualité ressentie</h3>' + lineChart([{name: 'Heures', values: d.map(x => x.sleeph), color: 'var(--s4)'}, {name: 'Qualité /10', values: d.map(x => x.sleepq), color: 'var(--s1)'}], {min: 0, max: 10, labels: lab, label: 'Sommeil'});
+    const moods = {}; for (const x of d) for (const m of (x.moods || [])) moods[m] = (moods[m] || 0) + 1;
+    const mk = Object.entries(moods).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    if (mk.length) h += '<h3>Humeurs cochées</h3><div class="tags">' + mk.map(([k, v]) => `<span class="tag">${esc(k)} ×${v}</span>`).join('') + '</div>';
+    const wins = d.filter(x => x.wins).slice(-4).reverse();
+    if (wins.length) h += '<h3>Ce qui a marché, récemment</h3>' + wins.map(x => `<div class="quote"><span class="muted">${fmtDate(x.date)}</span><br>${esc(x.wins)}</div>`).join('');
+    const wh = S.wheel[S.wheel.length - 1];
+    if (wh) h += `<h3>Roue de la vie (${fmtDate(wh.date)})</h3>` + barChart([wh.health, wh.career, wh.finances, wh.family, wh.love, wh.social, wh.fun, wh.giving, wh.mental], ['Santé', 'Carrière', 'Finances', 'Famille', 'Amour', 'Social', 'Loisirs', 'Don', 'Mental'], {max: 100, label: 'Roue de la vie', color: 'var(--s3)'});
+    return h;
+  },
+  taverne() {
+    const d = S.daily; const lab = [fmtDate(d[0] && d[0].date), fmtDate(d[d.length - 1] && d[d.length - 1].date)];
+    const soc = avg(last(d.filter(x => x.social != null), 14).map(x => x.social)), love = avg(last(d.filter(x => x.love != null), 14).map(x => x.love));
+    let h = `<div class="kpis">${kpi(S.friends.length, 'personnes dans le Friend CRM')}${kpi(fmtNum(soc, 1), 'vie sociale /10 (14 j)', statusCls(soc / 10))}${kpi(fmtNum(love, 1), 'love-life /10 (14 j)', statusCls(love / 10))}${kpi(M.lastDay.where ? esc(trunc(M.lastDay.where, 14)) : '–', 'où je suis')}</div>`;
+    h += '<h3>Les amis</h3><table class="t"><tr><th>Qui</th><th>Dernier contact</th><th>Prochaine action</th></tr>' + S.friends.map(f => `<tr><td><b>${esc(f.name)}</b><br><span class="muted">${esc(trunc(f.where || '', 30))}</span></td><td class="muted">${f.last ? fmtDate(f.last) : '–'}${f.channel ? '<br>' + esc(f.channel) : ''}</td><td>${esc(trunc(f.next || '', 110))}</td></tr>`).join('') + '</table>';
+    h += '<h3>Vie sociale et amour</h3>' + lineChart([{name: 'Social', values: d.map(x => x.social)}, {name: 'Love-life', values: d.map(x => x.love), color: 'var(--s3)'}], {min: 0, max: 10, labels: lab, label: 'Vie sociale et amour'});
+    const ev = d.filter(x => x.socialev).slice(-6).reverse();
+    if (ev.length) h += '<h3>Événements sociaux notés</h3><ul>' + ev.map(x => `<li><span class="muted">${fmtDate(x.date)}</span> ${esc(x.socialev)}</li>`).join('') + '</ul>';
+    const up = S.calendar.filter(e => /EA Berlin|Time Left|Comedy|Anniversaire|Opération|Lundoufle/i.test(e.title));
+    if (up.length) h += '<h3>Sorties à venir</h3><ul>' + up.map(e => `<li><span class="muted">${fmtDate(e.start.slice(0, 10))}${e.start.length > 10 ? ' ' + e.start.slice(11, 16) : ''}</span> ${esc(e.title)}${e.where ? ' <span class="muted">· ' + esc(e.where) + '</span>' : ''}</li>`).join('') + '</ul>';
+    const g = M.goalsQ.find(x => /noyau/i.test(x.goal)); if (g) h += `<div class="quote">${esc(g.goal)}<br><span class="muted">${esc(g.criteria)}</span></div>`;
+    return h;
+  },
+  dojo() {
+    const d = last(S.daily, 30); const lab = [fmtDate(d[0] && d[0].date), fmtDate(d[d.length - 1] && d[d.length - 1].date)];
+    const workouts = S.daily.filter(x => x.workout).slice(-30);
+    const mt = S.calendar.filter(e => /Muay|Boxen/i.test(e.title));
+    const hrv = avg(last(S.daily.filter(x => x.hrv), 14).map(x => x.hrv)), rhr = avg(last(S.daily.filter(x => x.rhr), 14).map(x => x.rhr)), wt = last(S.daily.filter(x => x.weight), 1)[0];
+    let h = `<div class="kpis">${kpi(workouts.length, 'séances sur 30 jours', statusCls(workouts.length / 12))}${kpi(fmtNum(M.steps14), 'pas / jour (14 j)', statusCls((M.steps14 || 0) / 10000))}${kpi(fmtNum(hrv) + ' ms', 'HRV moyen (14 j)')}${kpi(fmtNum(rhr) + ' bpm', 'FC repos (14 j)')}${wt ? kpi(fmtNum(wt.weight, 1) + ' kg', 'poids le ' + fmtDate(wt.date)) : ''}${kpi(mt.length, 'cours Ringside cette semaine', statusCls(mt.length / 3))}</div>`;
+    h += '<h3>Pas par jour (30 j)</h3>' + barChart(d.map(x => x.steps || 0), d.map(x => fmtDate(x.date).split(' ')[0]), {label: 'Pas par jour', color: 'var(--s2)'});
+    h += '<h3>HRV et fréquence cardiaque au repos</h3>' + lineChart([{name: 'HRV (ms)', values: S.daily.map(x => x.hrv)}, {name: 'FC repos', values: S.daily.map(x => x.rhr), color: 'var(--bad)'}], {labels: [fmtDate(S.daily[0].date), fmtDate(S.daily[S.daily.length - 1].date)], label: 'HRV et FC repos'});
+    h += '<h3>Dernières séances</h3><ul>' + workouts.slice(-10).reverse().map(x => `<li><span class="muted">${fmtDate(x.date)}</span> ${esc(x.workout)}</li>`).join('') + '</ul>';
+    if (mt.length) h += '<h3>Ringside Gym, cette semaine</h3><ul>' + mt.map(e => `<li><span class="muted">${fmtDate(e.start.slice(0, 10))} ${e.start.slice(11, 16)}</span> ${esc(e.title.replace(/🥊 ?/, ''))}</li>`).join('') + '</ul>';
+    return h;
+  },
+  atelier() {
+    const k = S.kpi_live, p = S.productivity;
+    let h = `<div class="kpis">${kpi((k.leads_since_sept || 0) + '<small>/' + (k.leads_target || 500) + '</small>', 'leads du trimestre (au ' + fmtDate(k.as_of) + ')', statusCls((k.leads_since_sept || 0) / 150))}${kpi(M.sales2papQ + '<small>/6</small>', 'ventes 2PaP depuis le 31/08', statusCls(M.sales2papQ / 3))}${kpi((k.videos_published || 0) + '<small>/' + (k.videos_target || 13) + '</small>', 'vidéos publiées (' + (k.videos_recorded || 0) + ' enregistrées)', (k.videos_published || 0) ? 'warn' : 'bad')}${kpi((k.webinars_held || 0) + '<small>/3</small>', 'webinaires tenus', 'warn')}${kpi(fmtEur(M.incomeQ), 'encaissé 2PaP depuis le 1er sept.')}${kpi(M.sales2pap, 'ventes 2PaP ≥ 1 500 € en 2026')}</div>`;
+    if (k.notes) h += `<p class="muted">${esc(k.notes)}</p>`;
+    h += '<h3>KPIs du trimestre</h3><table class="t"><tr><th>KPI</th><th>Type</th><th>Cible</th></tr>' + M.kpisQ.map(x => `<tr><td>${esc(x.kpi)}<br><span class="muted">${esc(trunc(x.def, 120))}</span></td><td>${esc(x.type || '')}</td><td class="n">${esc(String(x.target ?? ''))}</td></tr>`).join('') + '</table>';
+    const inc = S.income.filter(r => r.date >= '2026-05-01'); const byM = {}; for (const r of inc) { const m = r.date.slice(0, 7); byM[m] = (byM[m] || 0) + r.amount; } const ms = Object.keys(byM).sort();
+    if (ms.length) h += '<h3>Encaissements 2PaP depuis mai</h3>' + barChart(ms.map(m => byM[m]), ms.map(monthLabel), {label: 'Encaissements 2PaP', color: 'var(--s2)'});
+    if (p.karma) { h += `<h3>Todoist</h3><div class="kpis">${kpi(fmtNum(p.karma), 'karma (' + (p.karmaTrend === 'up' ? 'en hausse' : 'stable') + ')', 'good')}${kpi(p.currentDailyStreak + ' j', 'série quotidienne (record ' + p.maxDailyStreak + ')')}${kpi(p.currentWeeklyStreak + ' sem.', 'série hebdo (record ' + p.maxWeeklyStreak + ')')}${kpi(fmtNum(p.completedCount), 'tâches terminées, à vie')}</div>`; h += barChart((p.days || []).map(x => x[1]), (p.days || []).map(x => fmtDate(x[0]).split(' ')[0]), {label: 'Tâches terminées par jour', color: 'var(--s3)'}); }
+    const today = todayISO(); const due = S.todoist.filter(t => t.due && t.due.slice(0, 10) <= today).slice(0, 10);
+    if (due.length) h += '<h3>À faire aujourd\'hui</h3><ul>' + due.map(t => `<li>${esc(trunc(t.content, 90))}${t.prio === 'p1' ? ' <span class="tag">p1</span>' : ''}</li>`).join('') + '</ul>';
+    return h;
+  },
+  ecole() {
+    const g = S.german; const lab = [fmtDate(g[0] && g[0].date), fmtDate(g[g.length - 1] && g[g.length - 1].date)];
+    const mins = g.reduce((s, x) => s + (x.min || 0), 0);
+    let h = `<div class="kpis">${kpi(g.length, 'sessions loggées')}${kpi(fmtNum(mins) + ' min', 'de pratique')}${kpi(fmtNum(avg(last(g, 3).map(x => x.fluency))), 'fluency /100 (3 dernières)', 'warn')}${kpi(fmtNum(avg(last(g, 3).map(x => x.comprehension))), 'compréhension /100', 'warn')}</div>`;
+    h += '<h3>Fluency, compréhension, communication</h3>' + lineChart([{name: 'Fluency', values: g.map(x => x.fluency)}, {name: 'Compréhension', values: g.map(x => x.comprehension), color: 'var(--s2)'}, {name: 'Communication', values: g.map(x => x.communication), color: 'var(--s3)'}], {min: 0, max: 100, labels: lab, label: 'Allemand'});
+    h += '<table class="t"><tr><th>Date</th><th>Source</th><th>Min</th><th>Ce qui coince</th></tr>' + g.slice().reverse().map(x => `<tr><td class="muted">${fmtDate(x.date)}</td><td>${esc(x.source || '')}</td><td class="n">${fmtNum(x.min)}</td><td>${esc(trunc(x.stuck || '', 120))}</td></tr>`).join('') + '</table>';
+    const lvl = last(g.filter(x => x.level), 1)[0]; if (lvl) h += `<div class="quote">${esc(lvl.level)}</div>`;
+    const co = S.calendar.filter(e => /2PaP|SOLV/i.test(e.title)); if (co.length) h += '<h3>Cours et coachings cette semaine</h3><ul>' + co.map(e => `<li><span class="muted">${fmtDate(e.start.slice(0, 10))} ${e.start.length > 10 ? e.start.slice(11, 16) : ''}</span> ${esc(e.title)}</li>`).join('') + '</ul>';
+    return h;
+  },
+  observatoire() {
+    const P = S.predictions; const res = P.filter(p => p.resolved === true || p.resolved === 'True'), open = P.filter(p => !(p.resolved === true || p.resolved === 'True'));
+    const acc = avg(res.map(p => Number(p.acc))), brier = avg(res.map(p => Number(p.brier)));
+    const good = res.filter(p => p.sense === '✅').length;
+    let h = `<div class="kpis">${kpi(P.length, 'prédictions')}${kpi(res.length, 'résolues')}${kpi(fmtNum(acc), 'justesse moyenne /100', statusCls((acc || 0) / 100))}${kpi(res.length ? good + '/' + res.length : '–', 'dans le bon sens')}${kpi(fmtNum(brier, 2), 'score de Brier moyen (0 = parfait)')}</div>`;
+    h += '<h3>Ouvertes</h3><table class="t"><tr><th>Question</th><th>Confiance</th><th>Échéance</th></tr>' + open.map(p => `<tr><td>${esc(trunc(p.q, 110))}</td><td class="n">${fmtNum(p.conf)} %</td><td class="muted">${p.due ? fmtDate(p.due) : '–'}</td></tr>`).join('') + '</table>';
+    h += '<h3>Résolues</h3><table class="t"><tr><th>Question</th><th>Conf.</th><th>Issue</th><th>Justesse</th></tr>' + res.map(p => `<tr><td>${esc(trunc(p.q, 90))}</td><td class="n">${fmtNum(p.conf)} %</td><td>${esc(p.status || '')} ${esc(p.sense || '')}</td><td class="n">${fmtNum(p.acc)}</td></tr>`).join('') + '</table>';
+    return h;
+  },
+  marche() {
+    const b = S.balances; const d = last(S.daily.filter(x => x.spentmonth != null), 40);
+    const months = M.months;
+    let h = `<div class="kpis">${kpi(fmtEur(b.perso_30d), 'dépenses perso, 30 derniers jours (audit)', b.perso_30d > 2500 ? 'warn' : 'good')}${kpi('2 500 €', 'plafond mensuel visé')}${kpi(fmtEur(M.lastDay.spentmonth || last(d, 1)[0]?.spentmonth), 'dépensé ce mois (Daily Form)')}</div>`;
+    h += '<h3>Les 30 derniers jours, par bloc</h3>' + barChart((b.perso_blocks || []).map(x => x[1]), (b.perso_blocks || []).map(x => x[0]), {label: 'Dépenses par bloc', color: 'var(--bad)'});
+    if (d.length) h += '<h3>Cumul du mois, jour après jour (Daily Form)</h3>' + lineChart([{name: 'Cumul', values: d.map(x => x.spentmonth), color: 'var(--bad)'}], {min: 0, labels: [fmtDate(d[0].date), fmtDate(d[d.length - 1].date)], label: 'Cumul mensuel des dépenses'});
+    if (months.length) h += '<h3>Dépenses perso 2026 par mois (transactions consolidées)</h3>' + barChart(months.map(m => S.money.monthly[m].perso_out), months.map(monthLabel), {label: 'Dépenses perso par mois', color: 'var(--s1)'});
+    const cats = S.money.perso_cats_since_aug || []; if (cats.length) h += '<h3>Catégories depuis août</h3><table class="t">' + cats.map(c => `<tr><td>${esc(c[0])}</td><td class="n">${fmtEur(c[1])}</td></tr>`).join('') + '</table>';
+    h += '<p class="muted">Le test de l\'achat raisonnable : supprime-t-il une friction hebdomadaire ? Son coût sur douze mois vaut-il le temps gagné ? Rentre-t-il dans l\'enveloppe ? Trois oui, sinon 72 heures.</p>';
+    return h;
+  },
+  meteo() {
+    const w = M.weather;
+    let h = '';
+    if (!w || !w.current) {
+      h += `<div class="quote">Le bulletin n'est pas encore arrivé. La GitHub Action « Météo Berlin » écrit <code>village/data/weather.json</code> deux fois par jour ; la page le lit via ton connecteur GitHub.</div><p>${esc(sunLine())}.</p>`;
+    } else {
+      const c = w.current;
+      h += `<div class="kpis">${kpi(wmoIcon(c.weather_code) + ' ' + fmtNum(c.temperature_2m, 1) + '°', wmoLabel(c.weather_code))}${kpi(fmtNum(c.apparent_temperature, 1) + '°', 'ressenti')}${kpi(fmtNum(c.wind_speed_10m) + ' km/h', 'vent')}${kpi(fmtNum(c.relative_humidity_2m) + ' %', 'humidité')}</div><p class="muted">Relevé ${esc(w.fetched_at || '')} · ${esc(sunLine())}.</p>`;
+      const dd = w.daily || [];
+      h += '<h3>7 jours</h3><table class="t"><tr><th>Jour</th><th></th><th>Min</th><th>Max</th><th>Pluie</th><th>Soleil</th></tr>' + dd.map(x => `<tr><td>${fmtDate(x.date)}</td><td>${wmoIcon(x.weather_code)} ${wmoLabel(x.weather_code)}</td><td class="n">${fmtNum(x.temperature_2m_min)}°</td><td class="n">${fmtNum(x.temperature_2m_max)}°</td><td class="n">${fmtNum(x.precipitation_sum, 1)} mm</td><td class="n">${fmtNum((x.sunshine_duration || 0) / 3600, 1)} h</td></tr>`).join('') + '</table>';
+      const hist = (w.history || []).slice(-60);
+      if (hist.length) {
+        h += '<h3>Soleil et température max, 60 jours</h3>' + lineChart([{name: 'Soleil (h)', values: hist.map(x => (x.sunshine_duration || 0) / 3600)}, {name: 'T max', values: hist.map(x => x.temperature_2m_max), color: 'var(--bad)'}], {labels: [fmtDate(hist[0].date), fmtDate(hist[hist.length - 1].date)], label: 'Soleil et température'});
+        // corrélation soleil / bonheur
+        const byDate = {}; for (const x of (w.history || [])) byDate[x.date] = x;
+        const pairs = S.daily.filter(d => d.happy != null && byDate[d.date]).map(d => [(byDate[d.date].sunshine_duration || 0) / 3600, d.happy]);
+        if (pairs.length > 8) { const mx = avg(pairs.map(p => p[0])), my = avg(pairs.map(p => p[1])); let sxy = 0, sxx = 0, syy = 0; for (const [x, y] of pairs) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; } const r = sxy / Math.sqrt(sxx * syy || 1); h += `<div class="quote">Sur ${pairs.length} jours renseignés, corrélation soleil / bonheur : r = ${fmtNum(r, 2)} (${Math.abs(r) < 0.15 ? 'quasi nulle' : Math.abs(r) < 0.35 ? 'faible' : 'nette'}).</div>`; }
+      }
+    }
+    return h;
+  },
+  horloge() { return PANELS.atelier(); },
+};
+function houseHTML(b) {
+  const c = b.client; const rows = S.income.filter(r => firstName(r.client || r.nature || '').toLowerCase() === c.name.toLowerCase() && r.date >= '2026-01-01');
+  return `<div class="kpis">${kpi(fmtEur(c.total), 'versés en 2026')}${kpi(c.n, 'paiements')}${kpi(fmtDate(c.first), 'premier')}${kpi(fmtDate(c.last), 'dernier')}</div><table class="t"><tr><th>Date</th><th>Montant</th><th>Nature</th></tr>${rows.map(r => `<tr><td class="muted">${fmtDate(r.date)}</td><td class="n">${fmtEur(r.amount)}</td><td>${esc(trunc(r.nature || '', 60))}</td></tr>`).join('')}</table><p class="muted">Chaque client payeur de 2026 a sa maison. Plus il y a de maisons, plus le village vit.</p>`;
+}
+
+/* ---------- HUD, horloge, modes ---------- */
+function renderHUD() {
+  document.getElementById('m-mental').style.width = Math.round(M.mental * 100) + '%';
+  document.getElementById('m-mental').style.background = M.mental >= 0.66 ? 'var(--good)' : M.mental >= 0.4 ? 'var(--warn)' : 'var(--bad)';
+  document.getElementById('v-mental').textContent = Math.round(M.mental * 100) + '%';
+  document.getElementById('v-gold').textContent = fmtEur(M.persoCash);
+  document.getElementById('v-pop').textContent = M.pop; document.getElementById('v-houses').textContent = M.houseCount;
+  const p = S.productivity; document.getElementById('v-xp').textContent = p.karma ? fmtNum(p.karma) + ' · série ' + p.currentDailyStreak + ' j' : '–';
+}
+function renderClock() {
+  const b = berlinNow(); const s = sunTimes(b.date, b.offset);
+  const f = h => h == null ? '–' : String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor((h % 1) * 60)).padStart(2, '0');
+  const w = M.weather && M.weather.current ? ' · ' + wmoIcon(M.weather.current.weather_code) + ' ' + fmtNum(M.weather.current.temperature_2m) + '°' : '';
+  document.getElementById('clock').innerHTML = `BERLIN ${f(b.h)}${w}<br>☀ ${f(s.rise)} → ${f(s.set)}`;
+}
+setInterval(renderClock, 10000);
+document.getElementById('b-village').onclick = () => setMode('village');
+document.getElementById('b-dash').onclick = () => setMode('dash');
+function setMode(m) {
+  const dash = document.getElementById('dash');
+  document.getElementById('b-village').classList.toggle('on', m === 'village'); document.getElementById('b-dash').classList.toggle('on', m === 'dash');
+  if (m === 'dash') { dash.hidden = false; mainEl.hidden = true; dash.innerHTML = BUILDINGS.map(b => `<section><h2>${esc(b.name)}</h2><p class="muted">${esc(b.desc)}</p>${PANELS[b.id] ? PANELS[b.id]() : ''}</section>`).join(''); }
+  else { dash.hidden = true; mainEl.hidden = false; resize(); requestAnimationFrame(loop); }
+  try { localStorage.setItem('village-mode', m); } catch (e) {}
+}
+
+/* ================================================================
+   7. Données en direct via les connecteurs du spectateur (mcp)
+   ================================================================ */
+const DAILY_COLS = {'c-7N0cyxEVGg':'date','c-tAKEYlcGDn':'happy','c-Od1vxNtX6T':'anx','c-SMeU0olwRC':'energy','c-pW1vO6kRX6':'sleepq','c-kWTDwQNdNf':'stab','c-V60e2oSETX':'prod','c-_sD9DJt71G':'social','c-Odae1HQlUR':'love','c-tJk_bVulpZ':'moods','c-Kf1O5x9z3j':'workh','c-JsuqbIIW7K':'lifestyle','c-4iFinWTuGO':'steps','c-pua7ZJvXf7':'sleeph','c-0RW9tPoYvW':'workout','c-7C-OmoGii8':'wins','c-rQEAz7GNN2':'where','c-x0tMPRR8u1':'dayoff','c-f2ng9VRp3c':'drinks','c-BxepVjVc_n':'coffee','c-EUpJrDlBO-':'lep','c-H_1El1gT8j':'spentmonth','c-gg9GjPSZ0s':'socialev','c-WFYbGCMo_h':'hrv','c-1fE2ZjA9-_':'rhr','c-ikg_tCavhk':'weight'};
+const REVIEW_COLS = {'c-X1kw0DODyR':'date','c-rrIg5rLq1T':'brief','c-NMCtOGLqFP':'wins','c-6Jll85DPTl':'domino','c-vJIy3gva4l':'score','c-nQ2PuXbwBE':'week'};
+const WEEK_COLS = {'c-EkSzQV6vZC':'week','c-_jZ-KgEDfc':'start','c-v2P486YM6B':'end','c-NLpNVmQs_-':'focus','c-aB8J0HP9pO':'kpi','c-RIdDkvaKK2':'domino','c-Npv2B-0DiZ':'progress','c-QAnk3V6WCJ':'exec','c-RPdDAT09Wm':'wins','c-Odqq9BRq2o':'decisions','c-Kcbk029_cm':'reviewed'};
+function codaVal(v) { if (v == null) return null; if (Array.isArray(v)) return v.map(codaVal).filter(x => x != null); if (typeof v === 'object') { if (v.type === 'dt') return normDate(v.input); if (v.type === 'dur') return Math.round((v.seconds || 0) / 36) / 100; if (v.scalar != null) return v.scalar; if (v.name != null) return v.name; return null; } return v === '' ? null : v; }
+function normDate(s) { if (!s) return null; s = String(s); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`; m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`; return s; }
+function rowsFrom(payload, cols) { const rows = payload && payload.result && payload.result.rows ? payload.result.rows : (payload && payload.rows) || []; return rows.map(r => { const o = {}; for (const [k, name] of Object.entries(cols)) { if (r.values && r.values[k]) o[name] = codaVal(r.values[k].value); } if (o.workout && Array.isArray(o.workout)) o.workout = o.workout.join(', '); return o; }); }
+const liveSources = new Set();
+function markLive(src) { liveSources.add(src); const el = document.getElementById('live'); el.textContent = 'LIVE · ' + [...liveSources].join(' + '); el.classList.add('on'); }
+function refreshAfterData(regen) { deriveModel(); renderHUD(); renderClock(); if (regen) { buildWorld(); groundReady = false; } }
+async function startLive() {
+  if (!window.claude || typeof window.claude.use !== 'function') return;
+  let mcp = null; try { mcp = await window.claude.use('mcp'); } catch (e) { mcp = null; }
+  if (!mcp) return;
+  const watch = (server, tool, input, onData) => { try { mcp.watchTool(server, tool, input, ev => { if (ev.type === 'data') { try { onData(ev.result); } catch (e) { console.warn(tool, e); } } else console.info('mcp', server, tool, ev.error && ev.error.code); }, {cache: {staleTime: 300000}, refetchInterval: 900000}); } catch (e) { console.warn('watch', server, tool, e); } };
+  // Coda : Daily Form (45 jours), Daily Review, Weekly Goals
+  watch('Coda', 'table_rows_read', {uri: 'coda://docs/8P2-vrLPqE/tables/grid-pHsaGoMNot', rowLimit: 100, filterFormula: 'thisRow.Date >= Today() - 45', columnsToInclude: Object.keys(DAILY_COLS)}, res => {
+    const rows = rowsFrom(res.payload, DAILY_COLS).filter(r => r.date); if (!rows.length) return;
+    const by = {}; for (const d of S.daily) by[d.date] = d; for (const r of rows) by[r.date] = Object.assign(by[r.date] || {}, r);
+    S.daily = Object.values(by).sort((a, b) => a.date < b.date ? -1 : 1); markLive('Coda'); refreshAfterData(true);
+  });
+  watch('Coda', 'table_rows_read', {uri: 'coda://docs/8P2-vrLPqE/tables/grid-ckHqGwo4Zw', rowLimit: 8, filterFormula: 'thisRow.Date >= Today() - 14'}, res => { const rows = rowsFrom(res.payload, REVIEW_COLS).filter(r => r.date).sort((a, b) => a.date < b.date ? -1 : 1); if (rows.length) { S.reviews = rows; markLive('Coda'); refreshAfterData(false); } });
+  watch('Coda', 'table_rows_read', {uri: 'coda://docs/8P2-vrLPqE/tables/grid-NULK1_Z2Yv', rowLimit: 20}, res => { const rows = rowsFrom(res.payload, WEEK_COLS).filter(r => r.start).sort((a, b) => a.start < b.start ? -1 : 1); if (rows.length) { S.weeks = rows; markLive('Coda'); refreshAfterData(false); } });
+  // GitHub : weather.json écrit par la GitHub Action
+  const parseWeather = res => { const blocks = (res && res.content) || []; let txt = typeof res.payload === 'string' ? res.payload : ''; for (const b of blocks) { if (b.type === 'resource' && b.resource && typeof b.resource.text === 'string') txt = b.resource.text; else if (b.type === 'text' && b.text && b.text.includes('fetched_at')) txt = b.text; } if (res.payload && typeof res.payload === 'object' && res.payload.fetched_at) return res.payload; const i = txt.indexOf('{"fetched_at'); if (i < 0) return null; try { return JSON.parse(txt.slice(i, txt.lastIndexOf('}') + 1)); } catch (e) { return null; } };
+  for (const ref of ['refs/heads/master', 'refs/heads/claude/eloquent-brown-riug7e']) {
+    watch('github', 'get_file_contents', {owner: 'tomgauth', repo: 'tomgauth', path: 'village/data/weather.json', ref}, res => { const w = parseWeather(res); if (w && w.fetched_at && (!M.weather || !M.weather.fetched_at || w.fetched_at > M.weather.fetched_at)) { S.weather = w; markLive('GitHub'); refreshAfterData(false); const fw = world.actors.find(a => a.name === 'Frau Wetter'); if (fw) fw.lines = weatherLines().filter(Boolean); } });
+  }
+  // Todoist et Google Calendar
+  watch('Todoist', 'find-tasks-by-date', {startDate: 'today', daysCount: 3, limit: 40}, res => { const p = res.payload; const tasks = p && p.tasks ? p.tasks : null; if (tasks) { S.todoist = tasks.map(t => ({content: t.content, due: t.dueDate || t.due, prio: t.priority, project: t.projectId, labels: t.labels || []})); markLive('Todoist'); } });
+  watch('Todoist', 'get-productivity-stats', {}, res => { const p = res.payload; if (p && p.karma) { const g = p.goals || {}; S.productivity = {completedCount: p.completedCount, karma: p.karma, karmaTrend: p.karmaTrend, dailyGoal: g.dailyGoal, weeklyGoal: g.weeklyGoal, currentDailyStreak: g.currentDailyStreak && g.currentDailyStreak.count, currentWeeklyStreak: g.currentWeeklyStreak && g.currentWeeklyStreak.count, maxDailyStreak: g.maxDailyStreak && g.maxDailyStreak.count, maxWeeklyStreak: g.maxWeeklyStreak && g.maxWeeklyStreak.count, days: (p.daysItems || []).map(d => [d.date, d.totalCompleted]).reverse()}; markLive('Todoist'); renderHUD(); } });
+  watch('Google Calendar', 'list_events', {pageSize: 40, orderBy: 'startTime', timeZone: 'Europe/Berlin'}, res => { const p = res.payload; const ev = p && p.events ? p.events : null; if (ev) { S.calendar = ev.filter(e => e.status !== 'cancelled').map(e => ({start: (e.start && (e.start.dateTime || e.start.date) || '').slice(0, 16), end: (e.end && (e.end.dateTime || e.end.date) || '').slice(0, 16), title: e.summary || '(sans titre)', where: e.location || (e.conferenceUrl ? 'visio' : '')})); markLive('Calendar'); const her = world.actors.find(a => a.name === 'Le Héraut'); if (her) { const t = eventsOn(todayISO()); her.lines = [t.length ? 'Aujourd\'hui : ' + t.map(e => (e.start.length > 10 ? e.start.slice(11, 16) + ' ' : '') + trunc(e.title, 40)).slice(0, 3).join(' · ') : 'Rien au calendrier aujourd\'hui.']; } } });
+}
+
+/* ================================================================
+   8. Démarrage
+   ================================================================ */
+function start() {
+  buildWorld(); renderHUD(); renderClock();
+  let mode = 'village'; try { mode = localStorage.getItem('village-mode') || 'village'; } catch (e) {}
+  if (mode === 'dash') setMode('dash'); else requestAnimationFrame(loop);
+  if (document.fonts && document.fonts.load) document.fonts.load('8px "Press Start 2P"').catch(() => {});
+  startLive();
+}
+if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start); else start();
+</script>

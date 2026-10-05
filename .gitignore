@@ -1,0 +1,5 @@
+# Données personnelles et assets sous licence : jamais dans le dépôt public
+village/data/snapshot.json
+village/data/*.local.json
+village/assets/
+village/dist/
