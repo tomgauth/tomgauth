@@ -15,7 +15,7 @@ if os.path.exists(wpath) and 'weather' not in snap:
     snap['weather'] = json.load(open(wpath, encoding='utf-8'))
 data = json.dumps(snap, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
 assets = {}
-for name, fn in [('atlas', 'atlas.png'), ('water', 'water.png'), ('fire', 'campfire.png'), ('chests', 'chests.png'), ('icons1', 'icons1.png'), ('icons2', 'icons2.png')]:
+for name, fn in [('atlas', 'atlas.png'), ('water', 'water.png'), ('fire', 'campfire.png'), ('chests', 'chests.png'), ('icons1', 'icons1.png'), ('icons2', 'icons2.png'), ('characters', 'characters.png'), ('hair', 'hair.png')]:
     p = os.path.join(here, 'assets', fn)
     if os.path.exists(p):
         assets[name] = 'data:image/png;base64,' + base64.b64encode(open(p, 'rb').read()).decode()

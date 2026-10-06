@@ -32,6 +32,6 @@ python3 village/tools/build_data.py <dossier_exports> village/data/snapshot.json
 python3 village/build.py
 ```
 
-Les sprites viennent des packs Super Retro World (Gif @gif_not_jif, Noiracide
+Les personnages viennent du pack « 16Free » (`characters.png`, `hair.png`, recolorés à la volée par PNJ). Les décors viennent des packs Super Retro World (Gif @gif_not_jif, Noiracide
 @Noiracide, Romi @DessRomaric) : à déposer dans `village/assets/` (atlas.png,
 water.png, campfire.png, chests.png, icons1.png, icons2.png), jamais à redistribuer.

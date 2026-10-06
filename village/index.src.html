@@ -131,7 +131,7 @@ svg.chart text{font-family:var(--body);font-size:11px;fill:var(--ink-2)}
   </div>
 
   <section id="dash" hidden></section>
-  <div id="foot">Sprites : Super Retro World par Gif (@gif_not_jif), Noiracide (@Noiracide) et Romi (@DessRomaric). Données : Coda, Todoist, Google Calendar, Open-Meteo via GitHub Actions.</div>
+  <div id="foot">Sprites : Super Retro World par Gif (@gif_not_jif), Noiracide (@Noiracide) et Romi (@DessRomaric) ; personnages du pack 16Free. Données : Coda, Todoist, Google Calendar, Open-Meteo via GitHub Actions.</div>
 </div>
 
 <script id="snapshot" type="application/json">/*__DATA__*/</script>
@@ -140,7 +140,7 @@ svg.chart text{font-family:var(--body);font-size:11px;fill:var(--ink-2)}
 /* ================================================================
    0. Données
    ================================================================ */
-const ASSETS = /*__ASSETS__*/ {atlas:'assets/atlas.png',water:'assets/water.png',fire:'assets/campfire.png',chests:'assets/chests.png',icons1:'assets/icons1.png',icons2:'assets/icons2.png'} /*__ASSETS_END__*/;
+const ASSETS = /*__ASSETS__*/ {atlas:'assets/atlas.png',water:'assets/water.png',fire:'assets/campfire.png',chests:'assets/chests.png',icons1:'assets/icons1.png',icons2:'assets/icons2.png',characters:'assets/characters.png',hair:'assets/hair.png'} /*__ASSETS_END__*/;
 let S = {};
 try { S = JSON.parse(document.getElementById('snapshot').textContent || '{}') || {}; } catch (e) { S = {}; }
 for (const k of ['daily','reviews','weeks','predictions','income','expenses','friends','wheel','kpis','goals90','northstar','german','habits','todoist','calendar']) if (!Array.isArray(S[k])) S[k] = [];
@@ -149,7 +149,7 @@ S.balances = S.balances || {accounts:[], rules:[], perso_blocks:[]};
 S.productivity = S.productivity || {};
 S.kpi_live = S.kpi_live || {};
 
-const TILE = 16, MAPW = 52, MAPH = 34;
+const TILE = 16, MAPW = 60, MAPH = 34;
 const fmtEur = n => (n == null || isNaN(n)) ? '–' : Math.round(n).toLocaleString('fr-FR') + ' €';
 const fmtAxis = n => Math.abs(n) >= 10000 ? fmtNum(n / 1000, 0) + 'k' : Math.abs(n) >= 1000 ? fmtNum(n / 1000, 1) + 'k' : fmtNum(n, n % 1 ? 1 : 0);
 const fmtNum = (n, d = 0) => (n == null || isNaN(n)) ? '–' : Number(n).toLocaleString('fr-FR', {maximumFractionDigits: d, minimumFractionDigits: d});
@@ -252,46 +252,64 @@ const SPR = {
 };
 
 /* ================================================================
-   2. Personnages procéduraux (le pack n'a pas de PNJ)
+   2. Personnages : pack « 16Free » (corps et cheveux recolorés par PNJ)
+   Feuille 256x64 : 16 colonnes de 16 px (4 frames × 4 directions, colonne = frame*4 + dir
+   avec dir 0 bas, 1 haut, 2 droite, 3 gauche), 2 lignes de 32 px (robe, chemise).
    ================================================================ */
-// 12 x 16, lettres : H cheveux, S peau, E œil, T haut, P pantalon, F pieds, O contour, . vide, W main
-const BODY = {
-  down: [
-    '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HSSSSSSH..','..HSESSESH..','...SSSSSS...','....SSSS....','...TTTTTT...',
-    '..TTTTTTTT..','..STTTTTTS..','..S.TTTT.S..','....TTTT....','....PPPP....','....PPPP....','...PP..PP...','...FF..FF...'],
-  up: [
-    '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HHHHHHHH..','..HHHHHHHH..','...HHHHHH...','....SSSS....','...TTTTTT...',
-    '..TTTTTTTT..','..STTTTTTS..','..S.TTTT.S..','....TTTT....','....PPPP....','....PPPP....','...PP..PP...','...FF..FF...'],
-  side: [
-    '....HHHH....','...HHHHHH...','...HHHHHH...','...HHSSSH...','...HHSESH...','....SSSS....','....SSS.....','....TTTT....',
-    '...TTTTTT...','...TTTTTS...','...TTTT.S...','....TTTT....','....PPPP....','....PPPP....','....PPPP....','....FFF.....'],
-};
+const CH = {w: 16, h: 32, frames: 4, dir: {down: 0, up: 1, right: 2, left: 3}};
 const PAL = {
-  hair: ['#3b2a20', '#1c1612', '#d9a441', '#b5542b', '#8a8a8a', '#5a3a2a', '#e3c38a', '#2c3e6b'],
-  shirt: ['#d94a3d', '#3f7fd6', '#4caf7d', '#e0a030', '#8e5bd6', '#2b9ea8', '#c45c8a', '#6b7f3a', '#e86f2a', '#4a4a5e'],
-  pants: ['#2b3a6b', '#3a3a3a', '#6b4a2b', '#4a5a7a', '#2f5f4f'],
-  skin: ['#f1c9a5', '#e0ac86', '#c8865c', '#8d5a3b', '#f6d6b8'],
+  hair: [['#f6d98b', '#d9a441', '#9a6a1e'], ['#5a4036', '#3b2a20', '#231812'], ['#9a9aa4', '#5f5f6a', '#3a3a44'], ['#e38a5a', '#b5542b', '#7a3417'], ['#34343c', '#1c1612', '#0e0b0a'], ['#f0e2c8', '#d6c3a0', '#a08c66'], ['#5c6fb3', '#2c3e6b', '#1a2545'], ['#c97ab8', '#8e4f85', '#5a2f55'], ['#7fc77a', '#3f8a4a', '#24552c']],
+  shirt: ['#d94a3d', '#3f7fd6', '#4caf7d', '#e0a030', '#8e5bd6', '#2b9ea8', '#c45c8a', '#6b7f3a', '#e86f2a', '#4a4a5e', '#f2c14e', '#8fd3ff'],
+  pants: ['#2b3a6b', '#3a3a3a', '#6b4a2b', '#4a5a7a', '#2f5f4f', '#7a3b3b'],
+  skin: ['#f1c9a5', '#e0ac86', '#c8865c', '#8d5a3b', '#f6d6b8', '#a9714e'],
 };
+const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const shade = (h, f) => hexRgb(h).map(v => Math.round(clamp(v * f, 0, 255)));
 const spriteCache = new Map();
+function recolorBody(data, w, h, look) {
+  const skin = hexRgb(look.skin), skinD = shade(look.skin, 0.82), shirt = hexRgb(look.shirt), shirtD = shade(look.shirt, 0.78), shirtDD = shade(look.shirt, 0.6), pants = hexRgb(look.pants), pantsD = shade(look.pants, 0.7);
+  const dress = look.body === 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4; if (data[i + 3] === 0) continue;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    let c = null;
+    const head = y < 14, legs = y >= 25;
+    if (r === 255 && g === 255 && b === 255) c = head ? skin : legs ? (dress ? shirtD : pants) : shirt;
+    else if (r === 199 && g === 220 && b === 208) c = head ? skin : legs ? (dress ? shirtD : pants) : shirtD;
+    else if (r === 155 && g === 171 && b === 178) c = head ? skinD : legs ? (dress ? shirtDD : pantsD) : shirtDD;
+    else if (r === 127 && g === 112 && b === 138) c = pantsD;
+    if (c) { data[i] = c[0]; data[i + 1] = c[1]; data[i + 2] = c[2]; }
+  }
+}
+function recolorHair(data, w, h, cols, style) {
+  const [L, Mi, D] = cols.map(hexRgb);
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] === 0) continue;
+    const lum = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+    const c = style === 0 ? (lum > 230 ? L : lum > 180 ? Mi : D) : (lum > 200 ? L : lum > 100 ? Mi : D);
+    data[i] = c[0]; data[i + 1] = c[1]; data[i + 2] = c[2];
+  }
+}
 function makeActorSprites(look) {
   const key = JSON.stringify(look);
   if (spriteCache.has(key)) return spriteCache.get(key);
+  if (!IMG.characters) return null;
   const out = {};
-  const colors = {H: look.hair, S: look.skin, E: '#1a1a1a', T: look.shirt, P: look.pants, F: '#2a1a12', W: look.skin};
-  for (const face of ['down', 'up', 'side']) {
-    out[face] = [];
-    for (let f = 0; f < 2; f++) {
-      const c = document.createElement('canvas'); c.width = 12; c.height = 16;
-      const g = c.getContext('2d');
-      const rows = BODY[face].map(r => r);
-      if (f === 1) { // pas de marche : jambes décalées
-        if (face === 'side') { rows[14] = '...PP.PP....'; rows[15] = '..FF...FF...'; }
-        else { rows[13] = '...PPP.PP...'; rows[14] = '...PP...PP..'; rows[15] = '..FF.....FF.'; }
+  for (const [dir, d] of Object.entries(CH.dir)) {
+    out[dir] = [];
+    for (let f = 0; f < CH.frames; f++) {
+      const c = document.createElement('canvas'); c.width = CH.w; c.height = CH.h; const g = c.getContext('2d');
+      const col = f * 4 + d;
+      g.drawImage(IMG.characters, col * CH.w, look.body * CH.h, CH.w, CH.h, 0, 0, CH.w, CH.h);
+      let id = g.getImageData(0, 0, CH.w, CH.h); recolorBody(id.data, CH.w, CH.h, look); g.putImageData(id, 0, 0);
+      if (IMG.hair) {
+        const hc = document.createElement('canvas'); hc.width = CH.w; hc.height = CH.h; const hg = hc.getContext('2d');
+        hg.drawImage(IMG.hair, col * CH.w, look.hairStyle * CH.h, CH.w, CH.h, 0, 0, CH.w, CH.h);
+        const hid = hg.getImageData(0, 0, CH.w, CH.h); recolorHair(hid.data, CH.w, CH.h, look.hair, look.hairStyle); hg.putImageData(hid, 0, 0);
+        g.drawImage(hc, 0, 0);
       }
-      rows.forEach((row, y) => { for (let x = 0; x < 12; x++) { const ch = row[x]; if (ch !== '.' && colors[ch]) { g.fillStyle = colors[ch]; g.fillRect(x, y, 1, 1); } } });
-      if (look.hat) { g.fillStyle = look.hat; g.fillRect(2, 0, 8, 2); g.fillRect(1, 2, 10, 1); }
-      // contour sombre léger (ombre sous les pieds)
-      out[face].push(c);
+      if (look.hat) { g.fillStyle = look.hat; g.fillRect(4, 4, 8, 2); g.fillRect(3, 6, 10, 1); }
+      out[dir].push(c);
     }
   }
   spriteCache.set(key, out);
@@ -299,147 +317,140 @@ function makeActorSprites(look) {
 }
 function lookFor(name, overrides) {
   const h = hash(name);
-  return Object.assign({hair: PAL.hair[h % PAL.hair.length], shirt: PAL.shirt[(h >> 3) % PAL.shirt.length], pants: PAL.pants[(h >> 6) % PAL.pants.length], skin: PAL.skin[(h >> 9) % PAL.skin.length]}, overrides || {});
+  return Object.assign({hair: PAL.hair[h % PAL.hair.length], hairStyle: (h >>> 2) % 2, body: (h >>> 4) % 2, shirt: PAL.shirt[(h >>> 5) % PAL.shirt.length], pants: PAL.pants[(h >>> 9) % PAL.pants.length], skin: PAL.skin[(h >>> 12) % PAL.skin.length]}, overrides || {});
 }
 
 /* ================================================================
    3. Monde : bâtiments, PNJ, décor
    ================================================================ */
 const world = {grid: [], solid: [], buildings: [], decor: [], actors: [], lamps: [], fires: [], ponds: []};
+// Trois rues horizontales (2 tuiles de haut), trois rues verticales, une place pavée au centre.
+const STREETS = [10, 19, 28], VSTREETS = [10, 29, 48], PLAZA = {x: 24, y: 12, w: 12, h: 7};
 const BUILDINGS = [
-  {id:'mairie', name:'Mairie', spr:'house1', tx:24, ty:4, sign:'signInn', desc:'North Star, objectifs 90 jours, semaine en cours'},
-  {id:'banque', name:'Banque', spr:'house10', tx:35, ty:5, desc:'Soldes, revenus 2026, règles'},
-  {id:'temple', name:'Temple', spr:'house5', tx:7, ty:5, desc:'Humeur, sommeil, énergie : la santé mentale'},
-  {id:'taverne', name:'Taverne', spr:'house6', tx:15, ty:14, sign:'signPub', desc:'Amis, vie sociale, amour'},
-  {id:'atelier', name:'Atelier 2PaP', spr:'house8', tx:32, ty:14, sign:'signShop', desc:'Leads, vidéos, webinaires, ventes'},
-  {id:'dojo', name:'Dojo', spr:'hutO', tx:43, ty:13, desc:'Muay Thai, pas, cœur'},
-  {id:'ecole', name:'Sprachschule', spr:'house7', tx:5, ty:14, desc:'Allemand : fluency et compréhension'},
-  {id:'observatoire', name:'Observatoire', spr:'hutB', tx:44, ty:3, desc:'Prédictions et calibration'},
-  {id:'marche', name:'Marché', spr:'hutG', tx:24, ty:22, desc:'Dépenses'},
-  {id:'meteo', name:'Station météo', spr:'house3', tx:38, ty:23, desc:'Météo de Berlin'},
+  {id:'temple', name:'Temple', spr:'house5', tx:3, street:0, desc:'Humeur, sommeil, énergie : la santé mentale'},
+  {id:'mairie', name:'Mairie', spr:'house1', tx:24, street:0, sign:'signInn', desc:'North Star, objectifs 90 jours, semaine en cours'},
+  {id:'banque', name:'Banque', spr:'house10', tx:32, street:0, desc:'Soldes, revenus 2026, règles'},
+  {id:'observatoire', name:'Observatoire', spr:'hutB', tx:51, street:0, desc:'Prédictions et calibration'},
+  {id:'ecole', name:'Sprachschule', spr:'house7', tx:3, street:1, desc:'Allemand : fluency et compréhension'},
+  {id:'taverne', name:'Taverne', spr:'house6', tx:13, street:1, sign:'signPub', desc:'Amis, vie sociale, amour'},
+  {id:'atelier', name:'Atelier 2PaP', spr:'house8', tx:37, street:1, sign:'signShop', desc:'Leads, vidéos, webinaires, ventes'},
+  {id:'dojo', name:'Dojo', spr:'hutO', tx:51, street:1, desc:'Muay Thai, pas, cœur'},
+  {id:'marche', name:'Marché', spr:'hutG', tx:19, street:2, desc:'Dépenses'},
+  {id:'meteo', name:'Station météo', spr:'house3', tx:37, street:2, desc:'Météo de Berlin'},
 ];
-// Maisons résidentielles (une par client payeur), le long des rues
-const HOUSE_SLOTS = [[2,24],[7,24],[12,24],[2,29],[7,29],[12,29],[17,29],[30,29],[35,29],[40,29],[45,29],[17,24],[46,22],[44,8],[12,8],[17,8],[2,10],[29,8]];
-const HOUSE_SPRS = ['house2','house9','house4','house11','houseA','house3','house2','house9','house4','houseA','house11','house2','house9','house4','house2','house9','houseA','house11'];
+// Emplacements des maisons des clients : [tx, rue, sprite]
+const HOUSE_SLOTS = [[12,0,'house2'],[18,0,'house9'],[38,0,'house4'],[44,0,'houseA'],[18,1,'house11'],[42,1,'house2'],[3,2,'house9'],[13,2,'house4'],[23,2,'house11'],[31,2,'house2'],[43,2,'house9'],[50,2,'house4']];
 
 function footprint(b) {
-  const r = SPR[b.spr];
-  const w = Math.ceil(r[2] / TILE), h = Math.ceil(r[3] / TILE);
-  const solidH = Math.max(1, h - 1); // le toit déborde : on peut passer derrière la rangée du haut
-  return {x: b.tx, y: b.ty + (h - solidH), w, h: solidH, fullH: h, door: {x: b.tx + Math.floor(w / 2), y: b.ty + h}};
+  const r = SPR[b.spr]; const w = Math.ceil(r[2] / TILE), fullH = Math.ceil(r[3] / TILE);
+  const streetY = STREETS[b.street];
+  const ty = streetY - fullH - 1; // une rangée de cour entre la maison et la rue
+  return {x: b.tx, y: ty + 1, w, h: fullH - 1, fullH, ty, streetY, door: {x: b.tx + Math.floor(w / 2), y: streetY - 1}};
 }
 
 function buildWorld() {
-  const rnd = mulberry(20261005);
+  const rnd = mulberry(20261006);
   world.grid = []; world.solid = []; world.buildings = []; world.decor = []; world.actors = []; world.lamps = []; world.fires = []; world.ponds = [];
   for (let y = 0; y < MAPH; y++) { world.grid.push(new Array(MAPW).fill(1)); world.solid.push(new Array(MAPW).fill(false)); }
   const G = world.grid, SO = world.solid;
   const setSolid = (x, y, w, h, v = true) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (G[j] && i >= 0 && i < MAPW) SO[j][i] = v; };
-  // 1 = herbe, 2 = chemin sable, 3 = pavé, 4 = herbe sombre, 5 = eau
-  // Rues : une grande rue horizontale, deux verticales, une place centrale pavée
   const road = (x, y, w, h, v = 2) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (G[j] && i >= 0 && i < MAPW) G[j][i] = v; };
-  road(1, 11, MAPW - 2, 2); road(1, 20, MAPW - 2, 2);
-  road(20, 2, 2, 30); road(41, 2, 2, 30); road(10, 2, 2, 30);
-  road(22, 12, 12, 8, 3); // place centrale pavée
-  road(23, 13, 10, 6, 3);
-  // Bâtiments repères
-  for (const b of BUILDINGS) {
-    const f = footprint(b);
-    world.buildings.push(Object.assign({}, b, {fp: f, kind: 'landmark'}));
-    setSolid(f.x, f.y, f.w, f.h);
-    road(f.door.x, f.door.y, 1, Math.max(1, 11 - f.door.y > 0 && f.door.y < 11 ? 11 - f.door.y : (f.door.y < 20 ? 20 - f.door.y : 1)), 2);
-  }
-  // Maisons des clients
-  const clients = M.clients.slice(0, HOUSE_SLOTS.length);
-  clients.forEach((c, i) => {
-    const [tx, ty] = HOUSE_SLOTS[i];
-    const b = {id: 'maison-' + i, name: 'Maison de ' + c.name, spr: HOUSE_SPRS[i % HOUSE_SPRS.length], tx, ty, client: c, kind: 'house'};
-    b.fp = footprint(b);
-    world.buildings.push(b); setSolid(b.fp.x, b.fp.y, b.fp.w, b.fp.h);
-    const dy = b.fp.door.y; const target = dy <= 11 ? 11 : (dy <= 20 ? 20 : 20);
-    if (dy < target) road(b.fp.door.x, dy, 1, target - dy, 2); else if (dy > 21) road(b.fp.door.x, 22, 1, dy - 22 + 1, 2);
-  });
-  M.houseCount = clients.length;
-  // Étang
-  const pond = {x: 2, y: 2, w: 5, h: 5}; world.ponds.push(pond); setSolid(pond.x, pond.y, pond.w, pond.h);
-  const pond2 = {x: 28, y: 25, w: 3, h: 3, small: true}; world.ponds.push(pond2); setSolid(pond2.x, pond2.y, pond2.w, pond2.h);
-  // Feu de camp sur la place
-  world.fires.push({x: 27, y: 16}); setSolid(27, 16, 1, 1);
-  // Lampadaires le long des rues
-  for (const x of [4, 14, 24, 34, 46]) { world.lamps.push({x, y: 10}); world.lamps.push({x: x + 1, y: 19}); }
-  // Décor : végétation = santé mentale
-  const mental = M.mental;
-  const nTrees = 10 + Math.round(mental * 46), nBush = 8 + Math.round(mental * 34), nFlow = Math.round(mental * 60), nRock = Math.round((1 - mental) * 30), nBare = Math.round((1 - mental) * 14);
-  const trees = ['pineBig', 'pineB', 'pineC', 'roundTree', 'pineHuge', 'pineS', 'roundTree', 'pineBig'];
+  // 1 herbe, 2 chemin de sable, 3 pavé, 4 herbe sombre (sous les bâtiments)
+  for (const y of STREETS) road(2, y, MAPW - 4, 2);
+  for (const x of VSTREETS) road(x, 2, 2, MAPH - 4);
+  road(PLAZA.x, PLAZA.y, PLAZA.w, PLAZA.h, 3);
   const free = (x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) { if (!G[j] || i < 0 || i >= MAPW || G[j][i] !== 1 || SO[j][i]) return false; } return true; };
-  const place = (spr, solid, tries = 60, margin = 1) => {
+  const fence = (x, y, n) => { // clôture horizontale de n tuiles (morceaux du sprite fenceH)
+    for (let k = 0; k < n; k++) { const sx = n === 1 ? 32 : k === 0 ? 0 : k === n - 1 ? 32 : 16; world.decor.push({spr: 'fenceH', x: x + k, y, w: 1, h: 1, solid: true, sx, sw: 16}); }
+    setSolid(x, y, n, 1);
+  };
+  const placeBuilding = (b, kind) => {
+    const f = footprint(b); const bb = Object.assign({}, b, {ty: f.ty, fp: f, kind});
+    world.buildings.push(bb); setSolid(f.x, f.y, f.w, f.h);
+    road(f.x, f.y, f.w, f.h, 4);                                // herbe sombre sous les murs (pas sous le toit)
+    road(f.door.x - 1, f.door.y, 3, 1, 2);                      // allée de 3 tuiles jusqu'à la rue
+    if (kind === 'house') {                                     // clôture de part et d'autre de l'allée
+      const left = f.door.x - 1 - f.x, right = f.x + f.w - (f.door.x + 2);
+      if (left > 0) fence(f.x, f.door.y, left); if (right > 0) fence(f.door.x + 2, f.door.y, right);
+    } else {                                                    // jardinières devant les bâtiments publics
+      if (f.door.x - 1 - f.x >= 1) { world.decor.push({spr: 'flowerbox', x: f.x, y: f.door.y, w: 1, h: 1, solid: true, sx: 0, sw: 16}); setSolid(f.x, f.door.y, 1, 1); }
+      if (f.x + f.w - (f.door.x + 2) >= 1) { world.decor.push({spr: 'flowerbox', x: f.x + f.w - 1, y: f.door.y, w: 1, h: 1, solid: true, sx: 16, sw: 16}); setSolid(f.x + f.w - 1, f.door.y, 1, 1); }
+    }
+    return bb;
+  };
+  for (const b of BUILDINGS) placeBuilding(b, 'landmark');
+  const clients = M.clients.slice(0, HOUSE_SLOTS.length);
+  clients.forEach((c, i) => { const [tx, street, spr] = HOUSE_SLOTS[i]; placeBuilding({id: 'maison-' + i, name: 'Maison de ' + c.name, spr, tx, street, client: c, desc: 'Client 2PaP depuis le ' + fmtDate(c.first)}, 'house'); });
+  M.houseCount = clients.length;
+  // Étangs, feu de camp, panneau, lampadaires
+  const pond = {x: 3, y: 1, w: 5, h: 5}; world.ponds.push(pond); setSolid(pond.x, pond.y, pond.w, pond.h);
+  const pond2 = {x: 52, y: 30, w: 3, h: 3, small: true}; world.ponds.push(pond2); setSolid(pond2.x, pond2.y, pond2.w, pond2.h);
+  world.fires.push({x: 29, y: 15}); setSolid(29, 15, 1, 1);
+  world.decor.push({spr: 'signpost', x: 25, y: 13, w: 1, h: 1, solid: true}); setSolid(25, 13, 1, 1);
+  for (const sy of STREETS) for (const x of [6, 15, 22, 36, 45, 55]) { const y = sy + 2; if (free(x, y, 1, 2) || (G[y] && G[y][x] === 1 && !SO[y][x])) { world.lamps.push({x, y}); setSolid(x, y + 1, 1, 1); } }
+  for (const [x, y] of [[22, 13], [37, 13], [22, 17], [37, 17]]) if (free(x, y, 1, 1)) { world.lamps.push({x, y}); setSolid(x, y + 1, 1, 1); }
+  // Terrasse de la taverne et étal du marché
+  for (const [x, y, spr] of [[17, 21, 'barrel'], [18, 21, 'crate'], [17, 22, 'bucket'], [22, 30, 'crates'], [22, 31, 'sprout'], [23, 31, 'carrots'], [24, 31, 'pumpkin']]) { const w = SPR[spr][2] / 16; if (free(x, y, w, 1)) { world.decor.push({spr, x, y, w, h: 1, solid: true}); setSolid(x, y, w, 1); } }
+  // Végétation : la santé mentale décide de la densité
+  const mental = M.mental;
+  const nTrees = 12 + Math.round(mental * 50), nBush = 10 + Math.round(mental * 36), nFlow = Math.round(mental * 70), nRock = Math.round((1 - mental) * 34);
+  const trees = ['pineBig', 'pineB', 'pineC', 'roundTree', 'pineHuge', 'pineS', 'roundTree', 'pineBig'];
+  const place = (spr, solid, tries = 80, margin = 1) => {
     const r = SPR[spr]; const w = Math.ceil(r[2] / TILE), h = Math.ceil(r[3] / TILE);
     for (let t = 0; t < tries; t++) {
       const x = margin + Math.floor(rnd() * (MAPW - w - margin * 2)), y = margin + Math.floor(rnd() * (MAPH - h - margin * 2));
-      if (!free(x - 1, y, w + 2, h + 1)) continue;
+      if (!free(x - 1, y - 1, w + 2, h + 2)) continue;
       world.decor.push({spr, x, y, w, h, solid}); if (solid) setSolid(x, y + Math.max(0, h - 2), w, Math.min(h, 2)); return true;
     }
     return false;
   };
-  // Forêt sur les bords
   for (let i = 0; i < MAPW; i += 2) { for (const yy of [0, MAPH - 3]) if (free(i, yy, 2, 3)) { world.decor.push({spr: trees[Math.floor(rnd() * 3)], x: i, y: yy, w: 2, h: 3, solid: true}); setSolid(i, yy + 1, 2, 2); } }
   for (let j = 0; j < MAPH; j += 3) { for (const xx of [0, MAPW - 2]) if (free(xx, j, 2, 3)) { world.decor.push({spr: 'pineB', x: xx, y: j, w: 2, h: 3, solid: true}); setSolid(xx, j + 1, 2, 2); } }
   for (let i = 0; i < nTrees; i++) place(trees[Math.floor(rnd() * trees.length)], true);
   for (let i = 0; i < nBush; i++) place(['bushM', 'bushR', 'bigbush2', 'bushR', 'bushR'][Math.floor(rnd() * 5)], true);
   for (let i = 0; i < nFlow; i++) place(['flower1', 'flower2', 'flower3', 'plant1', 'plant2', 'tuft1', 'tuft2', 'tuft3'][Math.floor(rnd() * 8)], false);
   for (let i = 0; i < nRock; i++) place(['rock1', 'rock2', 'rocks'][Math.floor(rnd() * 3)], true);
-  for (let i = 0; i < nBare; i++) place('rocks', true);
-  // Potager près du marché, tonneaux près de la taverne
-  const kitchen = [[22, 26, 'sprout'], [23, 26, 'carrots'], [22, 27, 'pumpkin'], [23, 27, 'sprout'], [21, 26, 'fenceV']];
-  for (const [x, y, spr] of kitchen) if (free(x, y, 1, 1)) world.decor.push({spr, x, y, w: 1, h: 1, solid: false});
-  for (const [x, y, spr] of [[19, 17, 'barrel'], [19, 18, 'crate'], [34, 17, 'crates'], [25, 25, 'bucket'], [26, 25, 'barrel']]) if (free(x, y, SPR[spr][2] / 16, 1)) { world.decor.push({spr, x, y, w: SPR[spr][2] / 16, h: 1, solid: true}); setSolid(x, y, SPR[spr][2] / 16, 1); }
-  // Panneau indicateur sur la place
-  world.decor.push({spr: 'signpost', x: 22, y: 12, w: 1, h: 1, solid: true, label: 'place'}); setSolid(22, 12, 1, 1);
   buildActors(rnd);
 }
 
 /* ---------- PNJ : amis, participants, équipe, personnages de service ---------- */
 function buildActors(rnd) {
   const A = world.actors;
-  const freeCell = (nearX, nearY, r = 6) => { for (let t = 0; t < 80; t++) { const x = clamp(nearX + Math.floor((rnd() - 0.5) * r * 2), 1, MAPW - 2), y = clamp(nearY + Math.floor((rnd() - 0.5) * r * 2), 1, MAPH - 2); if (!world.solid[y][x]) return [x, y]; } return [nearX, nearY]; };
+  const doorOf = id => { const b = world.buildings.find(b => b.id === id); return b ? [b.fp.door.x, b.fp.door.y + 2] : [29, 21]; };
+  const freeCell = (nearX, nearY, r = 6) => { for (let t = 0; t < 120; t++) { const x = clamp(nearX + Math.floor((rnd() - 0.5) * r * 2), 2, MAPW - 3), y = clamp(nearY + Math.floor((rnd() - 0.5) * r * 2), 2, MAPH - 3); if (!world.solid[y][x] && !(world.solid[y + 1] && world.solid[y + 1][x])) return [x, y]; } return [nearX, nearY]; };
   const add = (name, lines, opts) => {
-    const [x, y] = freeCell(opts.x ?? 26, opts.y ?? 16, opts.r ?? 6);
+    const [x, y] = freeCell(opts.x ?? 29, opts.y ?? 21, opts.r ?? 6);
     const look = lookFor(name, opts.look);
-    A.push({name, lines: lines.filter(Boolean), x: x * TILE, y: y * TILE, home: {x, y, r: opts.r ?? 6}, face: 'down', frame: 0, speed: opts.speed ?? 0.35, wait: rnd() * 3, target: null, sprites: makeActorSprites(look), role: opts.role || '', player: !!opts.player, bubble: null, bubbleT: 0, thought: !!opts.thought});
+    A.push({name, lines: lines.filter(Boolean), x: x * TILE, y: y * TILE - 14, home: {x, y, r: opts.r ?? 6}, face: 'down', frame: 0, speed: opts.speed ?? 0.35, wait: rnd() * 3, target: null, look, sprites: null, role: opts.role || '', player: !!opts.player, bubble: null, bubbleT: 0, thought: !!opts.thought});
     return A[A.length - 1];
   };
-  // Tom
   const wins = S.daily.filter(d => d.wins).map(d => d.wins);
   const tomLines = [].concat(last(wins, 6).map(w => trunc(w, 140)), [M.review.brief ? trunc(M.review.brief.split('\n')[0], 160) : null, M.week.domino ? 'Lead domino : ' + trunc(M.week.domino, 120) : null]).filter(Boolean);
-  const tom = add('Tom', tomLines, {x: 26, y: 18, player: true, speed: 1.15, look: {hair: '#2a1d16', shirt: '#e86f2a', pants: '#2b3a6b', skin: '#f1c9a5'}, thought: true});
-  // Amis (Friend CRM)
-  const bx = {taverne: 17, atelier: 34, ecole: 7, dojo: 44, mairie: 26};
+  const tom = add('Tom', tomLines, {x: 29, y: 17, r: 1, player: true, speed: 1.15, look: {hair: PAL.hair[1], hairStyle: 1, body: 1, shirt: '#e86f2a', pants: '#2b3a6b', skin: '#f1c9a5'}, thought: true});
+  const [tvx, tvy] = doorOf('taverne'), [atx, aty] = doorOf('atelier'), [ecx, ecy] = doorOf('ecole'), [dox, doy] = doorOf('dojo'), [bax, bay] = doorOf('banque'), [obx, oby] = doorOf('observatoire'), [mex, mey] = doorOf('meteo');
   for (const f of S.friends) {
     const lines = [f.next ? '« ' + trunc(f.next, 150) + ' »' : null, f.life ? trunc(f.life, 150) : null, f.last ? 'Dernier contact le ' + fmtDate(f.last) + (f.channel ? ' (' + f.channel + ')' : '') + '.' : 'On ne s\'est pas parlé depuis un moment.', f.means ? trunc(f.means, 140) : null, f.where ? 'Je suis à ' + trunc(f.where, 60) + '.' : null];
-    add(firstName(f.name), lines, {x: bx.taverne + 2, y: 17, r: 7, role: 'ami'});
+    add(firstName(f.name), lines, {x: tvx + 3, y: tvy + 1, r: 7, role: 'ami'});
   }
-  // Participants 2PaP (clients 2026) devant leur maison
   world.buildings.filter(b => b.kind === 'house').forEach(b => {
     const c = b.client;
     const lines = ['Je suis dans De Prof à Pro depuis le ' + fmtDate(c.first) + '. ' + fmtEur(c.total) + ' versés en ' + c.n + ' paiement' + (c.n > 1 ? 's' : '') + '.', c.last >= '2026-08-15' ? 'Dernier paiement le ' + fmtDate(c.last) + '.' : 'Mon dernier paiement date du ' + fmtDate(c.last) + '.', 'Ma maison, c\'est ta trésorerie.'];
     add(c.name, lines, {x: b.fp.door.x, y: b.fp.door.y + 1, r: 3, role: 'participant'});
   });
-  // Équipe SOLV
-  add('Lilian', ['Les ventes SOLV, c\'est moi. Toi, tu construis le flux 2PaP.', 'Le tuto flashcards SOLV, tu l\'enregistres quand ?', 'SOLV a encaissé ' + fmtEur(M.solvIn2026) + ' depuis janvier.'], {x: 36, y: 17, r: 4, role: 'équipe', look: {shirt: '#2b9ea8'}});
-  add('Clarisse', ['Les quatre vidéos sont enregistrées. Je monte et je publie les trois autres.', 'Les miniatures Facebook, puis LinkedIn : je m\'en occupe.', 'Les pages Témoignages et Travailler avec Tom sont dans la file.'], {x: 33, y: 18, r: 4, role: 'équipe', look: {shirt: '#c45c8a'}});
-  add('Inès', ['Mes élèves SOLV progressent. 200 € par mois, et on tient le rythme.'], {x: 30, y: 18, r: 4, role: 'équipe', look: {shirt: '#4caf7d'}});
-  // Personnages de service
+  add('Lilian', ['Les ventes SOLV, c\'est moi. Toi, tu construis le flux 2PaP.', 'Le tuto flashcards SOLV, tu l\'enregistres quand ?', 'SOLV a encaissé ' + fmtEur(M.solvIn2026) + ' depuis janvier.'], {x: atx - 2, y: aty + 1, r: 4, role: 'équipe', look: {shirt: '#2b9ea8'}});
+  add('Clarisse', ['Les quatre vidéos sont enregistrées. Je monte et je publie les trois autres.', 'Les miniatures Facebook, puis LinkedIn : je m\'en occupe.', 'Les pages Témoignages et Travailler avec Tom sont dans la file.'], {x: atx + 2, y: aty + 1, r: 4, role: 'équipe', look: {shirt: '#c45c8a'}});
+  add('Inès', ['Mes élèves SOLV progressent. 200 € par mois, et on tient le rythme.'], {x: atx, y: aty + 2, r: 4, role: 'équipe', look: {shirt: '#4caf7d'}});
   const todayEv = eventsOn(todayISO());
   const tomorrowEv = eventsOn(shiftDate(todayISO(), 1));
-  add('Le Héraut', [todayEv.length ? 'Aujourd\'hui : ' + todayEv.map(e => (e.start.length > 10 ? e.start.slice(11, 16) + ' ' : '') + trunc(e.title, 40)).slice(0, 3).join(' · ') : 'Rien d\'inscrit au calendrier aujourd\'hui.', tomorrowEv.length ? 'Demain : ' + tomorrowEv.map(e => (e.start.length > 10 ? e.start.slice(11, 16) + ' ' : '') + trunc(e.title, 40)).slice(0, 3).join(' · ') : null, 'Oyez ! ' + S.todoist.filter(t => (t.due || '').slice(0, 10) <= todayISO()).length + ' tâches Todoist pour aujourd\'hui ou en retard.'], {x: 25, y: 13, r: 2, role: 'héraut', look: {shirt: '#e0a030', hat: '#d94a3d'}});
-  add('La Trésorière', ['Trésor perso : ' + fmtEur(M.persoCash) + '. Soit ' + fmtNum(M.runway, 1) + ' mois de vie à 2 500 € par mois.', 'LEP à ' + fmtEur(M.lep) + '. Ligne rouge : 7 500 €.', 'Wise SOLV : ' + fmtEur(M.wise) + ', trésorerie de l\'OÜ, pas ton argent. Ta règle.', 'Chaque 1er du mois : compléter N26 à 2 500 € une fois le loyer passé.'], {x: 38, y: 9, r: 3, role: 'trésor', look: {shirt: '#4a4a5e', hair: '#8a8a8a'}});
-  add('Aron', ['Le loyer de novembre, 829,50 €, part du N26 dans quatre semaines.', 'Laszlo habite tout près maintenant. Vous êtes quasiment voisins.'], {x: 14, y: 26, r: 4, role: 'coloc', look: {shirt: '#6b7f3a'}});
-  add('Frau Wetter', weatherLines(), {x: 40, y: 27, r: 3, role: 'météo', look: {shirt: '#8fd3ff', hair: '#e3c38a'}});
+  add('Le Héraut', [todayEv.length ? 'Aujourd\'hui : ' + todayEv.map(e => (e.start.length > 10 ? e.start.slice(11, 16) + ' ' : '') + trunc(e.title, 40)).slice(0, 3).join(' · ') : 'Rien d\'inscrit au calendrier aujourd\'hui.', tomorrowEv.length ? 'Demain : ' + tomorrowEv.map(e => (e.start.length > 10 ? e.start.slice(11, 16) + ' ' : '') + trunc(e.title, 40)).slice(0, 3).join(' · ') : null, 'Oyez ! ' + S.todoist.filter(t => (t.due || '').slice(0, 10) <= todayISO()).length + ' tâches Todoist pour aujourd\'hui ou en retard.'], {x: 27, y: 14, r: 2, role: 'héraut', look: {shirt: '#e0a030', hat: '#d94a3d', hairStyle: 1}});
+  add('La Trésorière', ['Trésor perso : ' + fmtEur(M.persoCash) + '. Soit ' + fmtNum(M.runway, 1) + ' mois de vie à 2 500 € par mois.', 'LEP à ' + fmtEur(M.lep) + '. Ligne rouge : 7 500 €.', 'Wise SOLV : ' + fmtEur(M.wise) + ', trésorerie de l\'OÜ, pas ton argent. Ta règle.', 'Chaque 1er du mois : compléter N26 à 2 500 € une fois le loyer passé.'], {x: bax, y: bay + 1, r: 3, role: 'trésor', look: {shirt: '#4a4a5e', hair: PAL.hair[2], hairStyle: 0, body: 0}});
+  add('Aron', ['Le loyer de novembre, 829,50 €, part du N26 dans quatre semaines.', 'Laszlo habite tout près maintenant. Vous êtes quasiment voisins.'], {x: 6, y: 31, r: 4, role: 'coloc', look: {shirt: '#6b7f3a'}});
+  add('Frau Wetter', weatherLines(), {x: mex, y: mey + 1, r: 3, role: 'météo', look: {shirt: '#8fd3ff', hair: PAL.hair[5], hairStyle: 0, body: 0}});
   const gl = last(S.german, 1)[0];
-  add('Yogi', [gl ? 'Du schwimmst gut. Dernier cours : fluency ' + fmtNum(gl.fluency) + '/100, compréhension ' + fmtNum(gl.comprehension) + '/100.' : 'Wie bitte ? Seit wann ?', 'Quand un détail n\'est pas sûr : Wie bitte ? Seit wann ? Demander plutôt que deviner.', 'Tu veux réserver un nouveau paquet de cours depuis Berlin. Cinq ou dix.'], {x: 8, y: 17, r: 4, role: 'prof', look: {shirt: '#3f7fd6'}});
-  add('Nora', ['Jut, wa ? Freuste dich uff Berlin ?', 'Ick hab dit jeschafft. Et toi, tu dis quoi ?', 'Der Hammer ! Mais tu m\'as demandé « wie bitte » cinq fois.'], {x: 6, y: 18, r: 4, role: 'agent vocal', look: {shirt: '#8e5bd6', hair: '#1c1612'}});
-  add('Le Maître', ['Muay Thai Basics ce soir à 19 h. Prends les gants.', M.steps14 ? fmtNum(M.steps14) + ' pas par jour en moyenne sur 14 jours.' : null, 'Relax, relax, jab jab, right hook, elbow, knee.'], {x: 45, y: 18, r: 3, role: 'dojo', look: {shirt: '#d94a3d', hair: '#1c1612'}});
-  add('L\'Oracle', predictionLines(), {x: 45, y: 8, r: 3, role: 'oracle', look: {shirt: '#2c3e6b', hair: '#8a8a8a', hat: '#8e5bd6'}});
+  add('Yogi', [gl ? 'Du schwimmst gut. Dernier cours : fluency ' + fmtNum(gl.fluency) + '/100, compréhension ' + fmtNum(gl.comprehension) + '/100.' : 'Wie bitte ? Seit wann ?', 'Quand un détail n\'est pas sûr : Wie bitte ? Seit wann ? Demander plutôt que deviner.', 'Tu veux réserver un nouveau paquet de cours depuis Berlin. Cinq ou dix.'], {x: ecx + 1, y: ecy + 1, r: 4, role: 'prof', look: {shirt: '#3f7fd6', hairStyle: 1}});
+  add('Nora', ['Jut, wa ? Freuste dich uff Berlin ?', 'Ick hab dit jeschafft. Et toi, tu dis quoi ?', 'Der Hammer ! Mais tu m\'as demandé « wie bitte » cinq fois.'], {x: ecx - 1, y: ecy + 2, r: 4, role: 'agent vocal', look: {shirt: '#8e5bd6', hair: PAL.hair[4], hairStyle: 0, body: 0}});
+  add('Le Maître', ['Muay Thai Basics ce soir à 19 h. Prends les gants.', M.steps14 ? fmtNum(M.steps14) + ' pas par jour en moyenne sur 14 jours.' : null, 'Relax, relax, jab jab, right hook, elbow, knee.'], {x: dox, y: doy + 1, r: 3, role: 'dojo', look: {shirt: '#d94a3d', hair: PAL.hair[4], hairStyle: 1}});
+  add('L\'Oracle', predictionLines(), {x: obx, y: oby + 1, r: 3, role: 'oracle', look: {shirt: '#2c3e6b', hair: PAL.hair[2], hairStyle: 0, hat: '#8e5bd6', body: 0}});
   M.pop = A.length - 1;
   world.player = tom;
 }
@@ -466,7 +477,7 @@ function berlinNow() {
   const now = new Date();
   const parts = new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Berlin', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false, year: 'numeric', month: 'numeric', day: 'numeric'}).formatToParts(now);
   const o = {}; for (const p of parts) o[p.type] = p.value;
-  const h = (+o.hour % 24) + (+o.minute) / 60 + (+o.second) / 3600;
+  const h = typeof window.FORCE_HOUR === 'number' ? window.FORCE_HOUR : (+o.hour % 24) + (+o.minute) / 60 + (+o.second) / 3600;
   // décalage Berlin/UTC en heures
   const asUTC = Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour % 24, +o.minute, +o.second);
   const offset = Math.round((asUTC - now.getTime()) / 36e5);
@@ -558,7 +569,7 @@ canvas.addEventListener('click', e => {
   const wx = (e.clientX - rect.left) / scale + camX, wy = (e.clientY - rect.top) / scale + camY;
   const b = world.buildings.find(b => wx >= b.tx * TILE && wx < b.tx * TILE + SPR[b.spr][2] && wy >= b.ty * TILE && wy < b.ty * TILE + SPR[b.spr][3]);
   if (b) { openBuilding(b); return; }
-  const a = world.actors.find(a => !a.player && wx >= a.x - 2 && wx < a.x + 14 && wy >= a.y - 4 && wy < a.y + 16);
+  const a = world.actors.find(a => !a.player && wx >= a.x && wx < a.x + 16 && wy >= a.y + 2 && wy < a.y + 32);
   if (a) talkTo(a);
 });
 
@@ -568,14 +579,14 @@ function moveDir() {
   if (keys.arrowup || keys.z || keys.w || keys.padup) dy -= 1; if (keys.arrowdown || keys.s || keys.paddown) dy += 1;
   return [dx, dy];
 }
-function blocked(px, py) { // boîte de collision : pieds du personnage (12 x 6)
-  const pts = [[px + 1, py + 10], [px + 10, py + 10], [px + 1, py + 15], [px + 10, py + 15]];
+function blocked(px, py) { // boîte de collision : les pieds (x 3..12, y 25..30 du sprite 16x32)
+  const pts = [[px + 3, py + 25], [px + 12, py + 25], [px + 3, py + 30], [px + 12, py + 30]];
   for (const [x, y] of pts) { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (tx < 0 || ty < 0 || tx >= MAPW || ty >= MAPH || world.solid[ty][tx]) return true; }
   return false;
 }
-function actorBlocked(a, nx, ny) { if (blocked(nx, ny)) return true; for (const o of world.actors) { if (o === a) continue; if (Math.abs(o.x - nx) < 9 && Math.abs(o.y - ny) < 9) return true; } return false; }
+function actorBlocked(a, nx, ny) { if (blocked(nx, ny)) return true; for (const o of world.actors) { if (o === a) continue; if (Math.abs(o.x - nx) < 10 && Math.abs(o.y - ny) < 8) return true; } return false; }
 
-let lastT = performance.now(), anim = 0, dialogOpen = false;
+let lastT = performance.now(), anim = 0, dialogOpen = false, hintHidden = false;
 function step(dt) {
   anim += dt;
   const P = world.player;
@@ -585,7 +596,7 @@ function step(dt) {
     if (dx || dy) {
       const sp = P.speed * dt * 60; let nx = P.x + dx * sp, ny = P.y + dy * sp;
       if (!actorBlocked(P, nx, P.y)) P.x = nx; if (!actorBlocked(P, P.x, ny)) P.y = ny;
-      P.face = dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down'; P.walking = true;
+      P.face = dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down'; P.walking = true; if (!hintHidden) { hintHidden = true; document.getElementById('hint').hidden = true; }
     } else P.walking = false;
   }
   // PNJ : errance
@@ -616,16 +627,16 @@ function step(dt) {
   for (const a of world.actors) if (a.bubbleT > 0) { a.bubbleT -= dt; if (a.bubbleT <= 0) a.bubble = null; }
   // Caméra
   const mapPxW = MAPW * TILE, mapPxH = MAPH * TILE;
-  camX = clamp(P.x + 6 - viewW / 2, 0, Math.max(0, mapPxW - viewW)); camY = clamp(P.y + 8 - viewH / 2, 0, Math.max(0, mapPxH - viewH));
+  camX = clamp(P.x + 8 - viewW / 2, 0, Math.max(0, mapPxW - viewW)); camY = clamp(P.y + 16 - viewH / 2, 0, Math.max(0, mapPxH - viewH));
   if (viewW > mapPxW) camX = -(viewW - mapPxW) / 2; if (viewH > mapPxH) camY = -(viewH - mapPxH) / 2;
   camX = Math.round(camX); camY = Math.round(camY);
 }
 let bubbleTimer = 2;
 function onScreen(a) { return a.x > camX - 16 && a.x < camX + viewW + 16 && a.y > camY - 16 && a.y < camY + viewH + 16; }
 function nearestInteractable() {
-  const P = world.player; const px = P.x + 6, py = P.y + 12; let best = null, bd = 26;
-  for (const a of world.actors) { if (a.player) continue; const d = Math.hypot(a.x + 6 - px, a.y + 12 - py); if (d < bd) { bd = d; best = {actor: a, d}; } }
-  for (const b of world.buildings) { const dx = b.fp.door.x * TILE + 8, dy = b.fp.door.y * TILE + 4; const d = Math.hypot(dx - px, dy - py); if (d < bd) { bd = d; best = {building: b, d}; } }
+  const P = world.player; const px = P.x + 8, py = P.y + 28; let best = null, bd = 28;
+  for (const a of world.actors) { if (a.player) continue; const d = Math.hypot(a.x + 8 - px, a.y + 28 - py); if (d < bd) { bd = d; best = {actor: a, d}; } }
+  for (const b of world.buildings) { const dx = b.fp.door.x * TILE + 8, dy = b.fp.door.y * TILE + 12; const d = Math.hypot(dx - px, dy - py); if (d < bd) { bd = d; best = {building: b, d}; } }
   return best;
 }
 
@@ -643,17 +654,18 @@ function render() {
   }
   // Objets triés par y (bas du sprite)
   const items = [];
-  for (const d of world.decor) { const r = SPR[d.spr]; items.push({y: d.y * TILE + r[3], draw: () => drawSprite(g, d.spr, d.x * TILE, d.y * TILE)}); }
-  for (const b of world.buildings) { const r = SPR[b.spr]; items.push({y: b.ty * TILE + r[3] - 2, draw: () => { drawSprite(g, b.spr, b.tx * TILE, b.ty * TILE); if (b.sign) drawSprite(g, b.sign, b.tx * TILE + 4, b.ty * TILE + r[3] - 26); if (isNight()) { g.fillStyle = 'rgba(255,210,120,0.55)'; g.fillRect(b.tx * TILE + 10, b.ty * TILE + r[3] - 18, 10, 8); g.fillRect(b.tx * TILE + r[2] - 22, b.ty * TILE + r[3] - 18, 10, 8); } }}); }
+  for (const d of world.decor) { const r = SPR[d.spr]; items.push({y: d.y * TILE + (d.sw ? 16 : r[3]), draw: () => d.sw ? drawTile(g, d.spr, d.x * TILE, d.y * TILE, d.sx, 0, d.sw, 16) : drawSprite(g, d.spr, d.x * TILE, d.y * TILE)}); }
+  for (const b of world.buildings) { const r = SPR[b.spr]; items.push({y: b.ty * TILE + r[3] - 1, draw: () => { drawSprite(g, b.spr, b.tx * TILE, b.ty * TILE); if (b.sign) drawSprite(g, b.sign, b.tx * TILE + 4, b.ty * TILE + r[3] - 26); if (isNight()) { g.fillStyle = 'rgba(255,210,120,0.55)'; g.fillRect(b.tx * TILE + 10, b.ty * TILE + r[3] - 18, 10, 8); g.fillRect(b.tx * TILE + r[2] - 22, b.ty * TILE + r[3] - 18, 10, 8); } }}); }
   for (const l of world.lamps) items.push({y: l.y * TILE + 32, draw: () => drawSprite(g, 'lamp1', l.x * TILE, l.y * TILE)});
   for (const f of world.fires) { const ff = Math.floor(anim * 8) % 3; items.push({y: f.y * TILE + 20, draw: () => { if (IMG.fire) g.drawImage(IMG.fire, ff * 16, 64, 16, 32, f.x * TILE, f.y * TILE - 16, 16, 32); }}); }
   for (const a of world.actors) {
-    items.push({y: a.y + 16, draw: () => {
-      const face = a.face === 'left' || a.face === 'right' ? 'side' : a.face; const fr = a.walking ? (Math.floor(anim * 8) % 2) : 0;
-      const img = a.sprites[face][fr];
-      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(Math.round(a.x) + 2, Math.round(a.y) + 14, 8, 2);
-      if (a.face === 'right') { g.save(); g.translate(Math.round(a.x) + 12, Math.round(a.y)); g.scale(-1, 1); g.drawImage(img, 0, 0); g.restore(); } else g.drawImage(img, Math.round(a.x), Math.round(a.y));
-      if (a.player) { g.fillStyle = '#fff'; g.fillRect(Math.round(a.x) + 5, Math.round(a.y) - 5 + Math.round(Math.sin(anim * 4)), 2, 2); }
+    items.push({y: a.y + 31, draw: () => {
+      if (!a.sprites) a.sprites = makeActorSprites(a.look); if (!a.sprites) return;
+      const fr = a.walking ? (Math.floor(anim * 7) % 4) : 0;
+      const img = a.sprites[a.face][fr];
+      g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(Math.round(a.x) + 4, Math.round(a.y) + 29, 8, 2);
+      g.drawImage(img, Math.round(a.x), Math.round(a.y));
+      if (a.player) { g.fillStyle = '#fff'; g.fillRect(Math.round(a.x) + 7, Math.round(a.y) + Math.round(Math.sin(anim * 4)), 2, 2); }
     }});
   }
   items.sort((p, q) => p.y - q.y); for (const it of items) it.draw();
@@ -663,7 +675,7 @@ function render() {
   g.textAlign = 'left';
   // Indicateur d'interaction
   const near = nearestInteractable();
-  if (near && !dialogOpen) { const x = near.actor ? near.actor.x + 4 : near.building.fp.door.x * TILE + 4, y = near.actor ? near.actor.y - 10 : near.building.fp.door.y * TILE - 10; g.fillStyle = '#ffb347'; g.font = '6px "Press Start 2P", monospace'; g.fillText('E', x + 1, y + Math.round(Math.sin(anim * 5))); }
+  if (near && !dialogOpen) { const x = near.actor ? near.actor.x + 5 : near.building.fp.door.x * TILE + 5, y = near.actor ? near.actor.y - 4 : near.building.fp.door.y * TILE - 6; g.fillStyle = '#ffb347'; g.font = '6px "Press Start 2P", monospace'; g.fillText('E', x + 1, y + Math.round(Math.sin(anim * 5))); }
   g.restore();
   overlay(g);
   renderBubbles();
@@ -688,7 +700,7 @@ function renderBubbles() {
   let html = '';
   for (const a of world.actors) {
     if (!a.bubble) continue;
-    const sx = (a.x + 6 - camX) * scale, sy = (a.y - 4 - camY) * scale;
+    const sx = (a.x + 8 - camX) * scale, sy = (a.y + 2 - camY) * scale;
     if (sx < -100 || sx > rect.width + 100 || sy < -20 || sy > rect.height) continue;
     html += `<div class="bubble ${a.thought ? 'thought' : ''}" style="left:${sx}px;top:${sy}px">${esc(trunc(a.bubble, 90))}</div>`;
   }
@@ -707,7 +719,7 @@ function showDialog(who, text, queue) {
 }
 function advanceDialog() { const tx = dlg.querySelector('.txt'); if (dlgTimer && tx.textContent.length < (tx.dataset.full || '').length) { } if (dlgQueue.length) { const n = dlgQueue.shift(); showDialog(n.who, n.text, dlgQueue); } else hideDialog(); }
 function hideDialog() { dialogOpen = false; dlg.hidden = true; clearInterval(dlgTimer); }
-function talkTo(a) { if (!a.lines.length) return; a.talkingT = 6; a.face = world.player.x < a.x ? 'left' : 'right'; const lines = a.lines.slice(0, 3); showDialog(a.name + (a.role ? ' · ' + a.role : ''), lines[0], lines.slice(1).map(t => ({who: a.name, text: t}))); }
+function talkTo(a) { if (!a.lines.length) return; a.talkingT = 6; a.face = Math.abs(world.player.x - a.x) > Math.abs(world.player.y - a.y) ? (world.player.x < a.x ? 'left' : 'right') : (world.player.y < a.y ? 'up' : 'down'); const lines = a.lines.slice(0, 3); showDialog(a.name + (a.role ? ' · ' + a.role : ''), lines[0], lines.slice(1).map(t => ({who: a.name, text: t}))); }
 
 /* ================================================================
    6. Panneaux : le contenu de chaque bâtiment
