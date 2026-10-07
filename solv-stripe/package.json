@@ -1,0 +1,25 @@
+{
+  "name": "solv-stripe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stripe integration for SOLV Languages and De Prof à Pro: hosted Checkout, instalment plans, invoicing, Stripe Tax and webhooks.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "setup": "node scripts/setup-catalog.js && node scripts/setup-portal.js",
+    "setup:catalog": "node scripts/setup-catalog.js",
+    "setup:portal": "node scripts/setup-portal.js",
+    "invoice": "node scripts/create-invoice.js",
+    "test": "node --test",
+    "stripe:listen": "stripe listen --forward-to localhost:4242/webhooks/stripe"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "stripe": "^18.0.0"
+  }
+}
