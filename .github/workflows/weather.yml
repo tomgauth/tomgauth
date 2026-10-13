@@ -1,0 +1,28 @@
+name: Météo Berlin (dashboard)
+
+on:
+  schedule:
+    - cron: "17 4,16 * * *"   # deux fois par jour (UTC), branche par défaut seulement
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/weather.yml"
+      - "dashboard/tools/fetch_weather.py"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Open-Meteo (Berlin)
+        run: python3 dashboard/tools/fetch_weather.py dashboard/data/weather.json
+      - name: Commit
+        run: |
+          git config user.name "dashboard-weather-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add dashboard/data/weather.json
+          git diff --cached --quiet && echo "rien à commiter" || git commit -m "météo: $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push

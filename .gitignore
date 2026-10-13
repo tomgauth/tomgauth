@@ -1,0 +1,4 @@
+# données personnelles et sorties de build : jamais versionnées (dépôt public)
+dashboard/data/snapshot.json
+dashboard/data/*.local.json
+dashboard/dist/
