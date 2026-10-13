@@ -1,0 +1,7 @@
+{
+  "manifest_version": 3,
+  "name": "Tableau de bord (nouvel onglet)",
+  "version": "1.0",
+  "description": "Ouvre le tableau de bord à chaque nouvel onglet.",
+  "chrome_url_overrides": { "newtab": "newtab.html" }
+}

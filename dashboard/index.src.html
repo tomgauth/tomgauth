@@ -245,6 +245,7 @@ function deriveModel() {
   // kpis quarter
   const K = S.kpi_live || {}; const g = (k, dv) => Object.assign({value: 0, target: 1}, dv || {}, K[k] || {});
   M.q = {cap: S.capberlin || {steps: []}, sales: g('sales_2pap', {target: 6}), videos: g('videos', {target: 12}), leads: g('leads', {target: 500}), webinars: g('webinars', {target: 3})};
+  if (S.youtube && typeof S.youtube.count_since === 'number') { M.q.videos = Object.assign({}, M.q.videos, {value: S.youtube.count_since, note: `${S.youtube.count_since} vidéo${S.youtube.count_since > 1 ? 's' : ''} publiée${S.youtube.count_since > 1 ? 's' : ''} sur la chaîne depuis le ${fmtShort(S.youtube.since || QSTART)} (flux YouTube relevé le ${fmtShort(S.youtube.fetched_at.slice(0, 10))}).`, items: (S.youtube.videos || []).filter(v => v.published >= (S.youtube.since || QSTART)).map(v => [v.published, v.title])}); }
   M.q.capDone = (M.q.cap.steps || []).filter(s => s[1] === 'ok').length; M.q.capTotal = (M.q.cap.steps || []).length || 14;
   // sprint
   const openTxt = (S.todoist || []).filter(t => !t.done).map(t => t.content || '').join(' | ');
@@ -258,7 +259,7 @@ function deriveModel() {
   const ev = (S.calendar || []).filter(e => e.start); M.events = ev; M.evToday = ev.filter(e => e.start.slice(0, 10) === today);
   M.muayWeek = ev.filter(e => /muay|boxen|ringside/i.test(e.title) && e.start.slice(0, 10) >= M.wkStart && e.start.slice(0, 10) <= M.wkEnd);
   const nowKey = berlinNow().date + 'T' + pad(Math.floor(berlinNow().h)) + ':' + pad(Math.floor((berlinNow().h % 1) * 60));
-  M.nowKey = nowKey; M.muayDone = M.muayWeek.filter(e => (e.end || e.start) < nowKey).length;
+  M.nowKey = nowKey; const muayDays = new Set(M.wk.filter(d => /muay|boxe/i.test(String(d.workout || ''))).map(d => d.date)); M.muayWeek.filter(e => (e.end || e.start) < nowKey).forEach(e => muayDays.add(e.start.slice(0, 10))); M.muayDone = muayDays.size; M.muayPlanned = new Set(M.muayWeek.filter(e => (e.end || e.start) >= nowKey).map(e => e.start.slice(0, 10))).size; M.muayTarget = (K.muay_thai && K.muay_thai.target_week) || 3;
   // MIT
   const withMit = daily.filter(d => d.mit).slice(-1)[0]; M.mit = withMit ? {date: withMit.date, text: withMit.mit} : null;
   // weather
@@ -304,9 +305,10 @@ function renderQuarter() {
     <p class="lead" style="margin-top:6px">${dLeft} jours restants. Le trait blanc sur chaque barre, c'est le rythme attendu au jour d'aujourd'hui.</p>
     ${quest('🏛️', 'Cap Berlin', M.q.capDone, M.q.capTotal, 'gold', `<b>${(cap.steps || []).filter(s => s[1] === 'wait').length}</b> étapes attendent quelqu'un d'autre, <b>${(cap.steps || []).filter(s => s[1] === 'todo').length}</b> pas commencées. Clique pour le détail.`, 'cap', 'clickable')}
     <div id="x-cap" class="hidden"><ul class="steps">${stepList}</ul>${thisWeek ? `<p class="note" style="margin-top:8px"><b>Cette semaine, pour toi :</b></p><ul class="steps">${thisWeek}</ul>` : ''}<p class="note">${esc(cap.summary || '')} ${cap.artifact ? `<a href="${esc(cap.artifact)}" target="_blank" rel="noopener">Ouvrir le dossier Cap Berlin</a>` : ''}</p></div>
-    ${quest('💰', 'Ventes 2PaP', q.sales.value, q.sales.target, 'green', `Ventes ≥ 1 500 € depuis le 31/08. Clique pour la liste.`, 'sales', 'clickable')}
+    ${quest('💰', 'Ventes 2PaP', q.sales.value, q.sales.target, 'green', `Ventes 2PaP depuis le 1er septembre. Clique pour la liste.`, 'sales', 'clickable')}
     <div id="x-sales" class="hidden"><ul class="steps">${salesItems || '<li class="muted">Aucune vente enregistrée.</li>'}</ul><p class="note">${esc(q.sales.note || '')}</p></div>
-    ${quest('🎥', 'Vidéos YouTube', q.videos.value, q.videos.target, 'red', esc(q.videos.note || ''))}
+    ${quest('🎥', 'Vidéos YouTube', q.videos.value, q.videos.target, 'red', esc(q.videos.note || '') + (q.videos.items && q.videos.items.length ? ' Clique pour la liste.' : ''), q.videos.items && q.videos.items.length ? 'videos' : null, q.videos.items && q.videos.items.length ? 'clickable' : '')}
+    ${q.videos.items && q.videos.items.length ? `<div id="x-videos" class="hidden"><ul class="steps">${q.videos.items.map(v => `<li><span class="st ok"></span>${esc(fmtShort(v[0]))} · ${esc(v[1])}</li>`).join('')}</ul></div>` : ''}
     ${quest('🧲', 'Leads', q.leads.value, q.leads.target, 'teal', `Compteur au ${q.leads.as_of ? fmtShort(q.leads.as_of) : '?'}. ${esc(q.leads.note || '')}`)}
     ${quest('🎤', 'Webinaires', q.webinars.value, q.webinars.target, 'pink', `${nextWeb}. ${esc(q.webinars.note || '')}`)}
     <p class="note">North Star du trimestre : 500 leads, 3 webinaires, 6 ventes 2PaP d'ici le 30 novembre. Contrainte : 20 h de travail par semaine.</p>`;
@@ -318,7 +320,8 @@ function renderWeek() {
   const sprintList = M.sprint.map(s => `<li><span class="st ${s.done ? 'ok' : 'todo'}"></span><span class="${s.done ? 'muted' : ''}">${esc(s.name)}</span></li>`).join('');
   const quest = (ic, name, v, t, color, sub, pace, unit) => `<div class="quest"><div class="qh"><div class="qn"><span class="ic">${ic}</span>${name}</div><div class="qv px">${fmtNum(v, unit === 'h' ? 1 : 0)}${unit === 'h' ? ' h' : ''}<small> / ${fmtNum(t)}${unit === 'h' ? ' h' : ''}</small></div></div>${bar(v, t, color, pace)}<div class="qs">${sub}</div></div>`;
   const wkPace = M.wkDay / 7;
-  const muaySub = M.muayWeek.length ? `${M.muayDone} cours fait${M.muayDone > 1 ? 's' : ''} sur <b>${M.muayWeek.length} planifiés</b> dans l'agenda cette semaine.` : 'Aucun cours de Muay Thai dans l\'agenda cette semaine.';
+  const muaySub = `Objectif ${M.muayTarget} cours par semaine. ${M.muayDone} fait${M.muayDone > 1 ? 's' : ''} (Daily Form et agenda)${M.muayWeek.length ? `, <b>${M.muayPlanned}</b> journée${M.muayPlanned > 1 ? 's' : ''} encore planifiée${M.muayPlanned > 1 ? 's' : ''} dans l'agenda` : ''}.`;
+  const capW = (S.capberlin && S.capberlin.this_week) || []; const capWeek = capW.length ? `<div class="quest"><div class="qn"><span class="ic">🏛️</span>Cap Berlin, à faire cette semaine <span class="tag">${capW.length}</span></div><ul class="steps" style="margin-top:6px">${capW.map(x => `<li><span class="st todo"></span>${esc(x)}</li>`).join('')}</ul></div>` : '';
   const review = pw ? `<div class="review"><details><summary>Semaine ${pw.week} : ce que la review a retenu</summary>${pw.progress ? `<p><b>Progrès.</b> ${esc(pw.progress)}</p>` : ''}${pw.whynot ? `<p><b>Leçon.</b> ${esc(pw.whynot)}</p>` : ''}${pw.resistance ? `<p><b>Résistance.</b> ${esc(pw.resistance)}</p>` : ''}${pw.wins ? `<p><b>Victoires.</b> ${esc(pw.wins)}</p>` : ''}</details></div>` : '';
   $('p-week').innerHTML = `<h2>🛡 Semaine ${M.wkNum} <span class="sub">${fmtShort(M.wkStart)} → ${fmtShort(M.wkEnd)} · jour ${M.wkDay}/7</span></h2>
     ${bar(M.wkDay, 7, 'blue')}
@@ -326,9 +329,8 @@ function renderWeek() {
     ${quest('🎤', (S.kpi_live.sprint || {}).name || 'Sprint webinaire', M.sprintDone, M.sprint.length || 7, 'pink', 'Une étape est cochée quand plus aucune tâche Todoist ouverte ne la mentionne.', wkPace)}
     <ul class="steps" style="margin-bottom:6px">${sprintList}</ul>
     ${quest('✅', 'Tâches Todoist', M.doneWeek, M.weeklyGoal, 'green', `Objectif hebdo Todoist : ${M.weeklyGoal}. Série en cours : <b>${(S.productivity || {}).currentWeeklyStreak || 0} semaines</b>.`, wkPace)}
-    ${quest('⏱️', 'Heures de travail', M.workWeek, WORK_TARGET, 'gold', `Toggl via le Daily Form. Plafond volontaire : ${WORK_TARGET} h par semaine, pas un objectif à dépasser.`, wkPace, 'h')}
-    ${quest('🥊', 'Muay Thai', M.muayDone, Math.max(4, M.muayWeek.length), 'red', muaySub, wkPace)}
-    ${quest('📋', 'Daily Form rempli', M.formsWeek, 7, 'teal', `${M.formsWeek} jour${M.formsWeek > 1 ? 's' : ''} avec une note d'humeur depuis lundi.`, wkPace)}
+    ${quest('🥊', 'Muay Thai', M.muayDone, M.muayTarget, 'red', muaySub, wkPace)}
+    ${capWeek}
     ${review}`;
 }
 function renderDay() {
@@ -607,7 +609,7 @@ function codaVal(v) { if (v == null) return null; if (typeof v !== 'object') ret
 function rowsFrom(payload, cols) { const rows = payload && payload.result && payload.result.rows ? payload.result.rows : (payload && payload.rows) || []; return rows.map(r => { const o = {}; for (const [k, name] of Object.entries(cols)) if (r.values && r.values[k]) o[name] = codaVal(r.values[k].value); if (Array.isArray(o.workout)) o.workout = o.workout.join(', '); if (o.date) o.date = String(o.date).slice(0, 10); return o; }); }
 const LIVE = {}; let mcpRef = null;
 function markLive(name, state) { LIVE[name] = state; $('live').innerHTML = Object.entries(LIVE).map(([k, v]) => `<span class="${v === 'ok' ? 'on' : v === 'err' ? 'err' : ''}" title="${v}">${esc(k)}</span>`).join(''); }
-function parseWeather(res) { if (res.payload && typeof res.payload === 'object' && res.payload.fetched_at) return res.payload; let txt = typeof res.payload === 'string' ? res.payload : ''; for (const b of res.content || []) { if (b.type === 'resource' && b.resource && typeof b.resource.text === 'string') txt = b.resource.text; else if (b.type === 'text' && b.text && b.text.includes('fetched_at')) txt = b.text; } const i = txt.indexOf('{"fetched_at'); if (i < 0) return null; try { return JSON.parse(txt.slice(i, txt.lastIndexOf('}') + 1)); } catch (e) { return null; } }
+function parseJsonFile(res, key) { if (res.payload && typeof res.payload === 'object' && res.payload[key]) return res.payload; let txt = typeof res.payload === 'string' ? res.payload : ''; for (const b of res.content || []) { if (b.type === 'resource' && b.resource && typeof b.resource.text === 'string') txt = b.resource.text; else if (b.type === 'text' && b.text && b.text.includes(key)) txt = b.text; } const i = txt.indexOf('{"' + key); if (i < 0) return null; try { return JSON.parse(txt.slice(i, txt.lastIndexOf('}') + 1)); } catch (e) { return null; } }
 async function startLive() {
   if (!window.claude || typeof window.claude.use !== 'function') return;
   let mcp = null; try { mcp = await window.claude.use('mcp'); } catch (e) { mcp = null; } if (!mcp) return; mcpRef = mcp;
@@ -623,7 +625,8 @@ async function startLive() {
   watch('Todoist', 'find-tasks-by-date', {startDate: 'today', daysCount: 1, limit: 50}, res => { const p = res.payload; const tasks = p && p.tasks ? p.tasks : null; if (!tasks) return; S.todoist = tasks.map(t => ({content: t.content, due: t.dueDate || t.due, prio: t.priority, project: t.projectId, labels: t.labels || [], duration: t.duration, done: !!t.checked})); refresh(); });
   watch('Todoist', 'get-productivity-stats', {}, res => { const p = res.payload; if (!p || !p.karma) return; const g = p.goals || {}; S.productivity = {completedCount: p.completedCount, karma: p.karma, karmaTrend: p.karmaTrend, dailyGoal: g.dailyGoal, weeklyGoal: g.weeklyGoal, currentDailyStreak: g.currentDailyStreak && g.currentDailyStreak.count, currentWeeklyStreak: g.currentWeeklyStreak && g.currentWeeklyStreak.count, maxDailyStreak: g.maxDailyStreak && g.maxDailyStreak.count, maxWeeklyStreak: g.maxWeeklyStreak && g.maxWeeklyStreak.count, days: (p.daysItems || []).map(d => ({date: d.date, n: d.totalCompleted})), weeks: (p.weekItems || []).map(w => ({from: w.from, to: w.to, n: w.totalCompleted}))}; refresh(); });
   watch('Google Calendar', 'list_events', {pageSize: 40, orderBy: 'startTime', timeZone: TZ}, res => { const p = res.payload; const ev = p && p.events ? p.events : null; if (!ev) return; S.calendar = ev.filter(e => e.status !== 'cancelled').map(e => ({start: (e.start && (e.start.dateTime || e.start.date) || '').slice(0, 16), end: (e.end && (e.end.dateTime || e.end.date) || '').slice(0, 16), allday: !!(e.start && e.start.date && !e.start.dateTime), title: e.summary || '(sans titre)', where: (e.location || (e.conferenceUrl ? 'meet' : '')).slice(0, 60)})); refresh(); });
-  watch('github', 'get_file_contents', {owner: 'tomgauth', repo: 'tomgauth', path: 'dashboard/data/weather.json', ref: 'refs/heads/claude/dashboard'}, res => { const w = parseWeather(res); if (w && w.current) { S.weather = w; refresh(); } });
+  watch('github', 'get_file_contents', {owner: 'tomgauth', repo: 'tomgauth', path: 'dashboard/data/weather.json', ref: 'refs/heads/claude/dashboard'}, res => { const w = parseJsonFile(res, 'fetched_at'); if (w && w.current) { S.weather = w; refresh(); } });
+  watch('github', 'get_file_contents', {owner: 'tomgauth', repo: 'tomgauth', path: 'dashboard/data/youtube.json', ref: 'refs/heads/claude/dashboard'}, res => { const y = parseJsonFile(res, 'fetched_at'); if (y && typeof y.count_since === 'number') { S.youtube = y; refresh(); } });
 }
 $('refresh').addEventListener('click', async () => { if (mcpRef) { try { await mcpRef.invalidate(); } catch (e) {} } else location.reload(); });
 $('theme').addEventListener('click', () => { const cur = document.documentElement.getAttribute('data-theme'); const next = cur === 'light' ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', next); try { localStorage.setItem('dash-theme', next); } catch (e) {} });
