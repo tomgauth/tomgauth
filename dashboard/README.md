@@ -11,10 +11,14 @@ alimentation et agenda.
 - `tools/build_data.py` : convertit les réponses brutes des connecteurs (Coda `table_rows_read`,
   Todoist, Google Calendar) en snapshot compact. Usage :
   `python3 tools/build_data.py <dossier_resultats> data/snapshot.json <dossier_extras>`.
-- `tools/fetch_weather.py` + `.github/workflows/weather.yml` : Open-Meteo deux fois par jour,
-  écrit `data/weather.json` et le commite (la page le lit via le connecteur GitHub).
+- `tools/fetch_weather.py` et `tools/fetch_youtube.py` + `.github/workflows/weather.yml` :
+  Open-Meteo et le flux Atom de la chaîne YouTube, deux fois par jour, écrits dans
+  `data/weather.json` et `data/youtube.json` puis commités (la page les lit via le connecteur GitHub).
+- `chrome-extension/` : ouvre le tableau de bord à chaque nouvel onglet Chrome (voir son README).
+- `assets/` (non versionné) : sprites du pack Cute Fantasy Free de Kenmi, embarqués en data URI
+  par `build.py`. La licence du pack interdit la redistribution, d'où l'exclusion du dépôt.
 
-`data/snapshot.json` et `dist/` sont ignorés par git : le dépôt est public, les données restent
+`data/snapshot.json`, `assets/` et `dist/` sont ignorés par git : le dépôt est public, les données restent
 locales ou dans l'artifact Claude.
 
 ## Le village

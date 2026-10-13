@@ -1,4 +1,5 @@
-# données personnelles et sorties de build : jamais versionnées (dépôt public)
+# données personnelles, assets sous licence et sorties de build : jamais versionnés (dépôt public)
 dashboard/data/snapshot.json
 dashboard/data/*.local.json
+dashboard/assets/
 dashboard/dist/
