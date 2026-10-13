@@ -9,8 +9,18 @@ LAT, LON = 52.52, 13.405
 out = sys.argv[1] if len(sys.argv) > 1 else "weather.json"
 
 def get(url):
-    with urllib.request.urlopen(url, timeout=30) as r:
-        return json.load(r)
+    # Open-Meteo répond parfois lentement : cinq tentatives, délai croissant
+    import time
+    last = None
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r:
+                return json.load(r)
+        except Exception as e:  # noqa: BLE001
+            last = e
+            print(f"tentative {attempt + 1} échouée : {e}", file=sys.stderr)
+            time.sleep(5 * (attempt + 1))
+    raise last
 
 today = dt.date.today()
 start = (today - dt.timedelta(days=150)).isoformat()
