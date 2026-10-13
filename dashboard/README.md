@@ -23,19 +23,22 @@ locales ou dans l'artifact Claude.
 
 ## Le village
 
+Sprites : pack Cute Fantasy Free (Kenmi). Chaque élément est cliquable et explique ce qu'il mesure.
+
 | Élément | Ce qu'il représente |
 | --- | --- |
-| Arbres | santé mentale (bonheur, stabilité, anxiété, énergie sur 14 jours) |
-| Fleurs | bonheur de la semaine |
-| Maisons, fenêtres allumées | vie sociale, événements sociaux |
-| Grange, tracteur, caisses | heures de travail, rythme hebdo, tâches du jour |
-| Champs côté 2PaP | ventes, leads, vidéos, webinaires du trimestre |
-| Champs côté SOLV | encaissements et marge du mois |
-| Puits | trésorerie perso (mois d'avance) |
-| Étang, couleur de l'herbe | sommeil |
-| Lampadaires | série Todoist |
-| Moutons | jours où tu as parlé à des amis |
-| Ciel, soleil, lune, nuages, pluie | heure réelle et météo réelle de Berlin |
+| Maisons (1 ou 2), fenêtres allumées le soir | vie sociale, événements sociaux de la semaine |
+| Fleurs devant les maisons | bonheur moyen de la semaine |
+| Arbres, souches | santé mentale sur 14 jours (bonheur, stabilité, anxiété, énergie) |
+| Atelier clôturé, caisses | travail : tâches terminées aujourd'hui, heures Toggl |
+| Champs 2PaP (gauche) | avancement des quêtes du trimestre (ventes, leads, vidéos, webinaires) |
+| Champs SOLV (droite) | encaissements SOLV du mois contre le mois précédent |
+| Mare, couleur de l'herbe | sommeil |
+| Enclos : vaches, cochons, moutons | clients payants, ventes 2PaP du trimestre, milliers d'euros encaissés ce mois |
+| Poules dans la rue | tâches Todoist terminées aujourd'hui (une pour trois) |
+| Lampadaires | série Todoist (un par tranche de trois jours) |
+| Habitants qui se promènent | toi et l'équipe |
+| Lumière, ombres de nuages, pluie, neige | heure réelle et météo réelle de Berlin |
 
 ## Mise à jour
 

@@ -15,6 +15,13 @@ for name in ('weather', 'youtube'):
         except Exception as e: print(name, 'ignoré :', e)
 payload = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
 out = src.replace('/*__DATA__*/{}', payload, 1)
+# sprites (dossier assets/, non versionné) en data URI
+import base64, glob
+assets = {}
+for f in sorted(glob.glob(os.path.join(HERE, 'assets', '*.png'))):
+    assets[os.path.splitext(os.path.basename(f))[0]] = 'data:image/png;base64,' + base64.b64encode(open(f, 'rb').read()).decode('ascii')
+out = out.replace('/*__ASSETS__*/{}', json.dumps(assets), 1)
+if not assets: print('attention : aucun sprite dans assets/, la scène restera vide')
 os.makedirs(os.path.join(HERE, 'dist'), exist_ok=True)
 dest = os.path.join(HERE, 'dist', 'index.html')
 open(dest, 'w', encoding='utf-8').write(out)
