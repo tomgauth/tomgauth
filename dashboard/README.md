@@ -24,6 +24,10 @@ locales ou dans l'artifact Claude.
 ## Le village
 
 Sprites : pack Cute Fantasy Free (Kenmi). Chaque élément est cliquable et explique ce qu'il mesure.
+Le village couvre les 90 jours du trimestre : un arrondissement par mois, un quartier par semaine.
+Par défaut on voit le quartier de la semaine en cours ; « Tout le village » montre les treize quartiers,
+les futurs encore en friche. La frise sous la scène permet de revoir le village à n'importe quelle date
+(données Daily Form, argent, ventes, vidéos et météo telles qu'elles étaient ce jour-là).
 
 | Élément | Ce qu'il représente |
 | --- | --- |
