@@ -181,7 +181,7 @@ for o in tx:
 snap['money'] = {
     'monthly': {m: {k: round(v, 2) for k, v in d.items()} for m, d in sorted(monthly.items())},
     'perso_cats_since_aug': sorted([[k, round(v, 2)] for k, v in cats.items()], key=lambda x: -x[1])[:12],
-    'recent': [o for o in tx if (o['date'] or '') >= '2026-09-01' and o.get('internal') != 'oui'][-150:],
+    'recent': [o for o in tx if (o['date'] or '') >= '2026-09-01' and o.get('internal') != 'oui'],
     'n_tx': len(tx),
 }
 
@@ -294,6 +294,18 @@ def conv_productivity(d):
             'weeks': [{'from': x['from'], 'to': x['to'], 'n': x['totalCompleted']} for x in d.get('weekItems', [])],
             'karmaGraph': d.get('karmaGraphData', [])}
 CONV = {'todoist': conv_todoist, 'calendar': conv_calendar, 'productivity': conv_productivity}
+def merge_todoist_weeks(prod, extra):
+    # semaines plus anciennes (find-completed-tasks) : totaux + détail par jour
+    weeks = {w['from']: w for w in prod.get('weeks', [])}
+    days = {d['date']: d for d in prod.get('days', [])}
+    for start, w in extra.items():
+        import datetime as _dt
+        end = (_dt.date.fromisoformat(start) + _dt.timedelta(days=6)).isoformat()
+        weeks.setdefault(start, {'from': start, 'to': end, 'n': w['n']})
+        for d, n in (w.get('days') or {}).items(): days.setdefault(d, {'date': d, 'n': n})
+    prod['weeks'] = sorted(weeks.values(), key=lambda w: w['from'], reverse=True)
+    prod['days'] = sorted(days.values(), key=lambda d: d['date'], reverse=True)
+    return prod
 if EXTRA:
     for name in ('todoist', 'calendar', 'weather', 'balances', 'productivity', 'kpi_live', 'capberlin'):
         p = os.path.join(EXTRA, name + '.json')
@@ -302,6 +314,9 @@ if EXTRA:
                 d = json.load(open(p))
                 snap[name] = CONV.get(name, lambda x: x)(d)
             except Exception as e: print('skip', name, e)
+    px = os.path.join(EXTRA, 'todoist_weeks_extra.json')
+    if os.path.exists(px) and 'productivity' in snap:
+        snap['productivity'] = merge_todoist_weeks(snap['productivity'], json.load(open(px)))
 
 json.dump(snap, open(OUT, 'w'), ensure_ascii=False, separators=(',', ':'))
 print('tables:', {k: len(v) for k, v in tables.items()})

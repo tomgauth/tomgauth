@@ -23,26 +23,28 @@ locales ou dans l'artifact Claude.
 
 ## Le village
 
-Sprites : pack Cute Fantasy Free (Kenmi). Chaque élément est cliquable et explique ce qu'il mesure.
-Le village couvre les 90 jours du trimestre : un arrondissement par mois, un quartier par semaine.
-Par défaut on voit le quartier de la semaine en cours ; « Tout le village » montre les treize quartiers,
-les futurs encore en friche. La frise sous la scène permet de revoir le village à n'importe quelle date
-(données Daily Form, argent, ventes, vidéos et météo telles qu'elles étaient ce jour-là).
+Sprites : pack Cute Fantasy Free (Kenmi). Une seule carte pour les 90 jours : un arrondissement par
+mois (une ligne), un quartier par semaine (une colonne), tous reliés par les routes. Six modèles de
+quartier (maisons à gauche ou à droite, champs ou parc en bas, route verticale qui fait un crochet).
+La caméra zoome sur le quartier de la semaine ou recule sur tout le village (boutons, molette,
+glisser, double-clic). La frise sous la scène reconstruit le village à n'importe quelle date.
+
+Ce qui s'accumule sur la semaine, ce qui se lit en moyenne :
 
 | Élément | Ce qu'il représente |
 | --- | --- |
-| Maisons (1 ou 2), fenêtres allumées le soir | vie sociale, événements sociaux de la semaine |
-| Fleurs devant les maisons | bonheur moyen de la semaine |
-| Arbres, souches | santé mentale sur 14 jours (bonheur, stabilité, anxiété, énergie) |
-| Atelier clôturé, caisses | travail : tâches terminées aujourd'hui, heures Toggl |
-| Champs 2PaP (gauche) | avancement des quêtes du trimestre (ventes, leads, vidéos, webinaires) |
-| Champs SOLV (droite) | encaissements SOLV du mois contre le mois précédent |
-| Mare, couleur de l'herbe | sommeil |
-| Enclos : vaches, cochons, moutons | clients payants, ventes 2PaP du trimestre, milliers d'euros encaissés ce mois |
-| Poules dans la rue | tâches Todoist terminées aujourd'hui (une pour trois) |
-| Lampadaires | série Todoist (un par tranche de trois jours) |
-| Habitants qui se promènent | toi et l'équipe |
-| Lumière, ombres de nuages, pluie, neige | heure réelle et météo réelle de Berlin |
+| Maisons (jusqu'à 4, par étapes de construction) | jours avec un événement social dans la semaine (un étage par jour, trois étages par maison) |
+| Parc : jusqu'à 20 fleurs | bonheur moyen sur 7 jours |
+| Arbres, souches, couleur des feuilles | santé mentale sur 14 jours |
+| Mare, couleur de l'herbe | sommeil moyen sur 7 jours |
+| Atelier : caisses | heures Toggl de la semaine (une caisse pour 4 h) |
+| Champs 2PaP | avancement des quêtes du trimestre à cette date |
+| Champs SOLV | encaissements SOLV du mois à cette date |
+| Enclos : moutons, cochons, vaches | milliers d'euros encaissés dans la semaine, ventes 2PaP de la semaine, clients qui ont payé dans la semaine |
+| Poules dans la rue | tâches Todoist terminées dans la semaine (une pour dix) |
+| Lampadaires | jours de la semaine à 10 tâches ou plus (un pour deux) |
+| Habitants | toi et l'équipe |
+| Lumière, ombres de nuages, pluie, neige | heure et météo réelles de Berlin, météo historique pour les dates passées |
 
 ## Mise à jour
 
