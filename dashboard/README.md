@@ -28,7 +28,9 @@ Un bourg serré. Au milieu, le centre-ville compte le trimestre entier ; autour,
 (septembre à l'ouest, octobre à l'est, novembre au sud). Dans un quartier, les maisons de toutes les
 semaines du mois se rangent par ordre de construction, les premières au plus près de la place ;
 chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. La forêt recouvre ce
-qui n'est pas encore bâti. Vues : « Ce mois-ci », « Centre-ville », « Tout le village ». La molette
+qui n'est pas encore bâti. Un ruisseau traverse le quartier de septembre (pont, grenouilles, oies),
+des chevaux paissent au nord, des abeilles tournent autour des ruches ; le sol a des taches de prairie
+et les routes quelques renflements. Vues : « Ce mois-ci », « Centre-ville », « Tout le village ». La molette
 fait défiler la page ; Ctrl + molette, le pincement ou les boutons + et − zooment.
 
 Aucun montant n'apparaît sur la page : l'argent se lit en mois d'avance, en pourcentages ou en moutons.
@@ -53,9 +55,9 @@ Chaque quartier mensuel :
 
 | Élément | Ce qu'il représente |
 | --- | --- |
-| Maisons (une de base par semaine, jusqu'à 4, par étapes) | jours avec un événement social dans la semaine ; toit et plaque par semaine |
+| Une maison par semaine : petite maison, maison à étage, grande, très grande, auberge | 0, 1, 2, 3, 4+ événements sociaux dans la semaine ; une cabane en plus à partir de 2 ; plaque avec le lundi, drapeau jaune sur la semaine en cours |
 | Poules en liberté | leads gagnés dans le mois (une pour dix) |
-| Enclos : moutons, cochons, vaches | milliers d'euros encaissés dans le mois, ventes 2PaP du mois, clients qui ont payé |
+| Grand enclos : moutons, cochons, vaches | milliers d'euros encaissés dans le mois, ventes 2PaP du mois, clients qui ont payé |
 | Mare, canard | sommeil moyen du mois (canard à 80 % et plus) |
 | Champs 2PaP, épouvantail, fermiers | avancement des quêtes du trimestre ; fermiers selon les tâches Todoist du mois |
 | Champs SOLV | encaissements SOLV du mois comparés au précédent |

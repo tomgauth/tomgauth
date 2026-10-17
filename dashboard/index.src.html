@@ -475,7 +475,7 @@ const VIEW = {mode: 'month', date: null};
 const cam = {x: 0, y: 0, s: 1, init: false}; let camAnim = null, zoomScale = 2, fitScale = .3, worldW = 3200, worldH = 2000;
 let OX = 0, OY = 0; // position (en tuiles) du centre de la place dans le monde
 const pxc = c => (c + OX) * T, pyc = r => (r + OY) * T, KEY = (c, r) => (c + OX) + ',' + (r + OY);
-let props = [], blocked = new Set(), objects = [], selected = null, hover = null, t0 = performance.now(), actors = [], drops = [], cloudShadows = [], lights = [], QS = [], V = null, CM = null, lake = null, dragging = null, moved = false, CENTER_BOX = null;
+let streamW = null, props = [], blocked = new Set(), objects = [], selected = null, hover = null, t0 = performance.now(), actors = [], drops = [], cloudShadows = [], lights = [], QS = [], V = null, CM = null, lake = null, dragging = null, moved = false, CENTER_BOX = null;
 const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const MONTHS3 = ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOU', 'SEP', 'OCT', 'NOV', 'DEC'];
 const FONT = {A:'111101111101101',B:'110101110101110',C:'111100100100111',D:'110101101101110',E:'111100110100111',F:'111100110100100',G:'111100101101111',H:'101101111101101',I:'111010010010111',J:'001001001101111',K:'101101110101101',L:'100100100100111',M:'101111111101101',N:'110101101101101',O:'111101101101111',P:'111101111100100',Q:'111101101111001',R:'111101110101101',S:'111100111001111',T:'111010010010010',U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',Y:'101101010010010',Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111',' ':'000000000000000','-':'000000111000000','.':'000000000000010','/':'001001010100100'};
@@ -488,6 +488,17 @@ function drawSign(x, y, line1, line2) { // panneau de bois 34 x 22 sur deux pote
 }
 function drawPlate(x, y, text) { // enseigne d'une ligne, accrochée au mur
   const w = text.length * 4 + 7, h = 11; octx.fillStyle = '#4a2a1a'; octx.fillRect(x, y, w, h); octx.fillStyle = '#a97845'; octx.fillRect(x + 1, y + 1, w - 2, h - 2); octx.fillStyle = '#d8a56a'; octx.fillRect(x + 1, y + 1, w - 2, 1); pxText(text, x + 4, y + 3, '#fff2cc');
+}
+let groundCache = null;
+function textureGround(w, h) { // de grandes taches de prairie plus claire et d'herbe plus sombre, en pixels de 2, pour casser l'uniformité
+  if (groundCache && groundCache.width === w && groundCache.height === h) { octx.drawImage(groundCache, 0, 0); return; }
+  const hash = (x, y) => { let n = (x * 374761393 + y * 668265263) ^ 0x5bd1e995; n = (n ^ (n >>> 13)) * 1274126177; return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+  const vn = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
+  const id = octx.getImageData(0, 0, w, h), px = id.data;
+  for (let by = 0; by < h; by += 2) for (let bx = 0; bx < w; bx += 2) { const n = .62 * vn(bx / 190, by / 190) + .38 * vn(bx / 52 + 17, by / 52 + 5); const dith = ((bx >> 1) + (by >> 1)) % 2 ? .04 : -.04;
+    let dr = 0, dg = 0, db = 0; if (n + dith > .6) { const k = Math.min(1, Math.round((n + dith - .6) / .1) * .34); dr = 16 * k; dg = 12 * k; db = -6 * k; } else if (n + dith < .38) { const k = Math.min(1, Math.round((.38 - n - dith) / .1) * .34); dr = -12 * k; dg = -6 * k; db = 4 * k; } if (!dr) continue;
+    for (let yy = 0; yy < 2 && by + yy < h; yy++) for (let xx = 0; xx < 2 && bx + xx < w; xx++) { const o = ((by + yy) * w + bx + xx) * 4; px[o] = clamp(px[o] + dr, 0, 255); px[o + 1] = clamp(px[o + 1] + dg, 0, 255); px[o + 2] = clamp(px[o + 2] + db, 0, 255); } }
+  octx.putImageData(id, 0, 0); groundCache = document.createElement('canvas'); groundCache.width = w; groundCache.height = h; groundCache.getContext('2d').drawImage(world, 0, 0);
 }
 function rnd(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 function mix(a, b, t) { const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16); const r = Math.round(((pa >> 16) & 255) * (1 - t) + ((pb >> 16) & 255) * t), g = Math.round(((pa >> 8) & 255) * (1 - t) + ((pb >> 8) & 255) * t), bl = Math.round((pa & 255) * (1 - t) + (pb & 255) * t); return '#' + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1); }
@@ -522,26 +533,31 @@ const quartierOf = date => QS.find(q => date >= q.start && date <= q.end) || nul
 const viewDate = () => VIEW.date || M.today;
 
 /* ---- un quartier par mois, serré autour du centre ----
-   Septembre à l'ouest, octobre à l'est, novembre au sud. Dans chaque quartier, les maisons de toutes les
-   semaines du mois se rangent par ordre de construction : les premières au plus près de la place.
-   Chaque maison donne sur une rue par une petite allée ; une plaque devant la porte porte le lundi de sa semaine. */
+   Septembre à l'ouest, octobre à l'est, novembre au sud. Une maison par semaine, d'autant plus grande
+   que la semaine a été sociale : petite maison, maison à étage, grande maison, très grande maison, auberge.
+   Elles se serrent le long des rues dans l'ordre des semaines, la première au plus près de la place ;
+   chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. */
 const DIRS = ['W', 'E', 'S']; let MOS = [];
+const TIERS = [ // modèle, largeur, hauteur, axe de la porte, bas visible du dessin
+  {m: 4, w: 112, h: 96, door: 40, vis: 84, name: 'petite maison'}, {m: 1, w: 96, h: 128, door: 44, vis: 118, name: 'maison à étage'},
+  {m: 2, w: 144, h: 128, door: 40, vis: 115, name: 'grande maison'}, {m: 5, w: 192, h: 128, door: 76, vis: 115, name: 'très grande maison'},
+  {m: 'inn', w: 240, h: 192, door: 122, vis: 179, name: 'auberge'}];
+const CABIN = {m: 'shed', w: 96, h: 112, door: 40, vis: 99, name: 'cabane'};
 function monthLayout(dir) { // tout en tuiles relatives au centre de l'étang
-  const L = {dir, slots: []};
+  const L = {dir};
   if (dir === 'W' || dir === 'E') {
-    const XR = (a, b) => dir === 'W' ? [a, b] : [-b, -a]; // plages écrites pour l'ouest, en miroir pour l'est
-    L.rows = {A: {R: -2, st: [0, 1]}, B: {R: 11, st: [13, 14]}, C: {R: -14, st: [-12, -11]}};
-    for (let k = 0; k < 4; k++) [['A', 0], ['B', 1], ['C', 3]].forEach(([row, pen]) => L.slots.push({row, k, x0: XR(-30 - 8 * k, -23 - 8 * k)[0], R: L.rows[row].R, st: L.rows[row].st[0], d: k * 2 + pen}));
-    L.lane = XR(-22, -21); L.inner = dir === 'W' ? -16 : 15;
-    L.fac = {pen: [XR(-34, -23)[0], 17], pond: [XR(-44, -37)[0], 16], fields: [XR(-35, -23)[0], 21], park: [XR(-46, -38)[0], 21], bench: [XR(-36, -35)[0], 24]};
-    L.trees = [[XR(-57, -48), 15, 25]]; L.sign = [XR(-20, -19)[0], 2]; L.lamps = [[XR(-20, -20)[0], -3], [XR(-36, -36)[0], 17]];
-    L.box = {x0: dir === 'W' ? -57 : 21, x1: dir === 'W' ? -21 : 57, y0: -23, y1: 26};
-  } else { // au sud : trois rues de part et d'autre de l'avenue
-    L.rows = {A: {R: 36, st: [38, 39]}, B: {R: 50, st: [52, 53]}, C: {R: 64, st: [66, 67]}};
-    [['A', 0], ['B', 2.5], ['C', 5]].forEach(([row, pen]) => [[-10, 0], [2, 0], [-18, 1], [10, 1]].forEach(([x0, k], i) => L.slots.push({row, k, x0, R: L.rows[row].R, st: L.rows[row].st[0], d: pen + k * 1.6 + i * .01})));
-    L.fac = {pen: [-33, 29], pond: [22, 29], fields: [-34, 34], park: [21, 34], bench: [31, 37]};
-    L.trees = [[[-36, -21], 38, 50], [[20, 35], 40, 50]]; L.sign = [1, 27]; L.lamps = [[-3, 36], [2, 50]];
-    L.box = {x0: -36, x1: 36, y0: 27, y1: 69};
+    const XR = (a, b) => dir === 'W' ? [a, b] : [-b, -a]; L.XR = XR; // plages écrites pour l'ouest, en miroir pour l'est
+    L.rows = {A: {R: -2, st: [0, 1], tall: true}, B: {R: 10, st: [11, 12]}, C: {R: -14, st: [-12, -11], tall: true}}; L.rowOrder = ['A', 'B', 'A', 'B', 'A', 'B', 'C', 'C', 'C'];
+    L.lane = XR(-22, -21); L.inner = dir === 'W' ? -16 : 15; L.start = dir === 'W' ? -23 : 23;
+    L.fac = {pen: [XR(-40, -23)[0], 15], pond: [XR(-52, -45)[0], 15], fields: [XR(-36, -24)[0], 23], park: [XR(-53, -45)[0], 21], bench: [XR(-40, -39)[0], 25]};
+    L.trees = [[XR(-62, -56), 12, 28]]; L.sign = [XR(-20, -19)[0], 2]; L.lamps = [[XR(-20, -20)[0], -3], [XR(-20, -20)[0], 14]];
+    L.trails = [[XR(-26, -25)[0], 13, 14]]; L.stream = XR(-43, -43)[0]; L.bEnd = XR(-50, -50)[0];
+    L.box = {x0: dir === 'W' ? -62 : 21, x1: dir === 'W' ? -21 : 62, y0: -23, y1: 29};
+  } else { // au sud : des rues de part et d'autre de l'avenue
+    L.rows = {A: {R: 36, st: [38, 39], tall: true}, B: {R: 58, st: [60, 61]}, C: {R: 72, st: [74, 75]}}; L.rowOrder = ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C'];
+    L.fac = {pen: [-21, 41], pond: [3, 41], fields: [3, 46], park: [12, 41], bench: [17, 47]};
+    L.trees = [[[-40, -24], 40, 52], [[22, 38], 40, 52]]; L.sign = [1, 27]; L.lamps = [[-3, 36], [2, 40]]; L.trails = []; L.stream = null;
+    L.box = {x0: -40, x1: 40, y0: 27, y1: 77};
   }
   return L;
 }
@@ -550,30 +566,38 @@ function monthsOf(qs) {
   out.forEach(mo => { mo.start = mo.weeks[0].start; mo.end = mo.weeks[mo.weeks.length - 1].end; mo.dir = DIRS[mo.mi % 3]; mo.L = monthLayout(mo.dir); mo.label = MONTHS_FR[mo.month - 1]; }); return out;
 }
 const monthOf = date => MOS.find(mo => date >= mo.start && date <= mo.end) || null;
+function packSlot(L, row, cursor, tilesW, side) { // place une maison de « tilesW » tuiles à la suite dans sa rangée
+  if (L.dir === 'S') { const c = cursor[row + side] == null ? (side === 'L' ? -2 : 1) : cursor[row + side]; const x0 = side === 'L' ? c - tilesW + 1 : c; cursor[row + side] = side === 'L' ? x0 - 2 : x0 + tilesW + 1; return x0; }
+  const c = cursor[row] == null ? L.start : cursor[row]; const x0 = L.dir === 'W' ? c - tilesW + 1 : c; cursor[row] = L.dir === 'W' ? x0 - 2 : x0 + tilesW + 1; return x0;
+}
 function planMonth(mo, date) {
-  const order = mo.L.slots.slice().sort((a, b) => a.d - b.d); mo.order = order;
-  mo.built = mo.start <= date; mo.ref = mo.end < date ? mo.end : date; mo.m = mo.built ? monthModel(mo, mo.ref) : null; mo.houses = []; mo.lot = null;
-  if (!mo.m) return;
-  mo.m.weekHouses.forEach(wh => { for (let i = 0; i < wh.n; i++) mo.houses.push({q: wh.q, i, wh, stage: i < wh.n - 1 ? 3 : wh.last}); });
-  mo.houses = mo.houses.slice(0, order.length); mo.houses.forEach((h, i) => { h.slot = order[i]; h.model = (order[i].k + 'ABC'.indexOf(order[i].row)) % 2 ? 4 : 1; });
-  const cw = mo.m.weekHouses.find(w => w.q.start <= date && w.q.end >= date); if (cw && cw.n < 4 && mo.houses.length < order.length) mo.lot = order[mo.houses.length];
+  const L = mo.L; mo.built = mo.start <= date; mo.ref = mo.end < date ? mo.end : date; mo.m = mo.built ? monthModel(mo, mo.ref) : null; mo.houses = [];
+  const cursor = {}; const weeks = mo.m ? mo.m.weekHouses : mo.weeks.slice(0, 2).map(q => ({q, days: [], tier: 0, future: true}));
+  weeks.forEach((wh, i) => { const row = L.rowOrder[Math.min(i, L.rowOrder.length - 1)]; let tier = Math.min(4, wh.tier); if (tier === 4 && !L.rows[row].tall) tier = 3;
+    const T0 = TIERS[tier]; const side = L.dir === 'S' ? (i % 2 ? 'R' : 'L') : null; const tilesW = Math.ceil((T0.w + 4) / 16); const x0 = packSlot(L, row, cursor, tilesW, side);
+    const model = T0.m === 2 && i % 2 ? 3 : T0.m, door = model === 3 ? 76 : T0.door; const pc = x0 + Math.max(0, Math.ceil(door / 16) - 1);
+    mo.houses.push(Object.assign({}, wh, {tier, T: T0, model, door, row, x0, x1: x0 + tilesW - 1, pc, R: L.rows[row].R, st: L.rows[row].st[0]}));
+    if (tier >= 2 && !wh.future) { const cw = 6, cx0 = packSlot(L, row, cursor, cw, side); mo.houses.push(Object.assign({}, wh, {annex: true, tier, T: CABIN, model: 'shed', door: 40, row, x0: cx0, x1: cx0 + cw - 1, pc: cx0 + 1, R: L.rows[row].R, st: L.rows[row].st[0]})); } });
 }
 function monthRoads(mo, add) {
-  if (!mo.built) return; const L = mo.L; const used = mo.houses.map(h => h.slot).concat(mo.lot ? [mo.lot] : []); const inRow = r => used.filter(s => s.row === r);
+  if (!mo.built) return; const L = mo.L; const inRow = r => mo.houses.filter(h => h.row === r);
   if (L.dir === 'S') { let last = 24;
-    ['A', 'B', 'C'].forEach(r => { const ss = inRow(r); if (!ss.length) return; const st = L.rows[r].st; last = Math.max(last, st[1]); const xl = Math.min(-1, ...ss.map(s => s.x0)), xr = Math.max(0, ...ss.map(s => s.x0 + 7)); for (let c = xl; c <= xr; c++) { add(c, st[0]); add(c, st[1]); } });
+    ['A', 'B', 'C'].forEach(r => { const hs = inRow(r); if (!hs.length) return; const st = L.rows[r].st; last = Math.max(last, st[1]); const xl = Math.min(-1, ...hs.map(h => h.x0)), xr = Math.max(0, ...hs.map(h => h.x1)); for (let c = xl; c <= xr; c++) { add(c, st[0]); add(c, st[1]); } });
     for (let r = 10; r <= last; r++) { add(-1, r); add(0, r); } }
-  else { const W = L.dir === 'W'; const outer = ss => W ? Math.min(...ss.map(s => s.x0)) : Math.max(...ss.map(s => s.x0 + 7)); const span = (a, b, f) => { for (let c = Math.min(a, b); c <= Math.max(a, b); c++) f(c); };
+  else { const W = L.dir === 'W'; const outer = hs => W ? Math.min(...hs.map(h => h.x0)) : Math.max(...hs.map(h => h.x1)); const span = (a, b, f) => { for (let c = Math.min(a, b); c <= Math.max(a, b); c++) f(c); };
     const a = inRow('A'); span(L.inner, a.length ? outer(a) : (W ? L.lane[0] : L.lane[1]), c => { add(c, 0); add(c, 1); });
     const lane = (r0, r1) => { for (let r = r0; r <= r1; r++) { add(L.lane[0], r); add(L.lane[1], r); } };
-    if (inRow('B').length) { lane(0, 14); span(W ? L.lane[0] : L.lane[1], outer(inRow('B')), c => { add(c, 13); add(c, 14); }); }
+    { lane(0, 12); const ob = inRow('B').length ? outer(inRow('B')) : L.bEnd; span(W ? L.lane[0] : L.lane[1], W ? Math.min(ob, L.bEnd) : Math.max(ob, L.bEnd), c => { add(c, 11); add(c, 12); });
+      L.trails.forEach(([c, r0, r1]) => { for (let r = r0; r <= r1; r++) { add(c, r); add(c + 1, r); } }); }
     if (inRow('C').length) { lane(-12, 1); span(W ? L.lane[0] : L.lane[1], outer(inRow('C')), c => { add(c, -12); add(c, -11); }); } }
-  mo.houses.forEach(h => { const s = h.slot, pc = s.x0 + 2; for (let r = s.R - 1; r < s.st; r++) { add(pc, r); add(pc + 1, r); } });
+  mo.houses.forEach(h => { for (let r = h.R - 1; r < h.st; r++) { add(h.pc, r); add(h.pc + 1, r); } });
 }
 
 /* ---- modèles de données ---- */
 function lerpPoints(points, date) { const pts = points.slice().sort((a, b) => a[0] < b[0] ? -1 : 1); if (!pts.length) return 0; if (date <= pts[0][0]) return date < pts[0][0] ? 0 : pts[0][1]; for (let i = 1; i < pts.length; i++) if (date <= pts[i][0]) { const a = pts[i - 1], b = pts[i]; const t = daysBetween(a[0], date) / Math.max(1, daysBetween(a[0], b[0])); return Math.round(a[1] + (b[1] - a[1]) * t); } return pts[pts.length - 1][1]; }
-const sleepOf = d => d.applesleep != null ? d.applesleep : (d.sleepq != null ? d.sleepq * 10 : null);
+let sleepCal = null; // quand Apple Santé manque, la note du Daily Form est recalée sur les jours où l'on a les deux
+function sleepOffset() { if (sleepCal && sleepCal.n === S.daily.length) return sleepCal.off; const both = S.daily.filter(d => d.applesleep != null && d.sleepq != null && d.sleepq !== ''); const off = both.length >= 5 ? avg(both.map(d => d.applesleep - d.sleepq * 10)) : 12; sleepCal = {n: S.daily.length, off}; return off; }
+const sleepOf = d => d.applesleep != null && d.applesleep !== '' ? +d.applesleep : (d.sleepq != null && d.sleepq !== '' ? clamp(d.sleepq * 10 + sleepOffset(), 0, 100) : null);
 function centerModel(date) { // ce que le centre-ville cumule sur le trimestre, au jour regardé
   const K = S.kpi_live || {}; const c = {date};
   c.sales = ((K.sales_2pap || {}).items || []).filter(s => s[0] <= date); c.salesTarget = (K.sales_2pap || {}).target || 6;
@@ -608,8 +632,8 @@ function monthModel(mo, ref) {
   const ss = daily.map(sleepOf).filter(x => x != null); m.sleepScore = ss.length ? avg(ss) : null; m.goodNights = ss.filter(x => x >= 80).length;
   const s = m.sleepScore == null ? 80 : m.sleepScore; m.pondTier = s < 70 ? 0 : s < 78 ? 1 : s < 84 ? 2 : s < 88 ? 3 : s < 91 ? 4 : s < 94 ? 5 : s < 97 ? 6 : 7;
   m.socialList = daily.filter(d => d.socialev).map(d => [d.date, String(d.socialev)]);
-  m.weekHouses = mo.weeks.filter(q => q.start <= ref).map(q => { const days = m.socialList.filter(x => x[0] >= q.start && x[0] <= q.end).map(x => x[0]); const stages = 3 + days.length; const n = clamp(Math.ceil(stages / 3), 1, 4); return {q, days, n, last: n >= 4 && stages >= 12 ? 3 : stages - 3 * (n - 1)}; });
-  m.nHouses = sum(m.weekHouses.map(w => w.n)); m.npcs = clamp(1 + m.socialList.length, 1, 6);
+  m.weekHouses = mo.weeks.filter(q => q.start <= ref).map(q => { const days = m.socialList.filter(x => x[0] >= q.start && x[0] <= q.end).map(x => x[0]); return {q, days, tier: Math.min(4, days.length)}; });
+  m.nHouses = m.weekHouses.length; m.npcs = clamp(1 + m.socialList.length, 1, 6);
   const rev = (S.money.recent || []).filter(t => t.date && inWin(t.date) && t.amount > 0 && /revenu/i.test(t.cat || '') && t.internal !== 'oui');
   m.sheep = clamp(Math.floor(sum(rev.map(t => t.amount)) / 1000), 0, 8); m.payers = clamp(new Set(rev.filter(t => t.amount >= 50).map(t => (t.payee || '').toLowerCase().slice(0, 12))).size, 0, 5);
   m.sales = ((K.sales_2pap || {}).items || []).filter(x => inWin(x[0])); m.pigs = clamp(m.sales.length, 0, 4);
@@ -659,35 +683,38 @@ function drawMonth(mo, g) {
   const obj = (x, y, w, h, key, extra) => res.objects.push(Object.assign({x, y, w, h, key, mo}, extra || {}));
   const prop = (x, base, draw) => res.props.push({x, base, draw});
   const stakes = (x, y, w) => [[x + 4, y - 40], [x + w - 20, y - 40], [x + 4, y - 8], [x + w - 20, y - 8]].forEach(([a, b]) => tile(IMG.fences, 0, 3, a, b));
-  // panneau du quartier, à l'entrée
   const sx = P(L.sign[0]) - 1, sy = Q(L.sign[1]); prop(sx, sy + 30, () => drawSign(sx, sy, MONTHS3[mo.month - 1], mo.weeks.length + ' SEM')); res.block(sx + 4, sy + 20, 26, 12); obj(sx, sy, 34, 31, 'sign');
-  if (!mo.built) { mo.order.slice(0, 2).forEach(s => stakes(P(s.x0) + 8, Q(s.R), 96)); const b = L.box;
-    for (let i = 0; i < 26; i++) decor(Math.floor(r() * 3), Math.floor(r() * 2), P(b.x0 + 2 + Math.floor(r() * (b.x1 - b.x0 - 4))), Q(b.y0 + 4 + Math.floor(r() * (b.y1 - b.y0 - 8))));
-    return res; }
-  // maisons : de la plus ancienne (près de la place) à la plus récente
+  if (!mo.built) { mo.houses.forEach(h => stakes(P(h.x0) + 4, Q(h.R), h.T.w)); return res; }
+  // maisons : une par semaine, de plus en plus grande avec la vie sociale de la semaine
   const mat = MATERIALS[mo.mi % 4]; const lit = g.day < .6;
-  mo.houses.forEach((h, idx) => { const s = h.slot, pc = s.x0 + 2, H = HOUSE[h.model]; const wi = mo.weeks.indexOf(h.q); const key = `h${mat}${h.model}${ROOFS[(wi + mo.mi) % 3]}`; if (!ok(IMG[key])) return;
-    const x = P(pc + 1) - (h.model === 1 ? 44 : 40), yb = Q(s.R) + H.h - (h.model === 1 ? 118 : 84);
-    const ho = drawHouse(res, x, yb, h.model, key, h.stage, lit && h.i < Math.max(1, h.wh.days.length), true); if (ho) ho.hs = h;
-    const fy = Q(s.R) - 4, fl = (idx * 3 + mo.mi * 2) % 10; [[P(pc) - 15, 0], [P(pc + 2) - 1, 1]].forEach(([fx, j]) => prop(fx, fy + 14, () => blit(IMG.flowers, (5 + (fl + j * 2) % 5) * 16, ((fl + j * 3) % 10) * 16, 16, 16, fx, fy)));
-    const px0 = P(pc + 3) + 4, day = String(+h.q.start.slice(8, 10)); prop(px0, fy + 14, () => drawPlaque(px0, fy - 1, day)); obj(px0, fy - 1, day.length * 4 + 3, 16, 'house', {hs: h});
-    const c = CUTE[Math.floor(r() * CUTE.length)], bx = r() < .5 ? x - 12 : x + H.w - 6; prop(bx, Q(s.R) + 6, () => odecor(c[0], c[1], bx, Q(s.R) - c[3] * 16 + 6, c[2], c[3])); res.block(bx + 2, Q(s.R) - 6, 12, 10);
+  mo.houses.forEach((h, idx) => { const T0 = h.T, wi = mo.weeks.indexOf(h.q); const key = T0.m === 'inn' ? 'inn' : T0.m === 'shed' ? 'shed' + ROOFS[(wi + mo.mi + 1) % 3] : `h${mat}${h.model}${ROOFS[(wi + mo.mi) % 3]}`; const im = IMG[key]; if (!ok(im)) return;
+    const x = P(h.pc + 1) - h.door, y = Q(h.R) - T0.vis, ph = idx * 1.7;
+    prop(x, Q(h.R) - 6, t => { blit(im, 0, 0, T0.w, T0.h, x, y); const sm = T0.m === 'shed' ? [] : T0.m === 'inn' ? [[9, 4], [100, -4]] : T0.m === 4 ? [[88, 13]] : T0.m === 1 ? [[65, 21]] : [[T0.w - 50, 21]];
+      sm.forEach(([cx, cy], j) => blit(IMG.smoke, ((Math.floor(t * 5 + ph) + j * 2) % 5) * 32, 0, 32, 32, x + cx - 7, y + cy - 27)); if (T0.m === 'inn') drawPlate(x + 128, y + 150, 'AUBERGE'); });
+    res.block(x + 4, y + T0.vis - Math.min(60, T0.vis - 20), T0.w - 8, Math.min(60, T0.vis - 20) - 2); obj(x + 2, y + 8, T0.w - 4, T0.vis - 8, 'house', {hs: h});
+    if (lit) { res.lights.push({x: P(h.pc + 1), y: Q(h.R) - 16, r: 18, c: '255,214,120'}); if (h.tier >= 1) res.lights.push({x: x + T0.w * .35, y: y + T0.vis * .55, r: 16, c: '255,214,120'}); if (h.tier >= 3) res.lights.push({x: x + T0.w * .75, y: y + T0.vis * .7, r: 16, c: '255,214,120'}); }
+    // devant la porte : pots de fleurs, plaque de la semaine, un petit quelque chose
+    const fy = Q(h.R) - 4, fl = (idx * 3 + mo.mi * 2) % 10; [[P(h.pc) - 15, 0], [P(h.pc + 2) - 1, 1]].forEach(([fx, j]) => prop(fx, fy + 14, () => blit(IMG.flowers, (5 + (fl + j * 2) % 5) * 16, ((fl + j * 3) % 10) * 16, 16, 16, fx, fy)));
+    const px0 = P(h.pc + 3) + 4, day = String(+h.q.start.slice(8, 10)); if (!h.annex) { prop(px0, fy + 14, () => drawPlaque(px0, fy - 1, day)); obj(px0, fy - 1, day.length * 4 + 3, 16, 'house', {hs: h}); }
+    const c = CUTE[Math.floor(r() * CUTE.length)], bx = r() < .5 ? P(h.x0) - 10 : P(h.x1) - 2; prop(bx, Q(h.R) + 6, () => odecor(c[0], c[1], bx, Q(h.R) - c[3] * 16 + 6, c[2], c[3]));
+    if (h.tier >= 2) { const gx = r() < .5 ? x - 30 : x + T0.w + 2, gy = Q(h.R) - 40; if (gx > P(h.x0) - 40) { for (let k = 0; k < 4; k++) blit(IMG.crops, (3 + (k % 2)) * 16, CROP_ROWS[(k + idx) % 6] * 32, 16, 32, gx + (k % 2) * 14, gy + Math.floor(k / 2) * 14 - 8); } }
   });
-  if (mo.lot) { const s = mo.lot; stakes(P(s.x0) + 8, Q(s.R), 96); decor(3, 0, P(s.x0) + 48, Q(s.R) - 30); obj(P(s.x0) + 8, Q(s.R) - 48, 96, 48, 'lot'); }
-  // l'enclos : l'argent du mois
-  const [penC, penR] = L.fac.pen, penW = 12; autoRect(IMG.fences, OX + penC, OY + penR, penW, 3, true, 1, 1); obj(P(penC), Q(penR), penW * T, 48, 'pen');
-  for (let c = 0; c < penW; c++) { res.blocked.add(KEY(penC + c, penR)); res.blocked.add(KEY(penC + c, penR + 2)); } for (let rr = 0; rr < 3; rr++) { res.blocked.add(KEY(penC, penR + rr)); res.blocked.add(KEY(penC + penW - 1, penR + rr)); }
-  blit(IMG.troughs, 16, 0, 32, 16, P(penC + 1) + 4, Q(penR + 1) - 4); decor(1, 1, P(penC + 9), Q(penR + 1));
-  const pen = {x0: P(penC) + 22, x1: P(penC + penW) - 26, y0: Q(penR) + 24, y1: Q(penR) + 34};
+  const cur = mo.houses.find(h => !h.annex && h.q.start <= viewDate() && h.q.end >= viewDate()); if (cur) { const fx = P(cur.x1) - 10, fy = Q(cur.R) - cur.T.vis - 6; prop(fx, Q(cur.R) - 2, t => { octx.fillStyle = '#3b2314'; octx.fillRect(fx, fy, 2, 18); octx.fillStyle = '#f2c14e'; const w = Math.round(Math.sin(t * 4)); octx.fillRect(fx + 2, fy + 1, 7, 5); octx.fillRect(fx + 9, fy + 2 + w, 3, 4); }); }
+  // l'enclos : l'argent du mois, avec de la place pour gambader
+  const [penC, penR] = L.fac.pen, penW = 18, penH = 6; autoRect(IMG.fences, OX + penC, OY + penR, penW, penH, true, 1, 1); obj(P(penC), Q(penR), penW * T, penH * T, 'pen');
+  for (let c = 0; c < penW; c++) { res.blocked.add(KEY(penC + c, penR)); res.blocked.add(KEY(penC + c, penR + penH - 1)); } for (let rr = 0; rr < penH; rr++) { res.blocked.add(KEY(penC, penR + rr)); res.blocked.add(KEY(penC + penW - 1, penR + rr)); }
+  blit(IMG.troughs, 16, 0, 32, 16, P(penC + 2), Q(penR + 1) + 2); blit(IMG.hay, 16, 0, 32, 16, P(penC + penW - 4), Q(penR + 1) + 2); decor(1, 1, P(penC + 8), Q(penR + 3)); decor(0, 1, P(penC + 12), Q(penR + 2)); decor(2, 0, P(penC + 5), Q(penR + 4));
+  const pen = {x0: P(penC) + 24, x1: P(penC + penW) - 28, y0: Q(penR) + 30, y1: Q(penR + penH) - 14};
   const addAnimal = (kind, n, box, free) => { for (let i = 0; i < n; i++) res.actors.push({kind, mo, x: box.x0 + r() * (box.x1 - box.x0), y: box.y0 + r() * (box.y1 - box.y0), box, free: !!free, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: kind === 'chicken' ? .11 : .07}); };
-  addAnimal('cow', m.payers, pen); addAnimal('pig', m.pigs, pen); addAnimal('sheep', m.sheep, pen);
+  addAnimal('cow', m.payers, pen, true); addAnimal('pig', m.pigs, pen, true); addAnimal('sheep', m.sheep, pen, true);
   // la mare : le sommeil du mois
   const tiers = [[1, 1], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3], [7, 3], [8, 3]]; const [pw, ph] = tiers[m.pondTier]; const [pondC, pondR] = L.fac.pond; const pC = pondC + Math.floor((8 - pw) / 2);
   if (m.pondTier === 0) { octx.fillStyle = '#6b4a2e'; octx.beginPath(); octx.ellipse(P(pC) + 8, Q(pondR) + 8, 9, 5, 0, 0, Math.PI * 2); octx.fill(); octx.fillStyle = '#4f3a26'; octx.beginPath(); octx.ellipse(P(pC) + 8, Q(pondR) + 8, 6, 3, 0, 0, Math.PI * 2); octx.fill(); }
   else { autoRect(IMG.water, OX + pC, OY + pondR, pw, ph); res.block(P(pC), Q(pondR), pw * T, ph * T);
     if (pw >= 3) { const lx = P(pC + pw - 2) + 2, ly = Q(pondR) + 4; prop(lx, ly - 30, t => blit(IMG.lily_g, ((Math.floor(t * 2) + mo.mi) % 8) * 16, 0, 16, 16, lx, ly)); }
     if ((m.sleepScore || 0) >= 80) { const nd = m.goodNights >= 15 && pw >= 4 ? 2 : 1; for (let i = 0; i < nd; i++) res.actors.push({kind: 'duck', mo, x: P(pC) + pw * 8 + i * 10, y: Q(pondR) + ph * 8 + 4, box: {x0: P(pC) + 10, x1: P(pC + pw) - 10, y0: Q(pondR) + 12, y1: Q(pondR + ph) - 6}, dir: -1, vx: -1, vy: 0, t: r() * 5, speed: .05}); }
-    [[P(pC) - 12, Q(pondR + ph) - 14], [P(pC + pw) - 2, Q(pondR) + 2]].forEach(([x, y], i) => prop(x, y + 14, t => blit(IMG.cattail, ((Math.floor(t * 3) + i * 4) % 8) * 16, 0, 16, 16, x, y))); }
+    [[P(pC) - 12, Q(pondR + ph) - 14], [P(pC + pw) - 2, Q(pondR) + 2]].forEach(([x, y], i) => prop(x, y + 14, t => blit(IMG.cattail, ((Math.floor(t * 3) + i * 4) % 8) * 16, 0, 16, 16, x, y)));
+    res.actors.push({kind: 'wild', sheet: 'frog', mo, x: P(pC) - 4, y: Q(pondR + ph) + 6, row: 1, frames: 8, fps: 4, still: true, dir: 1, t: r() * 9}); }
   obj(P(pC), Q(pondR), Math.max(2, pw) * T, Math.max(1, ph) * T, 'pond');
   // les champs : 2PaP (trimestre) et SOLV (mois), un épouvantail, des fermiers
   const [fC, fR] = L.fac.fields; const plots = [0, 3, 7, 10]; const cropA = CROP_ROWS[(mo.mi * 2) % 6], cropB = CROP_ROWS[(mo.mi * 2 + 3) % 6];
@@ -704,18 +731,18 @@ function drawMonth(mo, g) {
   const bx = P(L.fac.bench[0]), by = Q(L.fac.bench[1]); prop(bx, by + 20, () => blit(IMG.benches, 0, 0, 32, 32, bx, by)); res.block(bx + 2, by + 12, 28, 10);
   obj(P(pkC), Q(pkR), 9 * T, 5 * T, 'park');
   // arbres : la santé mentale du mois
-  const nTrees = clamp(Math.round(m.mental * 9), 2, 8), treeFilter = m.mental > .65 ? '' : m.mental > .45 ? 'saturate(.7)' : 'sepia(.6) saturate(.8)'; 
+  const nTrees = clamp(Math.round(m.mental * 9), 2, 8), treeFilter = m.mental > .65 ? '' : m.mental > .45 ? 'saturate(.7)' : 'sepia(.6) saturate(.8)';
   const spots = []; L.trees.forEach(([[c0, c1], r0, r1]) => { for (let rr = r0; rr <= r1 - 4; rr += 4) for (let cc = c0; cc <= c1 - 3; cc += 4) spots.push([P(cc) + (rr % 8 ? 8 : 0), Q(rr)]); });
   spots.slice(0, nTrees + 2).forEach(([x, y], i) => { if (i < nTrees) propTree(res, x, y, (i + mo.mi) % 3 === 0 ? ST.oak : ST.small, treeFilter, 'tree'); else { decor(0, 2, x + 10, y + 30); obj(x + 8, y + 26, 20, 20, 'stump'); } });
   // poules : les leads du mois, en liberté partout sauf dans l'enclos
   const b = L.box; addAnimal('chicken', m.chickens, {x0: P(b.x0) + 16, x1: P(b.x1) - 16, y0: Q(b.y0) + 40, y1: Q(b.y1) - 8}, true);
   // habitants : toi, plus un par événement social du mois
-  for (let i = 0; i < m.npcs; i++) { const sheet = NPC_SHEETS[(mo.mi * 2 + i) % NPC_SHEETS.length];
-    if (L.dir === 'S') res.actors.push({kind: 'npc', mo, sheet, x: P(-14 + i * 5), y: Q(39) + 4 + (i % 2) * 6, dir: i % 2 ? 1 : -1, axis: 'h', x0: P(-16), x1: P(15), t: r() * 9, speed: .08 + r() * .04});
-    else { const xs = [L.inner, mo.houses.filter(h => h.slot.row === 'A').reduce((a, h) => L.dir === 'W' ? Math.min(a, h.slot.x0) : Math.max(a, h.slot.x0 + 7), L.lane[0])].map(P).sort((u, v) => u - v);
-      res.actors.push({kind: 'npc', mo, sheet, x: xs[0] + r() * (xs[1] - xs[0]), y: Q(1) + 4 + (i % 2) * 6, dir: i % 2 ? 1 : -1, axis: 'h', x0: xs[0], x1: xs[1], t: r() * 9, speed: .08 + r() * .04}); } }
-  // lampadaires aux carrefours
+  const xsA = mo.houses.filter(h => h.row === 'A'); const avX = L.dir === 'S' ? [P(-16), P(15)] : [P(L.inner), xsA.length ? (L.dir === 'W' ? P(Math.min(...xsA.map(h => h.x0))) : P(Math.max(...xsA.map(h => h.x1)))) : P(L.lane[0])].sort((u, v) => u - v);
+  for (let i = 0; i < m.npcs; i++) res.actors.push({kind: 'npc', mo, sheet: NPC_SHEETS[(mo.mi * 2 + i) % NPC_SHEETS.length], x: avX[0] + r() * (avX[1] - avX[0]), y: Q(L.dir === 'S' ? 39 : 1) + 4 + (i % 2) * 6, dir: i % 2 ? 1 : -1, axis: 'h', x0: avX[0], x1: avX[1], t: r() * 9, speed: .06 + r() * .03});
   L.lamps.forEach(([c, rw]) => propLamp(res, P(c), Q(rw) - 30, g));
+  // la ruche près du parc, les abeilles
+  const hvx = P(pkC + 9) + 4, hvy = Q(pkR + 1); prop(hvx, hvy + 44, () => blit(IMG.beenest, 0, 0, 32, 48, hvx, hvy)); res.block(hvx + 6, hvy + 32, 20, 12);
+  for (let i = 0; i < 3; i++) res.actors.push({kind: 'bee', mo, cx: hvx + 16, cy: hvy + 10, x: 0, y: 0, t: r() * 10, rx: 14 + r() * 20, ry: 8 + r() * 10});
   return res;
 }
 
@@ -795,11 +822,12 @@ function buildScene() {
   cv.width = cssW; cv.height = cssH; cv.style.width = cssW + 'px'; cv.style.marginLeft = '0'; ctx.imageSmoothingEnabled = false;
   QS = quartiers(); MOS = monthsOf(QS); const date = viewDate(); V = globalModel(date); CM = centerModel(date); MOS.forEach(mo => planMonth(mo, date));
   // emprise : centre + quartiers, et une bonne lisière de forêt tout autour
-  let x0 = -22, x1 = 22, y0 = -24, y1 = 30; MOS.forEach(mo => { const sl = mo.order.slice(0, 2); const b = mo.built ? mo.L.box : {x0: Math.min(...sl.map(s => s.x0)) - 3, x1: Math.max(...sl.map(s => s.x0 + 8)) + 3, y0: Math.min(...sl.map(s => s.R)) - 12, y1: Math.max(...sl.map(s => s.R)) + 4}; x0 = Math.min(x0, b.x0); x1 = Math.max(x1, b.x1); y0 = Math.min(y0, b.y0); y1 = Math.max(y1, b.y1); });
+  let x0 = -22, x1 = 22, y0 = -24, y1 = 30; MOS.forEach(mo => { const hs = mo.houses; const hb = hs.length ? {x0: Math.min(...hs.map(h => h.x0)) - 3, x1: Math.max(...hs.map(h => h.x1)) + 3, y0: Math.min(...hs.map(h => h.R)) - 14, y1: Math.max(...hs.map(h => h.st)) + 3} : mo.L.box; const B = mo.L.box; const b = mo.built ? {x0: Math.min(B.x0, hb.x0), x1: Math.max(B.x1, hb.x1), y0: Math.min(B.y0, hb.y0), y1: Math.max(B.y1, hb.y1)} : hb; x0 = Math.min(x0, b.x0); x1 = Math.max(x1, b.x1); y0 = Math.min(y0, b.y0); y1 = Math.max(y1, b.y1); });
   x0 -= 16; x1 += 16; y0 -= 16; y1 += 14; OX = -x0; OY = -y0; const cols = x1 - x0, rows = y1 - y0; worldW = cols * T; worldH = rows * T;
   world.width = worldW; world.height = worldH; octx = world.getContext('2d'); octx.imageSmoothingEnabled = false;
   objects = []; actors = []; lights = []; drops = []; cloudShadows = []; props = []; blocked = new Set();
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) tile(IMG.grass, 0, 0, x * T, y * T);
+  textureGround(worldW, worldH);
   // routes : la place, l'avenue du sud jusqu'à la ferme, l'allée de la ferme, puis les rues des quartiers construits
   const road = new Set(); const add = (c, r) => road.add(KEY(c, r));
   const hole = (c, r) => c >= -10 && c <= 9 && r >= -5 && r <= 4 && !((c === -10 || c === 9) && (r === -5 || r === 4)); // l'étang et sa berge au milieu de la place
@@ -807,7 +835,26 @@ function buildScene() {
   for (let r = 10; r <= 24; r++) { add(-1, r); add(0, r); } for (let c = -19; c <= 19; c++) { add(c, 23); add(c, 24); }
   [[-6, -5], [10, 11], [17, 18], [3, 4]].forEach(([a, b]) => { add(a, 22); add(b, 22); }); // seuils de la serre, de la grange, du poulailler, du moulin
   MOS.forEach(mo => monthRoads(mo, add));
+  // un peu de fantaisie : des renflements le long des routes, là où rien n'est construit
+  const noBump = new Set(); const nb = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) noBump.add(KEY(c, r)); };
+  nb(-21, -23, 21, -10); nb(-13, 10, 12, 14); nb(-20, 14, 20, 22); nb(-20, 25, 20, 30); nb(-10, -5, 9, 4);
+  MOS.forEach(mo => { const L = mo.L, f = L.fac; mo.houses.forEach(h => { nb(h.x0 - 1, h.R - 10, h.x1 + 1, h.R - 1); nb(h.pc - 2, h.R - 1, h.pc + 3, h.st - 1); });
+    nb(f.pen[0] - 1, f.pen[1] - 1, f.pen[0] + 18, f.pen[1] + 6); nb(f.pond[0] - 1, f.pond[1] - 1, f.pond[0] + 8, f.pond[1] + 4); nb(f.fields[0] - 1, f.fields[1] - 1, f.fields[0] + 13, f.fields[1] + 3); nb(f.park[0] - 1, f.park[1] - 2, f.park[0] + 10, f.park[1] + 5); nb(L.sign[0] - 1, L.sign[1] - 1, L.sign[0] + 2, L.sign[1] + 2); });
+  const has = (c, r) => road.has(KEY(c, r)), free = (c, r) => !road.has(KEY(c, r)) && !noBump.has(KEY(c, r)); const rb = rnd(99); const bumps = [];
+  road.forEach(k => { const [wc, wr] = k.split(',').map(Number); const c = wc - OX, r = wr - OY; const roll = rb();
+    if (roll < .07 && has(c, r - 1) && has(c + 1, r) && has(c + 1, r - 1) && free(c, r + 1) && free(c + 1, r + 1)) bumps.push([c, r + 1], [c + 1, r + 1]);
+    else if (roll > .955 && has(c - 1, r) && has(c, r + 1) && has(c - 1, r + 1) && free(c + 1, r) && free(c + 1, r + 1)) bumps.push([c + 1, r], [c + 1, r + 1]);
+    else if (roll > .91 && roll < .935 && has(c + 1, r) && has(c, r + 1) && has(c + 1, r + 1) && free(c - 1, r) && free(c - 1, r + 1)) bumps.push([c - 1, r], [c - 1, r + 1]); });
+  bumps.forEach(([c, r]) => add(c, r));
+  // le ruisseau : il descend de la forêt à travers le quartier de septembre ; un pont là où il croise une rue
+  const sMo = MOS.find(mo => mo.L.stream != null); const wcells = new Set(), bridges = []; streamW = null;
+  if (sMo) { let prev = null; for (let r = y0; r < y1; r++) { const c = sMo.L.stream + Math.round(.6 * Math.sin(r / 5.5) + .5 * Math.sin(r / 2.2 + 1) + (r < -12 || r > 28 ? 1.5 * Math.sin(r / 7) : 0)); const cs = new Set([c, c + 1]); if (prev != null) { cs.add(prev); cs.add(prev + 1); } prev = c;
+      cs.forEach(cc => { if (road.has(KEY(cc, r))) bridges.push([cc, r]); else wcells.add(KEY(cc, r)); }); }
+    const xs = [...wcells].map(k => +k.split(',')[0]); const sb = {x: Math.min(...xs) * T, y: 0, w: (Math.max(...xs) - Math.min(...xs) + 1) * T, h: worldH}; const fr8 = [];
+    if (ok(IMG.water_anim)) for (let f = 0; f < 8; f++) { const cnv = document.createElement('canvas'); cnv.width = sb.w; cnv.height = sb.h; const sv = octx; octx = cnv.getContext('2d'); octx.imageSmoothingEnabled = false; drawAuto(wcells, IMG.water_anim, f * 48, sb.x, sb.y); octx = sv; fr8.push(cnv); }
+    streamW = {box: sb, frames: fr8, cells: wcells, bridges}; }
   drawAuto(road, IMG.path);
+  if (streamW && streamW.frames[0]) octx.drawImage(streamW.frames[0], streamW.box.x, streamW.box.y);
   const cob = new Set(); for (let c = -13; c <= 12; c++) for (let r = -7; r <= 7; r++) if (!hole(c, r)) cob.add(KEY(c, r)); drawAuto(cob, IMG.cobble);
   // l'étang : masque ovale, eau animée pré-rendue sur 8 images
   const lrx = 7.4, lry = 3.7; const lcells = new Set(); for (let c = -9; c <= 8; c++) for (let r = -5; r <= 4; r++) if (Math.pow((c + .5) / lrx, 2) + Math.pow((r + .5) / lry, 2) <= 1) lcells.add(KEY(c, r));
@@ -822,16 +869,26 @@ function buildScene() {
   // touffes d'herbe et fleurs des champs hors route
   const rg = rnd(5); for (let i = 0; i < cols * rows * .05; i++) { const c = Math.floor(rg() * cols), rr = Math.floor(rg() * rows); const k = c + ',' + rr; if (!road.has(k) && !lcells.has(k)) { const kk = rg(); if (kk < .6) decor(Math.floor(rg() * 3), 0, c * T, rr * T); else if (kk < .85) decor(Math.floor(rg() * 3), 1, c * T, rr * T); else decor(1 + Math.floor(rg() * 2), 2, c * T, rr * T); } }
   // centre-ville puis quartiers
+  // prés fleuris : des touffes de fleurs de la même espèce, ici et là
+  const fm = rnd(17); for (let i = 0; i < cols * rows * .006; i++) { const c0 = Math.floor(fm() * cols), r0 = Math.floor(fm() * rows), kind = Math.floor(fm() * 10), col = Math.floor(fm() * 5), n = 3 + Math.floor(fm() * 7);
+    for (let j = 0; j < n; j++) { const c = c0 + Math.floor(fm() * 4) - 1, rr = r0 + Math.floor(fm() * 3) - 1; const k = c + ',' + rr; if (road.has(k) || lcells.has(k) || wcells.has(k)) continue; blit(IMG.flowers, col * 16, kind * 16, 16, 16, c * T + Math.floor(fm() * 6) - 3, rr * T + Math.floor(fm() * 6) - 3); } }
+  if (streamW) { streamW.bridges.forEach(([c, r]) => { const x = pxc(c), y = pyc(r); props.push({x, base: y - 40, draw: () => { octx.fillStyle = '#6b4226'; octx.fillRect(x - 2, y, T + 4, T); octx.fillStyle = '#9a6b3f'; for (let k = 0; k < 4; k++) octx.fillRect(x - 2, y + k * 4 + 1, T + 4, 2); octx.fillStyle = '#4a2a1a'; octx.fillRect(x - 3, y, 2, T); octx.fillRect(x + T + 1, y, 2, T); }}); });
+    streamW.cells.forEach(k => blocked.add(k)); const rs = rnd(23); const [sx0] = [streamW.box.x];
+    for (let i = 0; i < 3; i++) { const r = Math.floor(rs() * 40) - 18, cc = sMo.L.stream + Math.round(.6 * Math.sin(r / 5.5) + .5 * Math.sin(r / 2.2 + 1) + (r < -12 || r > 28 ? 1.5 * Math.sin(r / 7) : 0)); actors.push({kind: 'wild', sheet: 'frog', x: pxc(cc + (i % 2 ? 3 : -1)) + 4, y: pyc(r) + 8, row: i % 2 ? 2 : 1, frames: i % 2 ? 10 : 8, fps: 4, still: true, dir: i % 2 ? -1 : 1, t: rs() * 9}); }
+    const gb = {x0: pxc(sMo.L.stream - 7), x1: pxc(sMo.L.stream + 9), y0: pyc(-20), y1: pyc(10)}; for (let i = 0; i < 3; i++) actors.push({kind: 'wild', sheet: 'goose', x: gb.x0 + rs() * (gb.x1 - gb.x0), y: gb.y0 + rs() * (gb.y1 - gb.y0), row: 2, frames: 12, walkRow: 1, fps: 5, free: true, box: gb, dir: 1, vx: 0, vy: 0, state: 'idle', t: rs() * 9, speed: .05}); }
+  { const hb = {x0: pxc(-40), x1: pxc(-24), y0: pyc(-22), y1: pyc(-15)}; const rh = rnd(41); for (let i = 0; i < 2; i++) actors.push({kind: 'wild', sheet: 'horse', x: hb.x0 + rh() * (hb.x1 - hb.x0), y: hb.y0 + rh() * (hb.y1 - hb.y0), row: 6, frames: 8, walkRow: 3, fps: 4, free: true, box: hb, dir: 1, vx: 0, vy: 0, state: 'idle', t: rh() * 9, speed: .04}); }
+  // des herbes folles qui ondulent un peu partout
+  const fg = rnd(53); for (let i = 0; i < cols * rows * .012; i++) { const c = Math.floor(fg() * cols), rr = Math.floor(fg() * rows), k = c + ',' + rr; if (road.has(k) || lcells.has(k) || wcells.has(k)) continue; const x = c * T, y = rr * T, ph = Math.floor(fg() * 8); props.push({x, base: y + 2, draw: t => blit(IMG.fgrass, ((Math.floor(t * 2.5) + ph) % 8) * 16, 0, 16, 16, x, y)}); }
   merge(drawCenter(CM, V)); CENTER_BOX = {x: pxc(-21), y: pyc(-22), w: 42 * T, h: 51 * T};
   MOS.forEach(mo => merge(drawMonth(mo, V), {mo}));
   road.forEach(k => blocked.delete(k));
   // forêt : tout ce qui n'est ni construit, ni réservé aux équipements, ni au bord d'une route
   const reserved = new Set(); const reserve = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) reserved.add((c + OX) + ',' + (r + OY)); };
   reserve(-21, -23, 21, 29);
-  MOS.forEach(mo => { const L = mo.L; if (!mo.built) { mo.order.slice(0, 2).forEach(sl => reserve(sl.x0 - 1, sl.R - 6, sl.x0 + 8, sl.R + 2)); reserve(L.sign[0] - 1, L.sign[1] - 3, L.sign[0] + 2, L.sign[1] + 2); return; }
-    mo.houses.concat(mo.lot ? [{slot: mo.lot}] : []).forEach(h => reserve(h.slot.x0 - 1, h.slot.R - 10, h.slot.x0 + 8, h.slot.R + 1));
-    const f = L.fac; reserve(f.pen[0] - 2, f.pen[1] - 3, f.pen[0] + 13, f.pen[1] + 3); reserve(f.pond[0] - 2, f.pond[1] - 3, f.pond[0] + 9, f.pond[1] + 4); reserve(f.fields[0] - 2, f.fields[1] - 4, f.fields[0] + 14, f.fields[1] + 3); reserve(f.park[0] - 2, f.park[1] - 4, f.park[0] + 10, f.park[1] + 5);
-    L.trees.forEach(([[c0, c1], r0, r1]) => reserve(c0 - 1, r0 - 4, c1 + 1, r1)); reserve(L.sign[0] - 1, L.sign[1] - 3, L.sign[0] + 2, L.sign[1] + 2); });
+  MOS.forEach(mo => { const L = mo.L; mo.houses.forEach(h => reserve(h.x0 - 1, h.R - 13, h.x1 + 1, h.R + 1)); reserve(L.sign[0] - 1, L.sign[1] - 3, L.sign[0] + 2, L.sign[1] + 2); if (!mo.built) return;
+    const f = L.fac; reserve(f.pen[0] - 2, f.pen[1] - 3, f.pen[0] + 19, f.pen[1] + 6); reserve(f.pond[0] - 2, f.pond[1] - 3, f.pond[0] + 9, f.pond[1] + 4); reserve(f.fields[0] - 2, f.fields[1] - 4, f.fields[0] + 14, f.fields[1] + 3); reserve(f.park[0] - 2, f.park[1] - 4, f.park[0] + 12, f.park[1] + 5); reserve(f.bench[0] - 1, f.bench[1] - 2, f.bench[0] + 2, f.bench[1] + 2);
+    L.trees.forEach(([[c0, c1], r0, r1]) => reserve(c0 - 1, r0 - 4, c1 + 1, r1));  });
+  if (streamW) streamW.cells.forEach(k => { const [c, r] = k.split(',').map(Number); for (let dc = -3; dc <= 2; dc++) for (let dr = -4; dr <= 1; dr++) reserved.add((c + dc) + ',' + (r + dr)); });
   road.forEach(k => { const [c, r] = k.split(',').map(Number); for (let dc = -3; dc <= 2; dc++) for (let dr = -4; dr <= 2; dr++) reserved.add((c + dc) + ',' + (r + dr)); });
   const fr = rnd(31); for (let r = 0; r < rows - 5; r += 3) for (let c = 0; c < cols - 4; c += 3) { const cc = c + Math.floor(fr() * 2), rr = r + Math.floor(fr() * 2); let free = true; for (let dc = 0; dc < 4 && free; dc++) for (let dr = 0; dr < 5 && free; dr++) if (reserved.has((cc + dc) + ',' + (rr + dr))) free = false; const edge = Math.min(cc, rr, cols - cc, rows - rr) < 10; if (!free || fr() > (edge ? .8 : .6)) continue;
     const k = fr(); const [ik, sx, w, h] = TREES[k < .3 ? 'boak' : k < .55 ? 'spruce' : k < .68 ? 'birch' : k < .85 ? 'oak' : k < .93 ? 'spruce_s' : 'small']; const x = cc * T + (64 - w) / 2, y = rr * T + 80 - h; if (ok(IMG[ik])) props.push({base: y + h - 4, x, draw: () => blit(IMG[ik], sx, 0, w, h, x, y)});
@@ -845,9 +902,9 @@ function buildScene() {
   renderLegend(); renderTimeline();
 }
 function monthFrame(mo) { // ce qui est construit dans le quartier, plus un bout du centre pour situer
-  const L = mo.L, used = mo.houses.map(h => h.slot).concat(mo.lot ? [mo.lot] : []); const up = used.some(s => s.row === 'C');
-  if (L.dir === 'S') { const low = Math.max(40, ...used.map(s => L.rows[s.row].st[1])); return {x0: -36, x1: 36, y0: 10, y1: low + 2}; }
-  return L.dir === 'W' ? {x0: -57, x1: -6, y0: up ? -23 : -12, y1: 26} : {x0: 6, x1: 57, y0: up ? -23 : -12, y1: 26};
+  const L = mo.L, hs = mo.houses; const up = hs.some(h => h.row === 'C');
+  if (L.dir === 'S') { const low = Math.max(40, ...hs.map(h => h.st + 1)); return {x0: -36, x1: 36, y0: 10, y1: low + 2}; }
+  return L.dir === 'W' ? {x0: Math.min(-58, ...hs.map(h => h.x0)) - 1, x1: -6, y0: up ? -24 : -13, y1: 29} : {x0: 6, x1: Math.max(58, ...hs.map(h => h.x1)) + 1, y0: up ? -24 : -13, y1: 29};
 }
 function camBox(b) { const w = (b.x1 - b.x0) * T, h = (b.y1 - b.y0) * T; let s = Math.min(cv.width / w, cv.height / h); s = s >= 1 ? Math.min(zoomScale, Math.floor(s * 2) / 2) : Math.max(s, .5); return clampCam({x: pxc(b.x0) + w / 2 - cv.width / s / 2, y: pyc(b.y0) + h / 2 - cv.height / s / 2, s}); }
 function camForMode() { if (VIEW.mode === 'all') return camFit(); if (VIEW.mode === 'center') return camCenter(); const mo = monthOf(viewDate()) || MOS[MOS.length - 1]; return camBox(monthFrame(mo)); }
@@ -864,11 +921,13 @@ function zoomBy(f, px, py) { const s = clamp(cam.s * f, fitScale, zoomScale * 2.
 function drawAnimal(a, t) { const im = IMG[a.kind]; if (!ok(im)) return; const frame = Math.floor(t * 2 + a.t * 7) % 2; const row = a.state === 'walk' ? 1 : 0; blit(im, frame * 32, row * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0); }
 function drawDuck(a, t) { if (!ok(IMG.duck)) return; const f = Math.floor(t * 3 + a.t * 5) % 4; blit(IMG.duck, f * 32, 8 * 32, 32, 32, a.x - 16, a.y - 22, a.dir > 0); }
 function drawSwan(a, t) { if (!ok(IMG.swan)) return; const f = Math.floor(t * 2 + a.t) % 3; blit(IMG.swan, f * 32, 8 * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0); }
+function drawWild(a, t) { const im = IMG[a.sheet]; if (!ok(im)) return; const walking = !a.still && a.state === 'walk'; const row = walking ? a.walkRow : a.row, n = walking ? 6 : a.frames; blit(im, (Math.floor(t * (a.fps || 5) + a.t * 3) % n) * 32, row * 32, 32, 32, a.x - 16, a.y - 26, a.dir > 0); }
+function drawBee(a, t) { if (!ok(IMG.bee)) return; octx.drawImage(IMG.bee, (Math.floor(t * 12 + a.t) % 4) * 16, 0, 16, 16, Math.round(a.x - 4), Math.round(a.y - 4), 8, 8); }
 function drawSheet(sheet, row, frame, x, y, flip) { const im = IMG[sheet]; if (!ok(im)) return; blit(im, frame * 64, row * 64, 64, 64, x - 32, y - 42, flip); }
-function drawNpc(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; if (a.axis === 'h') drawSheet(a.sheet, 4, f, a.x, a.y, a.dir > 0); else drawSheet(a.sheet, a.dir > 0 ? 3 : 5, f, a.x, a.y, false); }
+function drawNpc(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; if (a.axis === 'h') drawSheet(a.sheet, 4, f, a.x, a.y, a.dir < 0); else drawSheet(a.sheet, a.dir > 0 ? 3 : 5, f, a.x, a.y, false); }
 function drawIdle(a, t) { drawSheet(a.sheet, 0, Math.floor(t * 3 + a.t * 4) % 6, a.x, a.y, false); }
-function drawLoop(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f, a.x, a.y, dx > 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f, a.x, a.y, false); }
-function drawWorker(a, t) { const f = Math.floor(t * (a.state === 'work' ? 4 : 5) + a.t * 3) % 6; if (a.state === 'work') drawSheet(a.sheet, a.tool, f, a.x, a.y, false); else if (Math.abs(a.vx) >= Math.abs(a.vy)) drawSheet(a.sheet, 4, f, a.x, a.y, a.vx > 0); else drawSheet(a.sheet, a.vy > 0 ? 3 : 5, f, a.x, a.y, false); }
+function drawLoop(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f, a.x, a.y, dx < 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f, a.x, a.y, false); }
+function drawWorker(a, t) { const f = Math.floor(t * (a.state === 'work' ? 4 : 5) + a.t * 3) % 6; if (a.state === 'work') drawSheet(a.sheet, a.tool, f, a.x, a.y, false); else if (Math.abs(a.vx) >= Math.abs(a.vy)) drawSheet(a.sheet, 4, f, a.x, a.y, a.vx < 0); else drawSheet(a.sheet, a.vy > 0 ? 3 : 5, f, a.x, a.y, false); }
 function drawBfly(a, t) { if (!ok(IMG.butterfly)) return; const f = Math.floor(t * 8 + a.t) % 2; blit(IMG.butterfly, f * 8, a.color * 8, 8, 8, a.x - 4, a.y - 4); }
 const isBlocked = (x, y) => blocked.has(Math.floor(x / T) + ',' + Math.floor(y / T));
 function stepActors(dt, t) {
@@ -876,6 +935,8 @@ function stepActors(dt, t) {
     if (a.kind === 'npc') { if (a.axis === 'h') { a.x += a.dir * a.speed * dt; if (a.x < a.x0) { a.x = a.x0; a.dir = 1; } if (a.x > a.x1) { a.x = a.x1; a.dir = -1; } } else { a.y += a.dir * a.speed * dt; if (a.y < a.y0) { a.y = a.y0; a.dir = 1; } if (a.y > a.y1) { a.y = a.y1; a.dir = -1; } } return; }
     if (a.kind === 'idle') return;
     if (a.kind === 'loop') { a.p = (a.p + a.speed * dt) % 1; const P = a.path; const seg = [0, 1, 2, 3].map(i => Math.hypot(P[(i + 1) % 4][0] - P[i][0], P[(i + 1) % 4][1] - P[i][1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i]) { d -= seg[i]; i++; } const A = P[i], B = P[(i + 1) % 4], k = d / seg[i]; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k; return; }
+    if (a.kind === 'bee') { a.t += dt / 60; a.x = a.cx + Math.sin(a.t * 2.1) * a.rx + Math.sin(a.t * 5.3) * 3; a.y = a.cy + Math.sin(a.t * 2.9) * a.ry; return; }
+    if (a.kind === 'wild' && a.still) return;
     if (a.kind === 'bfly') { a.t += dt / 60; a.x = a.cx + Math.sin(a.t * .9) * a.rx + Math.sin(a.t * 2.3) * 6; a.y = a.cy + Math.sin(a.t * 1.4) * a.ry - Math.abs(Math.sin(a.t * 3)) * 4; return; }
     if (a.kind === 'worker') { a.timer -= dt / 60; if (a.state === 'work') { if (a.timer <= 0) { a.state = 'walk'; a.tx = a.box.x0 + Math.random() * (a.box.x1 - a.box.x0); a.ty = a.box.y0 + Math.random() * (a.box.y1 - a.box.y0); } }
       else { const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy); if (d < 1.5) { a.state = 'work'; a.timer = 5 + Math.random() * 7; a.tool = Math.random() < .5 ? 8 : 11; } else { a.vx = dx / d; a.vy = dy / d; a.x += a.vx * .1 * dt; a.y += a.vy * .1 * dt; } } return; }
@@ -890,7 +951,7 @@ function stepActors(dt, t) {
     if (a.state === 'walk') { a.x += a.dir * a.speed * dt; a.y += Math.sin(a.t * 2) * .03 * dt; if (a.x < a.box.x0) { a.x = a.box.x0; a.dir = 1; } if (a.x > a.box.x1) { a.x = a.box.x1; a.dir = -1; } a.y = clamp(a.y, a.box.y0, a.box.y1); }
   });
 }
-const DRAW = {swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
+const DRAW = {wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
 let lastT = 0;
 function animate(now) {
   if (!assetsReady || !QS.length) { requestAnimationFrame(animate); return; }
@@ -899,6 +960,7 @@ function animate(now) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#2f6b3a'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.imageSmoothingEnabled = false;
   ctx.drawImage(world, cam.x, cam.y, vw, vh, 0, 0, cv.width, cv.height);
   ctx.setTransform(s, 0, 0, s, -cam.x * s, -cam.y * s); octx = ctx; stepActors(dt, t);
+  if (streamW && streamW.frames.length) { const b = streamW.box; if (b.x < cam.x + vw && b.x + b.w > cam.x) { const sy = Math.max(0, cam.y), sh = Math.min(vh, worldH - sy); if (sh > 0) ctx.drawImage(streamW.frames[Math.floor(t * 5) % 8], 0, sy, b.w, sh, b.x, sy, b.w, sh); } }
   if (lake && lake.frames.length) { const b = lake.box; if (b.x < cam.x + vw && b.x + b.w > cam.x && b.y < cam.y + vh && b.y + b.h > cam.y) ctx.drawImage(lake.frames[Math.floor(t * 5) % 8], b.x, b.y); }
   const inView = (x, y, m) => x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m;
   const layer = props.filter(p => p.base > cam.y - 20 && p.base < cam.y + vh + 220 && (p.x == null || (p.x > cam.x - 260 && p.x < cam.x + vw + 60))).map(p => ({y: p.base, p}));
@@ -927,7 +989,7 @@ function animate(now) {
 /* ---- légendes ---- */
 const plural = (n, a, b) => n > 1 ? b : a;
 const LEGEND = {
-  house: (m, o) => { const h = o.hs, wh = h.wh; return [`🏠 Maison ${h.i + 1}/${wh.n} de la semaine ${h.q.label} (lundi ${fmtShort(h.q.start)})`, `${wh.days.length} ${plural(wh.days.length, 'jour', 'jours')} avec un événement social cette semaine-là${wh.days.length ? ' (' + wh.days.map(fmtShort).join(', ') + ')' : ''}. Chaque semaine a sa maison de base, chaque événement ajoute un étage, trois étages font une maison, quatre maisons au plus par semaine. La plaque devant la porte donne le lundi de la semaine, et la couleur du toit change d'une semaine à l'autre. Les plus anciennes sont au plus près de la place.`]; },
+  house: (m, o) => { const h = o.hs; const n = h.days.length; if (h.annex) return [`🛖 Cabane de la semaine ${h.q.label} (lundi ${fmtShort(h.q.start)})`, `Une dépendance pousse à côté de la maison quand la semaine compte deux événements sociaux ou plus (${n} cette semaine-là).`]; return [`🏠 ${h.T.name.charAt(0).toUpperCase() + h.T.name.slice(1)} · semaine ${h.q.label} (lundi ${fmtShort(h.q.start)})`, `${n} ${plural(n, 'événement social', 'événements sociaux')} cette semaine-là${n ? ' (' + h.days.map(fmtShort).join(', ') + ')' : ''}. Une maison par semaine, qui grandit avec ta vie sociale : petite maison sans événement, maison à étage avec un, grande maison avec deux, très grande maison avec trois, auberge à partir de quatre. La plaque devant la porte donne le lundi de la semaine ; le petit drapeau jaune marque la semaine en cours.`]; },
   lot: () => ['🪧 Terrain à bâtir', 'La prochaine maison de la semaine se construira ici, au prochain événement social.'],
   park: m => [`🌸 Le parc de ${m.mo.label} : ton bonheur`, `${m.flowers} fleurs sur 20 : bonheur moyen de ${fmtNum(m.happy, 1)}/10 sur le mois (du ${fmtShort(m.from)} au ${fmtShort(m.to)}). Des papillons à partir de 6/10.`],
   f_2pap: m => ['🌾 Champs 2PaP : le trimestre', `Avancement des quatre quêtes au ${fmtShort(m.to)} : ventes ${m.q.sales.value}/${m.q.sales.target}, leads ${fmtNum(m.q.leads.value)}/${fmtNum(m.q.leads.target)}, vidéos ${m.q.videos.value}/${m.q.videos.target}, webinaires ${m.q.webinars.value}/${m.q.webinars.target}. Les plants grandissent avec.${m.workers ? ' ' + m.workers + ' ' + plural(m.workers, 'fermier', 'fermiers') + ' au travail (tâches Todoist du mois).' : ''}`],
@@ -997,7 +1059,7 @@ cv.addEventListener('touchstart', e => { if (e.touches.length === 2) { const i =
 cv.addEventListener('touchmove', e => { if (!touch || e.touches.length !== 2) return; e.preventDefault(); const i = tinfo(e), c0 = touch.cam; const s = clamp(c0.s * i.d / touch.i.d, fitScale, zoomScale * 2.5); const wx = c0.x + touch.i.x / c0.s, wy = c0.y + touch.i.y / c0.s; Object.assign(cam, clampCam({x: wx - i.x / s, y: wy - i.y / s, s})); }, {passive: false});
 cv.addEventListener('touchend', e => { if (e.touches.length < 2) touch = null; });
 /* ---------- live refresh (connecteurs du lecteur) ---------- */
-const DAILY_COLS = {'c-7N0cyxEVGg': 'date', 'c-tAKEYlcGDn': 'happy', 'c-Od1vxNtX6T': 'anx', 'c-SMeU0olwRC': 'energy', 'c-pW1vO6kRX6': 'sleepq', 'c-kWTDwQNdNf': 'stab', 'c-V60e2oSETX': 'prod', 'c-_sD9DJt71G': 'social', 'c-Odae1HQlUR': 'love', 'c-Kf1O5x9z3j': 'workh', 'c-JsuqbIIW7K': 'lifestyle', 'c-4iFinWTuGO': 'steps', 'c-pua7ZJvXf7': 'sleeph', 'c-0RW9tPoYvW': 'workout', 'c-rQEAz7GNN2': 'where', 'c-f2ng9VRp3c': 'drinks', 'c-BxepVjVc_n': 'coffee', 'c-gg9GjPSZ0s': 'socialev', 'c-PllOHwlhqi': 'friendstalk', 'c-WFYbGCMo_h': 'hrv', 'c-1fE2ZjA9-_': 'rhr', 'c-ikg_tCavhk': 'weight', 'c-ZO6bpLIlaH': 'foodq', 'c-GMIluVkvkY': 'protein', 'c-SZRcU0_foY': 'proteint', 'c-8SBOaCj69l': 'nonvegan', 'c-KZ2qLvlFkY': 'kcalin', 'c-zwVTB7Z1hI': 'kcalout', 'c-RBOb64ZLyq': 'mit', 'c-GUR59bJBoS': 'fasting'};
+const DAILY_COLS = {'c-7N0cyxEVGg': 'date', 'c-tAKEYlcGDn': 'happy', 'c-Od1vxNtX6T': 'anx', 'c-SMeU0olwRC': 'energy', 'c-pW1vO6kRX6': 'sleepq', 'c-kWTDwQNdNf': 'stab', 'c-V60e2oSETX': 'prod', 'c-_sD9DJt71G': 'social', 'c-Odae1HQlUR': 'love', 'c-Kf1O5x9z3j': 'workh', 'c-JsuqbIIW7K': 'lifestyle', 'c-4iFinWTuGO': 'steps', 'c-pua7ZJvXf7': 'sleeph', 'c-0RW9tPoYvW': 'workout', 'c-rQEAz7GNN2': 'where', 'c-f2ng9VRp3c': 'drinks', 'c-BxepVjVc_n': 'coffee', 'c-gg9GjPSZ0s': 'socialev', 'c-3uXIVe48eE': 'applesleep', 'c-PllOHwlhqi': 'friendstalk', 'c-WFYbGCMo_h': 'hrv', 'c-1fE2ZjA9-_': 'rhr', 'c-ikg_tCavhk': 'weight', 'c-ZO6bpLIlaH': 'foodq', 'c-GMIluVkvkY': 'protein', 'c-SZRcU0_foY': 'proteint', 'c-8SBOaCj69l': 'nonvegan', 'c-KZ2qLvlFkY': 'kcalin', 'c-zwVTB7Z1hI': 'kcalout', 'c-RBOb64ZLyq': 'mit', 'c-GUR59bJBoS': 'fasting'};
 function codaVal(v) { if (v == null) return null; if (typeof v !== 'object') return v === '' ? null : v; if (Array.isArray(v)) return v.map(codaVal).filter(x => x != null); if (v.type === 'dt') return v.input; if (v.type === 'dur') return Math.round((v.seconds || 0) / 36) / 100; if ('scalar' in v) return v.scalar; if (v.type === 'slate') return (v.root && v.root.children || []).map(ch => (ch.children || []).map(c => c.text || '').join('')).join('\n'); if ('name' in v) return v.name; return null; }
 function rowsFrom(payload, cols) { const rows = payload && payload.result && payload.result.rows ? payload.result.rows : (payload && payload.rows) || []; return rows.map(r => { const o = {}; for (const [k, name] of Object.entries(cols)) if (r.values && r.values[k]) o[name] = codaVal(r.values[k].value); if (Array.isArray(o.workout)) o.workout = o.workout.join(', '); if (o.date) o.date = String(o.date).slice(0, 10); return o; }); }
 const LIVE = {}; let mcpRef = null;
