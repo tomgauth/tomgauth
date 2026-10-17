@@ -682,7 +682,8 @@ const METRICS = [ // le potager : une planche par métrique de santé mentale
   {key: 'stable', label: 'STABLE', name: 'stabilité', row: 7, im: () => IMG.crops, val: d => d.stab, what: 'ta stabilité', icon: 'choux'},
   {key: 'calme', label: 'CALME', name: 'calme', row: 3, im: () => IMG.crops2, val: d => d.anx == null || d.anx === '' ? null : clamp(10 - d.anx * 2, 0, 10), what: "ton calme (l'inverse de l'anxiété)", icon: 'fraises'}];
 function propLampS(res, x, y, g, style, key) { // réverbères du pack : droits (0 à 5) ou suspendus (6 à 11)
-  const ph = Math.floor(x * .37); res.props.push({base: y + 46, x, draw: t => blit(IMG.lposts, ((Math.floor(t * 4) + ph) % 6) * 32, style * 48, 32, 48, x, y)}); res.block(x + 12, y + 36, 8, 10); if (key) res.objects.push({x: x + 8, y, w: 16, h: 48, key});
+  const fw = style >= 6 ? 32 : 16, dx = style >= 6 ? x : x + 8, ph = Math.floor(x * .37); // les droits font 16 px de large, les suspendus 32
+  res.props.push({base: y + 46, x, draw: t => blit(IMG.lposts, ((Math.floor(t * 4) + ph) % 6) * fw, style * 48, fw, 48, dx, y)}); res.block(x + 12, y + 36, 8, 10); if (key) res.objects.push({x: x + 8, y, w: 16, h: 48, key});
   if (g.day < .6) res.lights.push({x: x + (style >= 6 ? 9 : 16), y: y + (style >= 6 ? 18 : 10), r: 30, c: '255,200,110'}); }
 function propLamp(res, x, y, g, key) { const ph = Math.floor(x * .37); res.props.push({base: y + 46, x, draw: t => blit(IMG.lamppost, ((Math.floor(t * 4) + ph) % 6) * 16, 0, 16, 48, x, y)}); res.block(x + 4, y + 36, 8, 10); if (key) res.objects.push({x, y, w: 16, h: 48, key}); if (g.day < .6) res.lights.push({x: x + 8, y: y + 12, r: 28, c: '255,200,110'}); }
 function drawHouse(res, x, yBase, model, key, stage, lit, smoke) { // stage 1 : rez-de-chaussée en chantier, 2 : murs sans toit, 3 : complète
