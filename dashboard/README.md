@@ -23,27 +23,46 @@ locales ou dans l'artifact Claude.
 
 ## Le village
 
-Sprites : pack Cute Fantasy Free (Kenmi). Une seule carte pour les 90 jours : un arrondissement par
-mois (une ligne), un quartier par semaine (une colonne), tous reliés par les routes. Six modèles de
-quartier (maisons à gauche ou à droite, champs ou parc en bas, route verticale qui fait un crochet).
-La caméra zoome sur le quartier de la semaine ou recule sur tout le village (boutons, molette,
-glisser, double-clic). La frise sous la scène reconstruit le village à n'importe quelle date.
+Sprites : packs Cute Fantasy Free et Premium (Kenmi), non versionnés (licence sans redistribution).
+Un bourg qui s'étend sur les 90 jours. Au milieu, le centre-ville compte le trimestre entier ; de la
+place partent trois avenues, une par mois (septembre à l'ouest, octobre à l'est, novembre au sud).
+Le long de chacune, un quartier pousse chaque semaine, en alternant les côtés. Les avenues ne vont
+que jusqu'au dernier quartier construit : en remontant la frise, on voit la ville grandir. Chaque
+mois a son style (bois et chênes, pierre et bouleaux dorés, calcaire et sapins). La caméra a trois
+vues (quartier de la semaine, centre-ville, tout le village), plus molette, glisser, double-clic.
 
-Ce qui s'accumule sur la semaine, ce qui se lit en moyenne :
+Le centre-ville :
 
 | Élément | Ce qu'il représente |
 | --- | --- |
-| Maisons (jusqu'à 4, par étapes de construction) | jours avec un événement social dans la semaine (un étage par jour, trois étages par maison) |
-| Parc : jusqu'à 20 fleurs | bonheur moyen sur 7 jours |
+| Mairie et ses 14 drapeaux | démarches Cap Berlin (vert fait, jaune en attente, gris à faire) |
+| Banque et coffres d'or | trésorerie hors Wise SOLV, un coffre par mois d'avance à 2 500 € |
+| Taverne, clients sur les bancs | événements sociaux des 30 derniers jours |
+| Guirlandes au sud de la place | trois événements sociaux ou plus sur 30 jours |
+| Étang : canards, cygne | nuits à 80 % ou plus sur 7 jours ; cygne si la moyenne dépasse 90 % |
+| Fontaine au milieu de l'étang | coule si le bonheur moyen sur 7 jours est à 5/10 ou plus |
+| Rue du marché : étals et Chloé | ventes 2PaP du trimestre (un étal par vente, six emplacements) |
+| Grange et bottes de foin | leads du trimestre (une botte pour 50) |
+| Moulin | vitesse des ailes = tâches Todoist sur 7 jours (pleine vitesse à 10 par jour) |
+| Serre et tonneaux fleuris | vidéos YouTube publiées (douze emplacements) |
+| Feux de veillée | webinaires tenus (trois emplacements) |
+| Promeneurs autour de l'étang | vie sociale du mois |
+
+Chaque quartier (ce qui s'accumule sur la semaine, ce qui se lit en moyenne) :
+
+| Élément | Ce qu'il représente |
+| --- | --- |
+| Maisons (jusqu'à 4, par étapes de construction, cheminées qui fument) | jours avec un événement social dans la semaine (un étage par jour, trois étages par maison) |
+| Parc : jusqu'à 20 fleurs, papillons | bonheur moyen sur 7 jours (papillons à partir de 6/10) |
 | Arbres, souches, couleur des feuilles | santé mentale sur 14 jours |
-| Mare, couleur de l'herbe | sommeil moyen sur 7 jours |
+| Mare, couleur de l'herbe, canard | sommeil moyen sur 7 jours (canard à 80 % et plus) |
 | Atelier : caisses | heures Toggl de la semaine (une caisse pour 4 h) |
-| Champs 2PaP | avancement des quêtes du trimestre à cette date |
+| Champs 2PaP et fermiers au travail | avancement des quêtes du trimestre ; un fermier dès 15 tâches dans la semaine, deux dès 45 |
 | Champs SOLV | encaissements SOLV du mois à cette date |
 | Enclos : moutons, cochons, vaches | milliers d'euros encaissés dans la semaine, ventes 2PaP de la semaine, clients qui ont payé dans la semaine |
 | Poules dans la rue | tâches Todoist terminées dans la semaine (une pour dix) |
 | Lampadaires | jours de la semaine à 10 tâches ou plus (un pour deux) |
-| Habitants | toi et l'équipe |
+| Habitants | toi, plus un par événement social de la semaine |
 | Lumière, ombres de nuages, pluie, neige | heure et météo réelles de Berlin, météo historique pour les dates passées |
 
 ## Mise à jour

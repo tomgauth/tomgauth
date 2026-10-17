@@ -428,22 +428,25 @@ function renderHUD() {
 }
 function renderAll() { deriveModel(); renderHUD(); renderQuarter(); renderWeek(); renderDay(); renderMood(); renderMoney(); renderFood(); renderAgenda(); $('gen').textContent = S.generated_at ? new Date(S.generated_at).toLocaleString('fr-FR', {timeZone: TZ, dateStyle: 'short', timeStyle: 'short'}) : '–'; buildScene(); }
 
-/* ====================== VILLAGE (sprites Cute Fantasy Free, Kenmi) ======================
-   Une seule carte pour les 90 jours : trois arrondissements (un par mois, en lignes), un quartier
-   par semaine (en colonnes), tous reliés par les routes. Six modèles de quartier. Une caméra
-   zoome sur le quartier de la semaine ou recule sur tout le village. */
+/* ====================== VILLAGE (Cute Fantasy, Kenmi) ======================
+   Un bourg qui s'étend sur les 90 jours. Au milieu, le centre-ville : mairie, taverne, banque,
+   marché, fontaine, lac, moulin, grange, serre et veillées, qui comptent le trimestre entier.
+   De la place partent trois avenues, une par mois ; le long de chacune, un quartier pousse
+   chaque semaine. Les quartiers futurs sont des terrains à bâtir. */
 const ASSETS = /*__ASSETS__*/{};
 const IMG = {}; let assetsReady = false;
 (function loadAssets() { const names = Object.keys(ASSETS); if (!names.length) return; let n = 0; names.forEach(k => { const im = new Image(); im.onload = im.onerror = () => { if (++n === names.length) { assetsReady = true; buildScene(); } }; im.src = ASSETS[k]; IMG[k] = im; }); })();
-const T = 16, QC = 30, QR = 21, QW = QC * T, QH = QR * T; // quartier : 30 × 21 tuiles (480 × 336 px)
-const ROAD_ROW = 10, CORR = 13; // route horizontale lignes 10-11, couloir de la route verticale colonnes 13-16
+const T = 16, QC = 30, QR = 20, QW = QC * T, QH = QR * T, ROAD_ROW = 9, CORR = 13;
 const cv = $('scene'); const ctx = cv.getContext('2d');
 const world = document.createElement('canvas'); let octx = world.getContext('2d');
 const VIEW = {mode: 'zoom', date: null};
-const cam = {x: 0, y: 0, s: 2}; let camAnim = null, zoomScale = 2, fitScale = .5, worldW = QW * 5, worldH = QH * 3;
-let props = [], blocked = new Set(), objects = [], selected = null, hover = null, t0 = performance.now(), actors = [], drops = [], cloudShadows = [], lights = [], QS = [], V = null, GRID = [], dragging = null, moved = false;
+const cam = {x: 0, y: 0, s: 1, init: false}; let camAnim = null, zoomScale = 2, fitScale = .3, worldW = 3200, worldH = 2000;
+let OX = 0, OY = 0; // position (en tuiles) du centre de la place dans le monde
+const pxc = c => (c + OX) * T, pyc = r => (r + OY) * T, KEY = (c, r) => (c + OX) + ',' + (r + OY);
+let props = [], blocked = new Set(), objects = [], selected = null, hover = null, t0 = performance.now(), actors = [], drops = [], cloudShadows = [], lights = [], QS = [], V = null, CM = null, lake = null, dragging = null, moved = false, CENTER_BOX = null;
 const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-const FONT = {A:'111101111101101',B:'110101110101110',C:'111100100100111',D:'110101101101110',E:'111100110100111',F:'111100110100100',G:'111100101101111',H:'101101111101101',I:'111010010010111',J:'001001001101111',K:'101101110101101',L:'100100100100111',M:'101111111101101',N:'110101101101101',O:'111101101101111',P:'111101111100100',Q:'111101101111001',R:'111101110101101',S:'111100111001111',T:'111010010010010',U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',Y:'101101010010010',Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111',' ':'000000000000000','-':'000000111000000','.':'000000000000010'};
+const MONTHS3 = ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOU', 'SEP', 'OCT', 'NOV', 'DEC'];
+const FONT = {A:'111101111101101',B:'110101110101110',C:'111100100100111',D:'110101101101110',E:'111100110100111',F:'111100110100100',G:'111100101101111',H:'101101111101101',I:'111010010010111',J:'001001001101111',K:'101101110101101',L:'100100100100111',M:'101111111101101',N:'110101101101101',O:'111101101101111',P:'111101111100100',Q:'111101101111001',R:'111101110101101',S:'111100111001111',T:'111010010010010',U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',Y:'101101010010010',Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111',' ':'000000000000000','-':'000000111000000','.':'000000000000010','/':'001001010100100'};
 function pxText(txt, x, y, color) { octx.fillStyle = color; let cx = x; for (const ch of txt.toUpperCase()) { const g = FONT[ch] || FONT[' ']; for (let i = 0; i < 15; i++) if (g[i] === '1') octx.fillRect(cx + (i % 3), y + Math.floor(i / 3), 1, 1); cx += 4; } return cx - x - 1; }
 function drawSign(x, y, line1, line2) { // panneau de bois 34 x 22 sur deux poteaux, texte pixel
   const w = 34, h = 22; octx.fillStyle = '#3b2314'; octx.fillRect(x + 6, y + h, 3, 9); octx.fillRect(x + w - 9, y + h, 3, 9);
@@ -451,19 +454,29 @@ function drawSign(x, y, line1, line2) { // panneau de bois 34 x 22 sur deux pote
   octx.fillStyle = '#7a4e2a'; octx.fillRect(x + 2, y + 2, 2, 2); octx.fillRect(x + w - 4, y + 2, 2, 2); octx.fillRect(x + 2, y + h - 4, 2, 2); octx.fillRect(x + w - 4, y + h - 4, 2, 2);
   const w1 = line1.length * 4 - 1, w2 = line2.length * 4 - 1; pxText(line1, x + Math.round((w - w1) / 2), y + 4, '#fff2cc'); pxText(line2, x + Math.round((w - w2) / 2), y + 12, '#fff2cc');
 }
-
+function drawPlate(x, y, text) { // enseigne d'une ligne, accrochée au mur
+  const w = text.length * 4 + 7, h = 11; octx.fillStyle = '#4a2a1a'; octx.fillRect(x, y, w, h); octx.fillStyle = '#a97845'; octx.fillRect(x + 1, y + 1, w - 2, h - 2); octx.fillStyle = '#d8a56a'; octx.fillRect(x + 1, y + 1, w - 2, 1); pxText(text, x + 4, y + 3, '#fff2cc');
+}
 function rnd(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 function mix(a, b, t) { const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16); const r = Math.round(((pa >> 16) & 255) * (1 - t) + ((pb >> 16) & 255) * t), g = Math.round(((pa >> 8) & 255) * (1 - t) + ((pb >> 8) & 255) * t), bl = Math.round((pa & 255) * (1 - t) + (pb & 255) * t); return '#' + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1); }
 const ok = im => !!im && (im instanceof HTMLCanvasElement || (im.complete && im.naturalWidth > 0));
-function blit(im, sx, sy, w, h, dx, dy, flip, filter) { if (!ok(im)) return; octx.save(); if (filter) octx.filter = filter; if (flip) { octx.translate(Math.round(dx) + w, Math.round(dy)); octx.scale(-1, 1); octx.drawImage(im, sx, sy, w, h, 0, 0, w, h); } else octx.drawImage(im, sx, sy, w, h, Math.round(dx), Math.round(dy), w, h); octx.restore(); }
+function blit(im, sx, sy, w, h, dx, dy, flip, filter) { if (!ok(im)) return; if (!flip && !filter) { octx.drawImage(im, sx, sy, w, h, Math.round(dx), Math.round(dy), w, h); return; } octx.save(); if (filter) octx.filter = filter; if (flip) { octx.translate(Math.round(dx) + w, Math.round(dy)); octx.scale(-1, 1); octx.drawImage(im, sx, sy, w, h, 0, 0, w, h); } else octx.drawImage(im, sx, sy, w, h, Math.round(dx), Math.round(dy), w, h); octx.restore(); }
 const tile = (im, c, r, dx, dy) => blit(im, c * T, r * T, T, T, dx, dy);
 const decor = (c, r, dx, dy, w = 1, h = 1) => blit(IMG.decor, c * T, r * T, w * T, h * T, dx, dy);
 function autoRect(im, cx, cy, cw, ch, borderOnly, ox = 0, oy = 0) { for (let r = 0; r < ch; r++) for (let c = 0; c < cw; c++) { const sc = c === 0 ? 0 : c === cw - 1 ? 2 : 1, sr = r === 0 ? 0 : r === ch - 1 ? 2 : 1; if (borderOnly && sc === 1 && sr === 1) continue; tile(im, sc + ox, sr + oy, (cx + c) * T, (cy + r) * T); } }
+function drawAuto(mask, im, sxOff = 0, dx0 = 0, dy0 = 0) { // autotile 3x3 + coins rentrants (planches route, pavés, eau)
+  const has = k => mask.has(k);
+  for (const k of mask) { const [c, r] = k.split(',').map(Number); const n = has(c + ',' + (r - 1)), s = has(c + ',' + (r + 1)), w = has((c - 1) + ',' + r), e = has((c + 1) + ',' + r); let tc = 1, tr = 1;
+    if (!n && !w) { tc = 0; tr = 0; } else if (!n && !e) { tc = 2; tr = 0; } else if (!s && !w) { tc = 0; tr = 2; } else if (!s && !e) { tc = 2; tr = 2; }
+    else if (!n) { tc = 1; tr = 0; } else if (!s) { tc = 1; tr = 2; } else if (!w) { tc = 0; tr = 1; } else if (!e) { tc = 2; tr = 1; }
+    else if (!has((c - 1) + ',' + (r - 1))) { tc = 1; tr = 4; } else if (!has((c + 1) + ',' + (r - 1))) { tc = 0; tr = 4; } else if (!has((c - 1) + ',' + (r + 1))) { tc = 1; tr = 3; } else if (!has((c + 1) + ',' + (r + 1))) { tc = 0; tr = 3; }
+    blit(im, sxOff + tc * T, tr * T, T, T, c * T - dx0, r * T - dy0); }
+}
 function weatherKind(code) { if (code == null) return 'clear'; if ([95, 96, 99].includes(code)) return 'storm'; if (code >= 71 && code <= 77 || code === 85 || code === 86) return 'snow'; if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return 'rain'; if (code === 45 || code === 48) return 'fog'; if (code === 3) return 'overcast'; if (code === 2) return 'cloudy'; return 'clear'; }
 function dayness(h, sun) { const rise = sun.rise == null ? 7 : sun.rise, set = sun.set == null ? 18 : sun.set; if (h < rise - 1 || h > set + 1) return 0; if (h < rise + 1) return (h - (rise - 1)) / 2; if (h > set - 1) return 1 - (h - (set - 1)) / 2; return 1; }
 const hueCache = {}; function hued(im, filter) { if (!filter) return im; const k = filter + '|' + im.naturalWidth + 'x' + im.naturalHeight + '|' + im.src.length; if (hueCache[k]) return hueCache[k]; const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.filter = filter; x.drawImage(im, 0, 0); hueCache[k] = c; return c; }
 
-/* ---- quartiers : semaines ISO rangées par mois (celui du jeudi) ---- */
+/* ---- semaines du trimestre ---- */
 function quartiers() {
   const out = []; let ws = weekStart(QSTART); const today = M.today; const endMonth = +QEND.slice(5, 7);
   while (ws <= QEND) { let we = addDays(ws, 6); const thu = addDays(ws, 3); let month = +thu.slice(5, 7);
@@ -471,29 +484,63 @@ function quartiers() {
     if (addDays(we, 7) > QEND && +addDays(we, 4).slice(5, 7) > endMonth) we = QEND;
     const status = we < today ? 'past' : ws > today ? 'future' : 'current';
     out.push({start: ws, end: we, week: isoWeek(ws), month, status, label: `S${isoWeek(ws)}`}); ws = addDays(ws, 7); }
-  const months = [...new Set(out.map(q => q.month))]; months.forEach((mo, ri) => out.filter(q => q.month === mo).forEach((q, ci) => { q.row = ri; q.col = ci; q.x = ci * QW; q.y = ri * QH; q.tpl = (q.week + ri) % 6; }));
   return out;
 }
 const quartierOf = date => QS.find(q => date >= q.start && date <= q.end) || null;
 const viewDate = () => VIEW.date || M.today;
 
-/* ---- le modèle d'un quartier : sa semaine, jusqu'au jour regardé ---- */
+/* ---- avenues : une par mois, ouest, est, sud, nord ---- */
+const AV_DIRS = ['W', 'E', 'S', 'N'];
+const avOff = (dir, v) => { // petit décalage pour que l'avenue serpente (0 ou -1 tuile), droite près de la place
+  if (dir === 'W' || dir === 'E') return Math.abs(v) < 20 ? 0 : (Math.sin(v / 7) > .35 ? -1 : 0);
+  return Math.abs(v) < 12 ? 0 : (Math.sin(v / 6) > .35 ? 1 : 0);
+};
+function layoutDistricts() {
+  const months = [...new Set(QS.map(q => q.month))];
+  QS.forEach(q => { const mi = months.indexOf(q.month); const idx = QS.filter(x => x.month === q.month).indexOf(q); q.mi = mi; q.idx = idx; q.dir = AV_DIRS[mi % 4]; q.tpl = (q.week * 5 + mi) % 6;
+    if (q.dir === 'W' || q.dir === 'E') { const xc = q.dir === 'W' ? -(40 + idx * 16) : 40 + idx * 16; q.side = idx % 2 === 0 ? 'N' : 'S'; q.tx = xc - 15; q.ty = q.side === 'N' ? -24 : 4; q.laneX = q.tx + 14; }
+    else if (q.dir === 'S') { q.side = idx % 2 === 0 ? 'E' : 'W'; q.tx = q.side === 'E' ? 4 : -34; q.ty = 30 + idx * 12; q.laneY = q.ty + ROAD_ROW; }
+    else { q.side = idx % 2 === 0 ? 'E' : 'W'; q.tx = q.side === 'E' ? 4 : -34; q.ty = -44 - idx * 12; q.laneY = q.ty + ROAD_ROW; } });
+}
+function avenueCells(dir, extent, add) { // de la place jusqu'à « extent » (tuiles relatives)
+  if (dir === 'W') { for (let x = -14; x >= extent; x--) { const o = avOff('W', x), o2 = avOff('W', x + 1); add(x, o); add(x, o + 1); add(x, o2); add(x, o2 + 1); } }
+  else if (dir === 'E') { for (let x = 13; x <= extent; x++) { const o = avOff('E', x), o2 = avOff('E', x - 1); add(x, o); add(x, o + 1); add(x, o2); add(x, o2 + 1); } }
+  else if (dir === 'S') { for (let y = 8; y <= extent; y++) { const o = avOff('S', y), o2 = avOff('S', y - 1); add(o - 1, y); add(o, y); add(o2 - 1, y); add(o2, y); } }
+  else { for (let y = -24; y >= extent; y--) { const o = avOff('N', y); add(o - 1, y); add(o, y); } }
+}
+function districtRoads(q, add) { // rue du quartier, allée vers l'avenue, amorces
+  const tx = q.tx, ty = q.ty, sr = ty + ROAD_ROW; const horiz = q.dir === 'W' || q.dir === 'E';
+  for (let c = 1; c <= 28; c++) { add(tx + c, sr); add(tx + c, sr + 1); }
+  for (let c = CORR; c < CORR + 4; c++) for (let r = sr - 1; r <= sr + 2; r++) add(tx + c, r); // la petite place du quartier
+  const lane = (r0, r1) => { for (let r = Math.min(r0, r1); r <= Math.max(r0, r1); r++) { add(tx + 14, r); add(tx + 15, r); } };
+  if (horiz) { const a = avOff(q.dir, q.laneX);
+    if (q.side === 'N') { lane(sr + 2, a - 1); lane(sr - 4, sr - 1); } else { lane(a + 2, sr - 1); lane(sr + 2, sr + 5); } }
+  else { const a = avOff(q.dir, sr), a2 = avOff(q.dir, sr + 1);
+    if (q.side === 'E') { for (let c = Math.min(a, a2) + 1; c <= tx + 1; c++) { add(c, sr); add(c, sr + 1); } } else { for (let c = tx + 28; c <= Math.max(a, a2) - 2; c++) { add(c, sr); add(c, sr + 1); } }
+    lane(sr - 4, sr - 1); lane(sr + 2, sr + 5); }
+}
+function signSpot(q) { // où planter le panneau du quartier : à l'entrée, près de l'avenue
+  const sr = q.ty + ROAD_ROW;
+  if (q.dir === 'W' || q.dir === 'E') { const a = avOff(q.dir, q.laneX); return q.side === 'N' ? {x: pxc(q.tx + 16) + 4, y: pyc(a) - 34} : {x: pxc(q.tx + 16) + 4, y: pyc(a + 2) + 1}; }
+  const a = avOff(q.dir, sr); return q.side === 'E' ? {x: pxc(a + 1) + 1, y: pyc(sr) - 34} : {x: pxc(a - 1) - 37, y: pyc(sr) - 34};
+}
+
+/* ---- modèles de données ---- */
 function lerpPoints(points, date) { const pts = points.slice().sort((a, b) => a[0] < b[0] ? -1 : 1); if (!pts.length) return 0; if (date <= pts[0][0]) return date < pts[0][0] ? 0 : pts[0][1]; for (let i = 1; i < pts.length; i++) if (date <= pts[i][0]) { const a = pts[i - 1], b = pts[i]; const t = daysBetween(a[0], date) / Math.max(1, daysBetween(a[0], b[0])); return Math.round(a[1] + (b[1] - a[1]) * t); } return pts[pts.length - 1][1]; }
+const sleepOf = d => d.applesleep != null ? d.applesleep : (d.sleepq != null ? d.sleepq * 10 : null);
 function weekModel(q, ref) {
   const m = {q, ref, from: q.start, to: ref}; const isToday = ref === M.today; const inWin = d => d >= q.start && d <= ref;
   const daily = S.daily.filter(d => d.date && d.date <= ref).sort((a, b) => a.date < b.date ? -1 : 1);
   const d7 = daily.filter(d => d.date > addDays(ref, -7)), d14 = daily.filter(d => d.date > addDays(ref, -14)), wk = daily.filter(d => inWin(d.date));
   const sc = d => { const parts = []; if (d.happy != null) parts.push([d.happy / 10, .4]); if (d.stab != null) parts.push([d.stab / 10, .25]); if (d.anx != null) parts.push([1 - d.anx / 10, .2]); if (d.energy != null) parts.push([d.energy / 10, .15]); const w = sum(parts.map(p => p[1])); return w ? sum(parts.map(p => p[0] * p[1])) / w : null; };
   const ms = d14.map(sc).filter(x => x != null); m.mental = ms.length ? avg(ms) : .5;
-  m.happy7 = avg(d7.map(d => d.happy)); m.sleep7 = avg(d7.map(d => d.sleeph)); m.social7 = avg(d7.map(d => d.social));
-  // score de sommeil : Apple Health quand il existe, sinon la note du Daily Form sur 10
-  const ss = d7.map(d => d.applesleep != null ? d.applesleep : (d.sleepq != null ? d.sleepq * 10 : null)).filter(x => x != null); m.sleepScore = ss.length ? avg(ss) : null;
+  m.happy7 = avg(d7.map(d => d.happy)); m.social7 = avg(d7.map(d => d.social));
+  const ss = d7.map(sleepOf).filter(x => x != null); m.sleepScore = ss.length ? avg(ss) : null;
   const s = m.sleepScore == null ? 80 : m.sleepScore; m.pondTier = s < 70 ? 0 : s < 78 ? 1 : s < 84 ? 2 : s < 88 ? 3 : s < 91 ? 4 : s < 94 ? 5 : s < 97 ? 6 : 7;
-  // accumulations de la semaine
   m.socialDays = wk.filter(d => d.socialev).map(d => d.date); m.socialUnits = m.socialDays.length;
   const stages = 3 + m.socialUnits; m.nHouses = clamp(Math.ceil(stages / 3), 1, 4); m.lastStage = m.nHouses >= 4 && stages >= 12 ? 3 : stages - 3 * (m.nHouses - 1);
   m.npcs = clamp(1 + m.socialUnits, 1, 6);
-  m.workWeek = sum(wk.map(d => d.workh)); m.muay = wk.filter(d => /muay|boxe/i.test(String(d.workout || ''))).length;
+  m.workWeek = sum(wk.map(d => d.workh));
   const rev = (S.money.recent || []).filter(t => t.date && inWin(t.date) && t.amount > 0 && /revenu/i.test(t.cat || '') && t.internal !== 'oui');
   m.cashWeek = sum(rev.map(t => t.amount)); m.sheep = Math.floor(m.cashWeek / 1000); m.payers = new Set(rev.filter(t => t.amount >= 50).map(t => (t.payee || '').toLowerCase().slice(0, 12))).size;
   const K = S.kpi_live || {}; m.salesWeek = ((K.sales_2pap || {}).items || []).filter(s => inWin(s[0])); m.pigs = m.salesWeek.length;
@@ -501,6 +548,7 @@ function weekModel(q, ref) {
   if (days.length) { tasks = sum(days.map(d => d.n)); known = true; goalDays = days.filter(d => d.n >= (P.dailyGoal || 10)).length; }
   else { const wr = (P.weeks || []).find(w => w.from === q.start); if (wr) { const frac = (daysBetween(q.start, ref) + 1) / 7; tasks = Math.round(wr.n * Math.min(1, frac)); known = true; goalDays = Math.round(Math.min(1, frac) * 7 * (wr.n / 7 >= (P.dailyGoal || 10) ? 1 : .5)); } }
   m.tasks = tasks; m.tasksKnown = known; m.chickens = clamp(Math.round(tasks / 10), 0, 8); m.lamps = clamp(Math.floor(goalDays / 2), 0, 4); m.chests = clamp(Math.round(m.workWeek / 4), 0, 6);
+  m.workers = tasks >= 45 ? 2 : tasks >= 15 ? 1 : 0; m.butterflies = m.happy7 == null ? 0 : m.happy7 >= 8 ? 3 : m.happy7 >= 7 ? 2 : m.happy7 >= 6 ? 1 : 0;
   const salesAll = ((K.sales_2pap || {}).items || []).filter(s => s[0] <= ref); const leadPts = (K.leads && K.leads.points) || [[QSTART, 0], [(K.leads || {}).as_of || M.today, (K.leads || {}).value || 0]];
   const vids = (S.youtube && S.youtube.videos || []).filter(v => v.published >= QSTART && v.published <= ref); const webs = ((K.webinars || {}).items || []).filter(w => w[0] <= ref);
   m.q = {sales: {value: salesAll.length, target: (K.sales_2pap || {}).target || 6}, leads: {value: isToday ? ((K.leads || {}).value || 0) : lerpPoints(leadPts, ref), target: (K.leads || {}).target || 500},
@@ -510,149 +558,273 @@ function weekModel(q, ref) {
   const months = Object.keys(S.money.monthly || {}).sort(); const prevKey = months.filter(k => k < mk).slice(-1)[0]; m.solvMonth = solvMonth; m.solvPrev = prevKey ? S.money.monthly[prevKey].solv_in : 3000; m.pctSolv = clamp(solvMonth / Math.max(1, m.solvPrev), 0, 1);
   return m;
 }
+function centerModel(date) { // ce que le centre-ville cumule sur le trimestre, au jour regardé
+  const K = S.kpi_live || {}; const c = {date};
+  c.sales = ((K.sales_2pap || {}).items || []).filter(s => s[0] <= date); c.salesTarget = (K.sales_2pap || {}).target || 6;
+  const leadPts = (K.leads && K.leads.points) || [[QSTART, 0], [(K.leads || {}).as_of || M.today, (K.leads || {}).value || 0]];
+  c.leads = date === M.today ? ((K.leads || {}).value || 0) : lerpPoints(leadPts, date); c.leadsTarget = (K.leads || {}).target || 500; c.bales = clamp(Math.floor(c.leads / 50), 0, 10);
+  c.videos = (S.youtube && S.youtube.videos || []).filter(v => v.published >= QSTART && v.published <= date); c.videosTarget = (K.videos || {}).target || 12;
+  c.webs = ((K.webinars || {}).items || []).filter(w => w[0] <= date); c.websTarget = (K.webinars || {}).target || 3; c.nextWeb = (K.webinars || {}).next;
+  c.cap = S.capberlin || {steps: []};
+  const B = S.balances || {}; c.cash = sum((B.accounts || []).filter(a => !/wise/i.test(a[0])).map(a => a[1])); c.runway = c.cash / BUDGET; c.chests = clamp(Math.round(c.runway), 0, 8);
+  const daily = S.daily.filter(d => d.date && d.date <= date);
+  const d30 = daily.filter(d => d.date > addDays(date, -30)); c.socialList = d30.filter(d => d.socialev).map(d => [d.date, String(d.socialev)]); c.guests = clamp(c.socialList.length, 0, 6);
+  const d7 = daily.filter(d => d.date > addDays(date, -7)); c.goodNights = d7.filter(d => { const s = sleepOf(d); return s != null && s >= 80; }).length; c.ducks = clamp(c.goodNights, 0, 7); c.happy7 = avg(d7.map(d => d.happy));
+  const P = S.productivity || {}; const days = (P.days || []).filter(d => d.date <= date && d.date > addDays(date, -7)); let tasks7 = sum(days.map(d => d.n));
+  if (!days.length) { const wr = (P.weeks || []).find(w => w.from <= date && w.to >= date); tasks7 = wr ? wr.n : 0; } c.tasks7 = tasks7; c.windSpeed = clamp(tasks7 / 70, 0, 1.8);
+  c.walkers = clamp(1 + Math.ceil(c.socialList.length / 3), 1, 5); c.party = c.socialList.length >= 3;
+  const ss7 = d7.map(sleepOf).filter(x => x != null); c.sleep7 = ss7.length ? avg(ss7) : null; c.swan = c.sleep7 != null && c.sleep7 >= 90;
+  return c;
+}
 function globalModel(date) { // météo et lumière du jour regardé
   const g = {}; const isToday = date === M.today; const W = S.weather;
   if (isToday && W && W.current) g.wx = {code: W.current.weather_code, cloud: W.current.cloud_cover}; else { const h = W && W.history ? W.history.find(x => x.date === date) : null; g.wx = h ? {code: h.weather_code, cloud: h.weather_code >= 3 ? 80 : h.weather_code * 25} : {code: null, cloud: 30}; }
   const now = berlinNow(); g.day = isToday ? dayness(now.h, sunTimes(date, now.offset)) : 1; g.kind = weatherKind(g.wx.code); return g;
 }
 
-/* ---- six modèles de quartier ---- */
-// hL : maisons 1-2 à gauche (sinon à droite) ; fL : champs + enclos à gauche (sinon parc + atelier à gauche) ; jog : décalage de la route verticale [haut, bas] en colonnes (0, -? ou +?)
-const TEMPLATES = [
-  {hL: true, fL: true, jog: [0, 0], pocket: 'right'}, {hL: false, fL: false, jog: [0, 0], pocket: 'left'}, {hL: true, fL: false, jog: [-1, 0], pocket: 'none'},
-  {hL: false, fL: true, jog: [1, 0], pocket: 'right'}, {hL: true, fL: true, jog: [0, 1], pocket: 'left'}, {hL: false, fL: false, jog: [0, -1], pocket: 'both'}];
-function roadCells(q, tpl) { // cellules de route du quartier, en tuiles locales
-  const cells = new Set(); const add = (c, r) => cells.add(c + ',' + r);
-  for (let c = 0; c < QC; c++) { add(c, ROAD_ROW); add(c, ROAD_ROW + 1); }
-  if (tpl.pocket === 'left' || tpl.pocket === 'both') for (let c = 3; c <= 9; c++) add(c, ROAD_ROW - 1); // la route s'élargit vers le haut : une poche
-  if (tpl.pocket === 'right' || tpl.pocket === 'both') for (let c = 20; c <= 26; c++) add(c, ROAD_ROW - 1);
-  const base = CORR + 1; const top = base + tpl.jog[0], bot = base + tpl.jog[1];
-  for (let r = 0; r < ROAD_ROW; r++) { const c = r < 4 ? base : top; add(c, r); add(c + 1, r); if (r === 4 && top !== base) { for (let x = Math.min(base, top); x <= Math.max(base, top) + 1; x++) { add(x, 4); add(x, 5); } } }
-  for (let r = ROAD_ROW + 2; r < QR; r++) { const c = r > QR - 5 ? bot : base; add(c, r); add(c + 1, r); if (r === QR - 5 && bot !== base) { for (let x = Math.min(base, bot); x <= Math.max(base, bot) + 1; x++) { add(x, QR - 5); add(x, QR - 4); } } }
-  for (let c = CORR; c < CORR + 4; c++) for (let r = ROAD_ROW - 1; r <= ROAD_ROW + 2; r++) add(c, r);
-  return cells;
+/* ---- dessin : utilitaires partagés ---- */
+const NPC_SHEETS = ['npc_bartender_katy', 'npc_chef_chloe', 'npc_fisherman_fin', 'npc_lumberjack_jack', 'npc_miner_mike', 'npc_bartender_bruno'];
+const MATERIALS = ['w', 's', 'l', 'w'], ROOFS = ['R', 'B', 'K'];
+const HOUSE = {1: {w: 96, h: 128, chim: [65, 21], win: [[48, 66], [62, 97]]}, 4: {w: 112, h: 96, chim: [88, 13], win: [[60, 70], [82, 70]]}};
+const CROP_ROWS = [0, 2, 4, 5, 7, 14]; // blé, carottes, maïs, potirons, choux, tournesols
+const TEMPLATES = [{hL: true, fL: true}, {hL: false, fL: false}, {hL: true, fL: false}, {hL: false, fL: true}, {hL: true, fL: true}, {hL: false, fL: false}];
+function mkRes() { const res = {objects: [], actors: [], lights: [], props: [], blocked: new Set()}; res.block = (x, y, w, h) => { for (let yy = Math.floor(y / T); yy < Math.ceil((y + h) / T); yy++) for (let xx = Math.floor(x / T); xx < Math.ceil((x + w) / T); xx++) res.blocked.add(xx + ',' + yy); }; return res; }
+const TREES = {oak: ['oak', 0, 64, 80], small: ['oaksmall', 32, 32, 48], boak: ['t_oak', 64, 64, 80], spruce: ['t_spruce', 64, 64, 80], spruce_s: ['t_spruce_s', 32, 32, 48], birch: ['t_birch', 32, 32, 80], fruit: ['t_fruit', 32, 32, 64]};
+function propTree(res, x, y, kind, filter, key) { const [ik, sx, w, h] = TREES[kind] || TREES.small; const im = IMG[ik]; if (!ok(im)) return; res.props.push({base: y + h - 4, x, draw: () => blit(hued(im, filter || ''), sx, 0, w, h, x, y)}); res.block(x + w / 2 - 8, y + h - 18, 16, 14); if (key) res.objects.push({x: x + 4, y: y + 8, w: w - 8, h: h - 10, key}); }
+function propLamp(res, x, y, g, key) { const ph = Math.floor(x * .37); res.props.push({base: y + 46, x, draw: t => blit(IMG.lamppost, ((Math.floor(t * 4) + ph) % 6) * 16, 0, 16, 48, x, y)}); res.block(x + 4, y + 36, 8, 10); if (key) res.objects.push({x, y, w: 16, h: 48, key}); if (g.day < .6) res.lights.push({x: x + 8, y: y + 12, r: 28, c: '255,200,110'}); }
+function drawHouse(res, x, yBase, model, key, stage, lit, smoke) { // stage 1 : rez-de-chaussée en chantier, 2 : murs sans toit, 3 : complète
+  const H = HOUSE[model], im = IMG[key]; if (!ok(im)) return; const y = yBase - H.h; const top = stage >= 3 ? 0 : Math.round(H.h * (stage === 2 ? .44 : .69)); const ph = Math.floor(x * .13);
+  res.props.push({base: yBase - 4, x, draw: t => { blit(im, 0, top, H.w, H.h - top, x, y + top);
+    if (stage < 3) { const n = Math.ceil(H.w / 16); for (let i = 0; i < n; i++) tile(IMG.fences, i === 0 ? 1 : i === n - 1 ? 3 : 2, 0, x + i * 16, y + top - 10); if (stage === 1) { blit(IMG.chest, 0, 0, 16, 16, x + H.w - 26, y + top - 18); decor(0, 7, x + 8, y + top - 20, 2, 1); } else decor(0, 7, x + 36, y + top - 22, 2, 1); }
+    else if (smoke) blit(IMG.smoke, ((Math.floor(t * 5) + ph) % 5) * 32, 0, 32, 32, x + H.chim[0] - 7, y + H.chim[1] - 27); }});
+  if (lit) H.win.forEach(([wx, wy], i) => { if (stage >= 3 || i > 0 || model === 4) res.lights.push({x: x + wx, y: y + wy, r: 14, c: '255,214,120'}); });
+  res.block(x + 2, y + top + 8, H.w - 4, H.h - top - 12);
+  res.objects.push({x: x + 2, y: y + top + 4, w: H.w - 4, h: H.h - top - 4, key: 'house'});
 }
-function drawRoads(mask, cols, rows) { // autotile global : bords, coins, coins rentrants
-  const has = (c, r) => mask.has(c + ',' + r);
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { if (!has(c, r)) continue;
-    const n = has(c, r - 1), s = has(c, r + 1), w = has(c - 1, r), e = has(c + 1, r); let tc = 1, tr = 1;
-    if (!n && !w) { tc = 0; tr = 0; } else if (!n && !e) { tc = 2; tr = 0; } else if (!s && !w) { tc = 0; tr = 2; } else if (!s && !e) { tc = 2; tr = 2; }
-    else if (!n) { tc = 1; tr = 0; } else if (!s) { tc = 1; tr = 2; } else if (!w) { tc = 0; tr = 1; } else if (!e) { tc = 2; tr = 1; }
-    else if (!has(c - 1, r - 1)) { tc = 1; tr = 4; } else if (!has(c + 1, r - 1)) { tc = 0; tr = 4; } else if (!has(c - 1, r + 1)) { tc = 1; tr = 3; } else if (!has(c + 1, r + 1)) { tc = 0; tr = 3; }
-    tile(IMG.path, tc, tr, c * T, r * T); }
-}
-function drawHouse(x, y, stage, variant, lit, res) { // stage 1 : rez-de-chaussée en chantier, 2 : murs sans toit, 3 : complète
-  const f = variant === 1 ? 'hue-rotate(300deg)' : variant === 2 ? 'hue-rotate(40deg)' : variant === 3 ? 'hue-rotate(190deg)' : '';
-  if (!ok(IMG.house)) return; const im = hued(IMG.house, f); const top = stage >= 3 ? 0 : stage === 2 ? 56 : 88;
-  res.props.push({base: y + 126, x, draw: () => { blit(im, 0, top, 96, 128 - top, x, y + top); if (stage < 3) { for (let i = 0; i < 6; i++) tile(IMG.fences, i === 0 ? 1 : i === 5 ? 3 : 2, 0, x + i * 16, y + top - 10); if (stage === 1) { blit(IMG.chest, 0, 0, 16, 16, x + 70, y + top - 18); decor(0, 7, x + 8, y + top - 20, 2, 1); } else decor(0, 7, x + 36, y + top - 22, 2, 1); } }});
-  if (lit && stage >= 3) { res.lights.push({x: x + 48, y: y + 66, r: 14, c: '255,214,120'}); res.lights.push({x: x + 62, y: y + 97, r: 10, c: '255,214,120'}); } else if (lit && stage === 2) res.lights.push({x: x + 62, y: y + 97, r: 10, c: '255,214,120'});
-  res.block(x, y + top + 8, 96, 128 - top - 8);
-  res.objects.push({x: x + 2, y: y + (stage >= 3 ? 16 : stage === 2 ? 46 : 78), w: 92, h: stage >= 3 ? 112 : stage === 2 ? 82 : 50, key: 'house'});
-}
-/* ---- dessin d'un quartier (origine ox, oy en pixels monde) ---- */
-function drawQuartier(q, m, g, opts) {
-  const res = {objects: [], actors: [], lights: [], props: [], blocked: new Set()}; const ox = q.x, oy = q.y; const r = rnd(900 + q.week * 7); const tpl = TEMPLATES[q.tpl];
-  res.block = (x, y, w, h) => { for (let yy = Math.floor(y / T); yy < Math.ceil((y + h) / T); yy++) for (let xx = Math.floor(x / T); xx < Math.ceil((x + w) / T); xx++) res.blocked.add(xx + ',' + yy); };
-  const L = (c) => ox + c * T, Tn = (rw) => oy + rw * T;
-  const left = {c0: 0, c1: 12}, right = {c0: CORR + 4, c1: QC - 1}; const hBlock = tpl.hL ? left : right, hBlock2 = tpl.hL ? right : left, fBlock = tpl.fL ? left : right, pBlock = tpl.fL ? right : left;
-  const tree = (x, y, kind, filter) => { const im = kind === 'oak' ? IMG.oak : IMG.oaksmall; const w = kind === 'oak' ? 64 : 32, h = kind === 'oak' ? 80 : 48, sx = kind === 'oak' ? 0 : 32; res.props.push({base: y + h - 4, x, draw: () => blit(hued(im, filter || ''), sx, 0, w, h, x, y)}); res.block(x + (kind === 'oak' ? 22 : 10), y + h - 20, kind === 'oak' ? 20 : 12, 16); res.objects.push({x: x + 4, y: y + 8, w: w - 8, h: h - 10, key: 'tree'}); };
-  const lamp = (x, y) => { res.props.push({base: y + 46, x, draw: () => decor(4, 4, x, y, 1, 3)}); res.block(x + 4, y + 36, 8, 10); res.objects.push({x, y, w: 16, h: 48, key: 'lamp'}); if (g.day < .6) res.lights.push({x: x + 8, y: y + 8, r: 26, c: '255,200,110'}); };
+
+/* ---- un quartier ---- */
+function drawDistrict(q, m, g, opts) {
+  const res = mkRes(); const ox = pxc(q.tx), oy = pyc(q.ty); const r = rnd(900 + q.week * 7); const tpl = TEMPLATES[q.tpl];
+  const L = c => ox + c * T, Tn = rw => oy + rw * T; const ST = [{oak: 'oak', small: 'small'}, {oak: 'birch', small: 'fruit'}, {oak: 'spruce', small: 'spruce_s'}][(q.mi || 0) % 3];
+  const left = {c0: 0}, right = {c0: CORR + 4}; const hBlock = tpl.hL ? left : right, hBlock2 = tpl.hL ? right : left, fBlock = tpl.fL ? left : right, pBlock = tpl.fL ? right : left;
   const small = (c, rw, x, y, key) => { decor(c, rw, x, y); res.block(x + 3, y + 6, 10, 10); if (key) res.objects.push({x, y, w: 16, h: 16, key}); };
-  // panneau du quartier : mois et lundi
-  const mon = ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOU', 'SEP', 'OCT', 'NOV', 'DEC'][+q.start.slice(5, 7) - 1]; const signX = L(CORR) - 44, signY = Tn(ROAD_ROW - 1) - 34;
-  res.props.push({base: signY + 30, x: signX, draw: () => drawSign(signX, signY, mon, String(+q.start.slice(8, 10)))}); res.block(signX + 4, signY + 20, 26, 12); res.objects.push({x: signX, y: signY, w: 34, h: 31, key: 'sign'});
-  if (opts.future) { for (let i = 0; i < 18; i++) decor(Math.floor(r() * 3), 0, L(Math.floor(r() * QC)), Tn(Math.floor(r() * QR))); for (let i = 0; i < 3; i++) tree(L(2 + Math.floor(r() * 9) + (i % 2 ? 17 : 0)), Tn(Math.floor(r() * 15)), 'small', 'saturate(.6)');
-    octx.save(); octx.globalAlpha = .42; octx.fillStyle = '#1b2a40'; octx.fillRect(ox, oy, QW, QH); octx.restore(); return res; }
-  const lush = clamp(((m.sleepScore == null ? 80 : m.sleepScore) - 60) / 30, 0, 1);
-  if (lush < .7) { octx.save(); octx.globalCompositeOperation = 'multiply'; octx.fillStyle = `rgba(230,200,120,${(0.7 - lush) * 0.5})`; octx.fillRect(ox, oy, QW, QH); octx.restore(); }
-  // maisons (vie sociale cumulée) : 1-2 dans hBlock, 3-4 dans hBlock2
-  const houseY = Tn(ROAD_ROW) - 144; const slots = [hBlock.c0, hBlock.c0 + 6.5, hBlock2.c0, hBlock2.c0 + 6.5]; const lit = g.day < .6;
-  for (let i = 0; i < 4; i++) { const x = L(slots[i]) + 4; if (i < m.nHouses) drawHouse(x, houseY, i < m.nHouses - 1 ? 3 : m.lastStage, i, lit && i < Math.max(1, m.socialUnits), res);
-    else if (i === m.nHouses) { small(3, 0, x + 40, houseY + 100); decor(0, 1, x + 10, houseY + 110); decor(2, 1, x + 70, houseY + 118); small(1, 3, x + 20, houseY + 70); small(0, 3, x + 60, houseY + 40); res.objects.push({x: x, y: houseY + 30, w: 92, h: 100, key: 'lot'}); }
-    else { tree(x + 30, houseY + 56, 'small'); decor(1, 1, x + 10, houseY + 112); small(6, 1, x + 70, houseY + 100); decor(2, 1, x + 76, houseY + 40); } }
-  res.objects.push({x: L(hBlock.c0), y: houseY + 16, w: 13 * T, h: 112, key: 'houses'}); if (m.nHouses > 2) res.objects.push({x: L(hBlock2.c0), y: houseY + 16, w: 13 * T, h: 112, key: 'houses'});
-  // champs sur la ligne 12-14 du bloc F, enclos large lignes 15-17, mare lignes 18-20
-  const fy = ROAD_ROW + 2; const plotsX = [fBlock.c0, fBlock.c0 + 3, fBlock.c0 + 7, fBlock.c0 + 10];
-  plotsX.forEach((pc, i) => { autoRect(IMG.farm, (ox / T) + pc, (oy / T) + fy, 3, 3); const pct = i < 2 ? m.pct2pap : m.pctSolv; const stage = pct >= .99 ? [6, 2] : pct >= .66 ? [5, 2] : pct >= .33 ? [4, 2] : [3, 2]; const nCells = Math.round(9 * clamp(pct, 0, 1)); let k = 0;
-    for (let yy = 0; yy < 3; yy++) for (let xx = 0; xx < 3; xx++) if (k++ < nCells) decor(stage[0], stage[1], L(pc + xx), Tn(fy + yy) - 2); });
+  const sp = signSpot(q); res.props.push({base: sp.y + 30, x: sp.x, draw: () => drawSign(sp.x, sp.y, MONTHS3[+q.start.slice(5, 7) - 1], String(+q.start.slice(8, 10)))}); res.block(sp.x + 4, sp.y + 20, 26, 12); res.objects.push({x: sp.x, y: sp.y, w: 34, h: 31, key: 'sign'});
+  // emplacements des maisons : deux par bloc, modèles différents selon le côté
+  const slotsFor = b => b.c0 === 0 ? [[0, 4], [112, 1]] : [[0, 1], [96, 4]];
+  const slots = [...slotsFor(hBlock).map(s => [L(hBlock.c0) + s[0], s[1]]), ...slotsFor(hBlock2).map(s => [L(hBlock2.c0) + s[0], s[1]])];
+  const houseBase = Tn(ROAD_ROW) - 6;
+  if (opts.future) { // terrain à bâtir : piquets, herbes hautes
+    slots.forEach(([x, model]) => { const w = HOUSE[model].w; [[x + 4, houseBase - 40], [x + w - 20, houseBase - 40], [x + 4, houseBase - 8], [x + w - 20, houseBase - 8]].forEach(([sx, sy]) => tile(IMG.fences, 0, 3, sx, sy)); });
+    for (let i = 0; i < 22; i++) decor(Math.floor(r() * 3), Math.floor(r() * 2), L(Math.floor(r() * QC)), Tn(Math.floor(r() * QR)));
+    res.objects.push({x: ox, y: oy, w: QW, h: QH, key: 'lot_future', big: true}); return res; }
+  const ss = m.sleepScore == null ? 80 : m.sleepScore; const lush = clamp((ss - 60) / 30, 0, 1);
+  if (lush < .7) { const cx = ox + QW / 2, cy = oy + QH / 2; const gr = octx.createRadialGradient(cx, cy, 20, cx, cy, QW * .62); gr.addColorStop(0, `rgba(230,200,120,${(0.7 - lush) * 0.55})`); gr.addColorStop(1, 'rgba(230,200,120,0)'); octx.save(); octx.globalCompositeOperation = 'multiply'; octx.fillStyle = gr; octx.fillRect(ox - 60, oy - 60, QW + 120, QH + 120); octx.restore(); }
+  // maisons : vie sociale cumulée de la semaine, matériaux selon le mois, toits selon la semaine
+  const mat = MATERIALS[q.mi % 4]; const lit = g.day < .6;
+  for (let i = 0; i < 4; i++) { const [x, model] = slots[i]; const key = `h${mat}${model}${ROOFS[(q.week + i) % 3]}`; const w = HOUSE[model].w;
+    if (i < m.nHouses) drawHouse(res, x, houseBase, model, key, i < m.nHouses - 1 ? 3 : m.lastStage, lit && i < Math.max(1, m.socialUnits), true);
+    else if (i === m.nHouses) { [[x + 4, houseBase - 40], [x + w - 20, houseBase - 40], [x + 4, houseBase - 8], [x + w - 20, houseBase - 8]].forEach(([sx, sy]) => tile(IMG.fences, 0, 3, sx, sy)); small(3, 0, x + w / 2 - 8, houseBase - 30); res.objects.push({x, y: houseBase - 60, w, h: 60, key: 'lot'}); }
+    else { propTree(res, x + w / 2 - 16, houseBase - 70, ST.small); decor(1, 1, x + 10, houseBase - 18); small(6, 1, x + w - 26, houseBase - 30); } }
+  res.objects.push({x: L(hBlock.c0), y: houseBase - 112, w: 13 * T, h: 112, key: 'houses'}); if (m.nHouses > 2) res.objects.push({x: L(hBlock2.c0), y: houseBase - 112, w: 13 * T, h: 112, key: 'houses'});
+  // champs : 2PaP puis SOLV, cultures différentes selon le quartier
+  const fy = ROAD_ROW + 2; const plotsX = [fBlock.c0, fBlock.c0 + 3, fBlock.c0 + 7, fBlock.c0 + 10]; const cropA = CROP_ROWS[q.tpl % 6], cropB = CROP_ROWS[(q.tpl + 3) % 6];
+  plotsX.forEach((pc, i) => { autoRect(IMG.farm, (ox / T) + pc, (oy / T) + fy, 3, 3); const pct = clamp(i < 2 ? m.pct2pap : m.pctSolv, 0, 1); const stage = pct < .25 ? 0 : pct < .5 ? 1 : pct < .85 ? 2 : 3; const nCells = Math.round(9 * pct); let k = 0; const row = i < 2 ? cropA : cropB;
+    for (let yy = 0; yy < 3; yy++) for (let xx = 0; xx < 3; xx++) if (k++ < nCells) blit(IMG.crops, (2 + stage) * 16, row * 32, 16, 32, L(pc + xx), Tn(fy + yy) - 18); });
   res.objects.push({x: L(fBlock.c0), y: Tn(fy), w: 6 * T, h: 48, key: 'f_2pap'}); res.objects.push({x: L(fBlock.c0 + 7), y: Tn(fy), w: 6 * T, h: 48, key: 'f_solv'});
-  small(3, 0, L(fBlock.c0 + 6) - 6, Tn(fy) - 4);
+  const fields = {x0: L(fBlock.c0) + 8, x1: L(fBlock.c0 + 13) - 8, y0: Tn(fy) + 14, y1: Tn(fy + 3) - 2};
+  for (let i = 0; i < m.workers; i++) res.actors.push({kind: 'worker', sheet: i % 2 ? 'npc_farmer_buba' : 'npc_farmer_bob', x: fields.x0 + r() * (fields.x1 - fields.x0), y: fields.y0 + r() * (fields.y1 - fields.y0), box: fields, state: 'work', timer: 4 + r() * 6, tool: r() < .5 ? 8 : 11, dir: 1, t: r() * 5});
+  // enclos : l'argent de la semaine
   const penC = fBlock.c0, penR = fy + 3, penW = 12; autoRect(IMG.fences, (ox / T) + penC, (oy / T) + penR, penW, 3, true, 1, 1); res.objects.push({x: L(penC), y: Tn(penR), w: penW * T, h: 48, key: 'pen'});
   for (let c = 0; c < penW; c++) { res.blocked.add((ox / T + penC + c) + ',' + (oy / T + penR)); res.blocked.add((ox / T + penC + c) + ',' + (oy / T + penR + 2)); } for (let rr = 0; rr < 3; rr++) { res.blocked.add((ox / T + penC) + ',' + (oy / T + penR + rr)); res.blocked.add((ox / T + penC + penW - 1) + ',' + (oy / T + penR + rr)); }
   const pen = {x0: L(penC) + 12, x1: L(penC + penW) - 28, y0: Tn(penR) + 22, y1: Tn(penR) + 32};
   const addAnimal = (kind, n, box, free) => { for (let i = 0; i < n; i++) res.actors.push({kind, x: box.x0 + r() * (box.x1 - box.x0), y: box.y0 + r() * (box.y1 - box.y0), box, free: !!free, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: kind === 'chicken' ? .11 : .07}); };
   addAnimal('cow', clamp(m.payers, 0, 4), pen); addAnimal('pig', clamp(m.pigs, 0, 3), pen); addAnimal('sheep', clamp(m.sheep, 0, 6), pen);
-  // la mare : taille selon le score de sommeil (de la flaque de boue à la grande mare)
+  // la mare : score de sommeil ; à 80 % et plus, un canard y nage
   const tiers = [[1, 1], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3], [7, 3], [8, 3]]; const [pw, ph] = tiers[m.pondTier]; const pondC = fBlock.c0 + 2, pondR = fy + 6;
   if (m.pondTier === 0) { octx.fillStyle = '#6b4a2e'; octx.beginPath(); octx.ellipse(L(pondC) + 8, Tn(pondR) + 8, 9, 5, 0, 0, Math.PI * 2); octx.fill(); octx.fillStyle = '#4f3a26'; octx.beginPath(); octx.ellipse(L(pondC) + 8, Tn(pondR) + 8, 6, 3, 0, 0, Math.PI * 2); octx.fill(); }
-  else { autoRect(IMG.water, (ox / T) + pondC, (oy / T) + pondR, pw, ph); res.block(L(pondC), Tn(pondR), pw * T, ph * T); if ((m.sleepScore || 0) >= 80 && ok(IMG.chicken)) res.props.push({base: Tn(pondR) + ph * 8 + 6, draw: () => blit(IMG.chicken, 0, 0, 32, 32, L(pondC) + pw * 8 - 16, Tn(pondR) + ph * 8 - 24)}); }
+  else { autoRect(IMG.water, (ox / T) + pondC, (oy / T) + pondR, pw, ph); res.block(L(pondC), Tn(pondR), pw * T, ph * T);
+    if (ss >= 80) res.actors.push({kind: 'duck', x: L(pondC) + pw * 8, y: Tn(pondR) + ph * 8 + 4, box: {x0: L(pondC) + 10, x1: L(pondC + pw) - 10, y0: Tn(pondR) + 12, y1: Tn(pondR + ph) - 6}, dir: -1, vx: -1, vy: 0, t: r() * 5, speed: .05}); }
   res.objects.push({x: L(pondC), y: Tn(pondR), w: Math.max(2, pw) * T, h: Math.max(1, ph) * T, key: 'pond'});
-  // parc (fleurs = bonheur moyen) + atelier dans le bloc P
+  // parc : fleurs = bonheur moyen, papillons quand ça va bien
   const parkC = pBlock.c0, parkR = fy; const nFlow = clamp(Math.round((m.happy7 || 0) / 10 * 20), 0, 20);
   for (let i = 0; i < 8; i++) { tile(IMG.fences, i === 0 ? 1 : i === 7 ? 3 : 2, 0, L(parkC + i), Tn(parkR) - 2); res.blocked.add((ox / T + parkC + i) + ',' + (oy / T + parkR - 1)); }
-  tree(L(parkC), Tn(parkR + 3), 'small'); tree(L(parkC + 6), Tn(parkR + 5), 'small');
+  propTree(res, L(parkC), Tn(parkR + 3), ST.small); propTree(res, L(parkC + 6), Tn(parkR + 5), ST.small);
   for (let i = 0; i < nFlow; i++) decor(i % 4, 8 + Math.floor(i / 4) % 4, L(parkC) + 8 + (i % 5) * 24 + (Math.floor(i / 5) % 2) * 8, Tn(parkR) + 14 + Math.floor(i / 5) * 22);
-  lamp(L(parkC + 7) + 4, Tn(parkR + 6)); res.objects.push({x: L(parkC), y: Tn(parkR), w: 8 * T, h: 9 * T, key: 'park'});
+  for (let i = 0; i < m.butterflies; i++) res.actors.push({kind: 'bfly', cx: L(parkC) + 64, cy: Tn(parkR) + 56, x: 0, y: 0, color: Math.floor(r() * 8), t: r() * 10, rx: 30 + r() * 30, ry: 18 + r() * 14});
+  res.objects.push({x: L(parkC), y: Tn(parkR), w: 8 * T, h: 9 * T, key: 'park'});
+  // atelier : heures de travail
   const yC = pBlock.c0 + 9, yR = fy; autoRect(IMG.fences, (ox / T) + yC, (oy / T) + yR, 4, 4, true, 1, 1); res.block(L(yC), Tn(yR), 64, 64);
   for (let i = 0; i < m.chests; i++) blit(IMG.chest, 0, 0, 16, 16, L(yC) + 16 + (i % 3) * 14, Tn(yR) + 18 + Math.floor(i / 3) * 14);
-  decor(0, 7, L(yC) + 14, Tn(yR) + 44, 2, 1); decor(4, 0, L(yC + 3) + 2, Tn(yR) - 2); res.objects.push({x: L(yC), y: Tn(yR), w: 64, h: 64, key: 'yard'});
-  // arbres (santé mentale), espacés, triés en profondeur
-  const treeSpots = [[yC - .5, yR + 4.5, 'oak'], [yC + 2, yR + 7, 'small'], [parkC + 3, yR + 7.2, 'small'], [hBlock2.c0 + 1, 0, 'small'], [hBlock2.c0 + 7, 2.5, 'oak'], [hBlock.c0 + 11.5, 0, 'small']];
-  const nTrees = clamp(Math.round(1 + m.mental * 5), 1, treeSpots.length); const treeFilter = m.mental > .65 ? '' : m.mental > .45 ? 'saturate(.7)' : 'sepia(.6) saturate(.8)';
-  treeSpots.forEach((s, i) => { if (i >= 3 && m.nHouses > 2) return; const x = L(s[0]), y = Tn(s[1]); if (i < nTrees) tree(x, y, s[2], treeFilter); else small(0, 2, x + 10, y + 30, 'stump'); });
-  // lampadaires (jours à objectif atteint) le long de la route, puis la lanterne de la place
-  const lampCols = [2, 9, 19, 27]; for (let i = 0; i < m.lamps; i++) lamp(L(lampCols[i]), Tn(ROAD_ROW) - 46);
-  for (let i = 0; i < 3; i++) tile(IMG.path, i, 5, L(CORR + (i === 1 ? 3 : i === 2 ? 1 : 0)), Tn(ROAD_ROW - 1 + (i === 2 ? 3 : i)));
-  lamp(L(CORR + 3) + 2, Tn(ROAD_ROW - 1) - 30);
-  // poules (tâches) partout dans le quartier sauf dans l'enclos, habitants (vie sociale) sur les routes
+  decor(0, 7, L(yC) + 14, Tn(yR) + 44, 2, 1); res.objects.push({x: L(yC), y: Tn(yR), w: 64, h: 64, key: 'yard'});
+  // arbres : santé mentale
+  const treeSpots = [[yC - .5, yR + 4.5, 'oak'], [yC + 2, yR + 7, 'small'], [parkC + 3, yR + 7.2, 'small']];
+  const nTrees = clamp(Math.round(m.mental * 4), 1, treeSpots.length); const treeFilter = m.mental > .65 ? '' : m.mental > .45 ? 'saturate(.7)' : 'sepia(.6) saturate(.8)';
+  treeSpots.forEach((s, i) => { const x = L(s[0]), y = Tn(s[1]); if (i < nTrees) propTree(res, x, y, ST[s[2]], treeFilter, 'tree'); else small(0, 2, x + 10, y + 30, 'stump'); });
+  // lampadaires : jours à objectif Todoist, autour de la petite place
+  [[CORR, ROAD_ROW - 3.2], [CORR + 3, ROAD_ROW - 3.2], [CORR, ROAD_ROW + 2.2], [CORR + 3, ROAD_ROW + 2.2]].slice(0, m.lamps).forEach(([c, rw]) => propLamp(res, L(c), Tn(rw), g, 'lamp'));
+  // poules : tâches, partout sauf dans l'enclos ; habitants : vie sociale
   addAnimal('chicken', m.chickens, {x0: ox + 8, x1: ox + QW - 24, y0: oy + 20, y1: oy + QH - 8}, true);
-  const npcFilters = ['', 'hue-rotate(150deg)', 'hue-rotate(40deg) saturate(1.3)', 'hue-rotate(260deg)', 'hue-rotate(90deg)', 'hue-rotate(200deg) saturate(.8)'];
-  for (let i = 0; i < m.npcs; i++) { const h = i % 2 === 0; if (h) res.actors.push({kind: 'npc', x: L(2 + (i * 7) % 24), y: Tn(ROAD_ROW) + 20 + (i % 3) * 4, dir: i % 4 < 2 ? 1 : -1, axis: 'h', x0: L(1), x1: L(QC - 2), t: r() * 9, speed: .11 + r() * .05, filter: npcFilters[i % 6]});
-    else res.actors.push({kind: 'npc', x: L(CORR + 1) + 10 + (i % 3) * 6, y: Tn(1 + (i * 5) % 18), dir: i % 4 < 2 ? 1 : -1, axis: 'v', y0: Tn(0) + 4, y1: Tn(QR - 1), t: r() * 9, speed: .1 + r() * .05, filter: npcFilters[i % 6]}); }
+  for (let i = 0; i < m.npcs; i++) { const sheet = NPC_SHEETS[(q.week + i) % NPC_SHEETS.length];
+    if (i % 2 === 0) res.actors.push({kind: 'npc', sheet, x: L(2 + (i * 7) % 24), y: Tn(ROAD_ROW) + 22 + (i % 3) * 3, dir: i % 4 < 2 ? 1 : -1, axis: 'h', x0: L(1) + 8, x1: L(28) + 8, t: r() * 9, speed: .1 + r() * .04});
+    else res.actors.push({kind: 'npc', sheet, x: L(14) + 14 + (i % 3) * 4, y: Tn(ROAD_ROW) + 10, dir: i % 4 < 2 ? 1 : -1, axis: 'v', y0: Tn(ROAD_ROW - 3), y1: Tn(ROAD_ROW + 5), t: r() * 9, speed: .09 + r() * .04}); }
   res.objects.push({x: ox, y: Tn(ROAD_ROW), w: QW, h: 32, key: 'street'});
+  res.objects.push({x: ox, y: oy, w: QW, h: QH, key: 'quartier', big: true});
   return res;
 }
+
+/* ---- le centre-ville ---- */
+function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'étang
+  const res = mkRes(); const X = v => OX * T + v, Y = v => OY * T + v; const night = g.day < .6; const r = rnd(4242);
+  const obj = (x, y, w, h, key) => res.objects.push({x, y, w, h, key, c: true});
+  const prop = (x, y, base, draw) => res.props.push({base, x, draw});
+  // mairie (Cap Berlin), en haut de la place ; drapeaux de part et d'autre
+  const mx = X(-56), my = Y(-284); prop(mx, my, my + 136, () => blit(IMG.church, (night ? 3 : 0) * 112, 0, 112, 144, mx, my)); res.block(mx + 8, my + 84, 96, 52); obj(mx + 6, my + 8, 100, 128, 'mairie');
+  if (night) [[42, 52], [70, 52], [42, 92], [70, 92]].forEach(([a, b]) => res.lights.push({x: mx + a, y: my + b, r: 16, c: '255,170,80'}));
+  (cm.cap.steps || []).forEach((s, i) => { const fx = X(i < 7 ? -196 + i * 18 : 76 + (i - 7) * 18), fy = Y(-142); const col = s[1] === 'ok' ? '#5fbf5a' : s[1] === 'wait' ? '#f2c14e' : '#9aa0a6'; const ph = i * .7;
+    prop(fx, fy, fy + 18, t => { octx.fillStyle = '#3b2314'; octx.fillRect(fx, fy, 2, 19); octx.fillStyle = '#d8a56a'; octx.fillRect(fx, fy - 1, 2, 1); octx.fillStyle = 'rgba(0,0,0,.25)'; octx.fillRect(fx - 1, fy + 18, 5, 2);
+      octx.fillStyle = col; if (s[1] === 'todo') { octx.fillRect(fx + 2, fy + 8, 6, 5); return; } const w1 = Math.round(Math.sin(t * 3 + ph)), w2 = Math.round(Math.sin(t * 3 + ph - 1.2)); octx.fillRect(fx + 2, fy + 1, 4, 6); octx.fillRect(fx + 6, fy + 1 + w1, 3, 6); octx.fillRect(fx + 9, fy + 1 + w2, 2, 5); octx.fillStyle = 'rgba(255,255,255,.35)'; octx.fillRect(fx + 2, fy + 1, 4, 1); }); });
+  obj(X(-200), Y(-146), 130, 26, 'flags'); obj(X(72), Y(-146), 130, 26, 'flags');
+  // banque (trésorerie) et ses coffres d'or
+  const bx = X(-344), by = Y(-238); prop(bx, by, by + 92, () => { blit(IMG.bank, 0, 0, 112, 96, bx, by); drawPlate(bx + 54, by + 64, 'BANQUE'); }); res.block(bx + 4, by + 44, 104, 48); obj(bx + 2, by + 4, 108, 90, 'banque');
+  for (let i = 0; i < cm.chests; i++) { const cx = X(-338 + (i % 4) * 17), cy = Y(-138 + Math.floor(i / 4) * 12); prop(cx, cy, cy + 14, () => blit(IMG.gchest, 5 * 16, 0, 16, 16, cx, cy)); }
+  if (cm.chests) obj(X(-340), Y(-140), 72, 30, 'banque');
+  if (night) res.lights.push({x: bx + 70, y: by + 74, r: 14, c: '255,214,120'});
+  const wx = X(-212), wy = Y(-200); prop(wx, wy, wy + 44, () => blit(IMG.well, 0, 0, 32, 48, wx, wy)); res.block(wx + 4, wy + 26, 24, 18); obj(wx, wy, 32, 48, 'puits');
+  // taverne (vie sociale du mois) : clients sur les bancs devant
+  const tx = X(84), ty = Y(-330); prop(tx, ty, ty + 186, t => { blit(IMG.inn, 0, 0, 240, 192, tx, ty); drawPlate(tx + 128, ty + 150, 'TAVERNE'); blit(IMG.smoke, (Math.floor(t * 5) % 5) * 32, 0, 32, 32, tx + 9, ty + 4); blit(IMG.smoke, ((Math.floor(t * 5) + 2) % 5) * 32, 0, 32, 32, tx + 100, ty - 4); });
+  res.block(tx + 4, ty + 120, 232, 66); obj(tx + 4, ty + 20, 232, 168, 'taverne');
+  if (night) [[40, 132], [140, 132], [186, 132], [218, 132], [86, 108], [106, 108]].forEach(([a, b]) => res.lights.push({x: tx + a, y: ty + b, r: 16, c: '255,206,110'}));
+  res.actors.push({kind: 'idle', sheet: 'npc_bartender_bruno', x: tx + 120, y: ty + 198, t: r() * 6});
+  [[X(236), Y(-134)], [X(282), Y(-134)]].forEach(([x, y]) => { prop(x, y, y + 20, () => blit(IMG.benches, 32, 0, 32, 32, x, y)); res.block(x + 2, y + 12, 28, 10); });
+  for (let i = 0; i < cm.guests; i++) res.actors.push({kind: 'idle', sheet: NPC_SHEETS[(i + 2) % NPC_SHEETS.length], x: X(238 + (i % 3) * 30), y: Y(i > 2 ? -86 : -100), t: r() * 6});
+  obj(X(228), Y(-140), 100, 64, 'taverne');
+  // l'étang au cœur de la place : canards (bonnes nuits), cygne (sommeil excellent), fontaine (bonheur)
+  const lk = lake; if (lk) { lk.cells.forEach(k => res.blocked.add(k));
+    for (let i = 0; i < cm.ducks; i++) { const a = r() * Math.PI * 2, d = .45 + r() * .4; res.actors.push({kind: 'duck', x: lk.cx + Math.cos(a) * lk.rx * d, y: lk.cy + Math.sin(a) * lk.ry * d, box: {ell: true, cx: lk.cx, cy: lk.cy, rx: lk.rx - 20, ry: lk.ry - 12, hole: {cx: lk.cx, cy: lk.cy, rx: 34, ry: 18}}, dir: r() < .5 ? 1 : -1, vx: r() < .5 ? 1 : -1, vy: 0, t: r() * 5, speed: .045}); }
+    if (cm.swan) res.actors.push({kind: 'swan', x: lk.cx - lk.rx * .55, y: lk.cy + 10, box: {ell: true, cx: lk.cx, cy: lk.cy, rx: lk.rx - 24, ry: lk.ry - 14, hole: {cx: lk.cx, cy: lk.cy, rx: 34, ry: 18}}, dir: 1, vx: 1, vy: 0, t: 2, speed: .03});
+    lk.cattails.forEach(([x, y], i) => prop(x, y, y + 14, t => blit(IMG.cattail, ((Math.floor(t * 3) + i) % 8) * 16, 0, 16, 16, x, y)));
+    lk.lilies.forEach(([x, y, k], i) => prop(x, y, y - 40, t => blit(IMG[k], ((Math.floor(t * 2) + i * 3) % 8) * 16, 0, 16, 16, x, y)));
+    const bxx = lk.cx + 30, byy = lk.cy - 36; prop(bxx, byy, byy + 36, t => blit(IMG.boat, 0, 0, 48, 48, bxx, byy + Math.round(Math.sin(t * 1.5)))); res.block(bxx + 4, byy + 20, 40, 20);
+    lk.ring.forEach(([x, y], i) => prop(x, y, y + 2, t => blit(IMG.fgrass, ((Math.floor(t * 2.5) + i * 5) % 8) * 16, 0, 16, 16, x, y)));
+    obj(lk.cx - lk.rx, lk.cy - lk.ry, lk.rx * 2, lk.ry * 2, 'lac');
+    res.actors.push({kind: 'idle', sheet: 'npc_fisherman_fin', x: lk.cx - lk.rx - 4, y: lk.cy + 30, t: 1}); obj(lk.cx - lk.rx - 22, lk.cy, 34, 40, 'lac'); }
+  const fx = X(-16), fyy = Y(-32); const flowing = cm.happy7 == null || cm.happy7 >= 5;
+  prop(fx, fyy, fyy + 44, t => flowing ? blit(IMG.fountain, (Math.floor(t * 8) % 8) * 32, 0, 32, 48, fx, fyy) : blit(IMG.fountain_dry, 0, 0, 32, 40, fx, fyy + 8)); res.block(fx + 2, fyy + 22, 28, 22); obj(fx, fyy, 32, 48, 'fontaine');
+  // lampadaires aux coins, guirlandes les mois de fête
+  [[-236, -186], [220, -186], [-236, 98], [220, 98]].forEach(([a, b]) => propLamp(res, X(a), Y(b), g));
+  if (cm.party) obj(X(-192), Y(126), 352, 30, 'fete'); if (cm.party) for (let i = 0; i < 11; i++) { const x = X(-192 + i * 32), y = Y(126); prop(x, y, y + 30, t => blit(IMG.bunting, ((Math.floor(t * 6) + i) % 8) * 32, 0, 32, 32, x, y)); }
+  // promeneurs autour de l'étang
+  for (let i = 0; i < cm.walkers; i++) res.actors.push({kind: 'loop', sheet: NPC_SHEETS[(i + 3) % NPC_SHEETS.length], p: i / cm.walkers, path: [[X(-184), Y(-92)], [X(184), Y(-92)], [X(184), Y(108)], [X(-184), Y(108)]], speed: .00012 + r() * .00004, t: r() * 5});
+  // rue du marché (ventes 2PaP) au sud de la place, de part et d'autre de l'avenue
+  [-184, -128, -72, 24, 80, 136].forEach((sx, i) => { const x = X(sx), y = Y(156); if (i < cm.sales.length) { res.actors.push({kind: 'idle', sheet: 'npc_chef_chloe', x: x + 24, y: y + 30, t: i}); prop(x, y, y + 44, () => blit(IMG.stalls, (i % 4) * 48, 0, 48, 48, x, y)); res.block(x + 2, y + 24, 44, 22); }
+    else { prop(x, y, y + 44, () => { blit(IMG.barrels, 48, 0, 16, 32, x + 8, y + 14); blit(IMG.barrels, 48, 0, 16, 32, x + 26, y + 16); }); res.block(x + 10, y + 34, 30, 10); } });
+  obj(X(-186), Y(156), 168, 48, 'marche'); obj(X(22), Y(156), 168, 48, 'marche');
+  // au sud-ouest : la serre (vidéos) et les veillées (webinaires)
+  const ghx = X(-452), ghy = Y(168); prop(ghx, ghy, ghy + 124, () => blit(IMG.greenhouse, 96, 0, 96, 128, ghx, ghy)); res.block(ghx + 4, ghy + 70, 88, 54); obj(ghx, ghy + 10, 96, 118, 'serre');
+  for (let i = 0; i < Math.min(12, cm.videosTarget); i++) { const px2 = X(-474 + (i % 6) * 18), py2 = Y(306 + Math.floor(i / 6) * 26); const done = i < cm.videos.length; prop(px2, py2, py2 + 30, () => blit(IMG.barrels, done ? (i % 6) * 16 : 48, done ? 32 : 0, 16, 32, px2, py2)); }
+  obj(X(-478), Y(304), 114, 62, 'serre');
+  [[-300, 232], [-252, 258], [-204, 232]].forEach(([a, b], i) => { const x = X(a), y = Y(b); const litF = i < cm.webs.length;
+    prop(x, y, y + 30, t => litF ? blit(IMG.campfire, ((Math.floor(t * 9) + i * 3) % 8) * 16, 0, 16, 32, x, y) : decor(0, 7, x - 8, y + 16, 2, 1)); res.block(x, y + 18, 16, 12);
+    if (litF) res.lights.push({x: x + 8, y: y + 22, r: 34, c: '255,150,60'}); });
+  [[-276, 290, 0], [-232, 206, 32]].forEach(([a, b, sx]) => { const x = X(a), y = Y(b); prop(x, y, y + 20, () => blit(IMG.benches, sx, 0, 32, 32, x, y)); res.block(x + 2, y + 12, 28, 10); });
+  obj(X(-316), Y(204), 150, 112, 'veillee');
+  // au sud-est : la ferme. Moulin (rythme Todoist), grange et bottes de foin (leads), silo
+  const wmx = X(236), wmy = Y(176); prop(wmx, wmy, wmy + 108, t => { blit(IMG.windmill, 0, 0, 64, 112, wmx, wmy); blit(IMG.sails, (Math.floor(t * 5 * cm.windSpeed) % 4) * 64, 0, 64, 80, wmx, wmy - 3); }); res.block(wmx + 12, wmy + 60, 40, 48); obj(wmx + 6, wmy, 52, 110, 'moulin');
+  const bnx = X(312), bny = Y(150); prop(bnx, bny, bny + 140, () => blit(IMG.barn, 0, 0, 128, 144, bnx, bny)); res.block(bnx + 8, bny + 88, 112, 52); obj(bnx + 6, bny + 10, 116, 130, 'grange');
+  const six = X(446), siy = Y(212); prop(six, siy, siy + 76, () => blit(IMG.silo, 0, 0, 48, 80, six, siy)); res.block(six + 6, siy + 44, 36, 32);
+  for (let i = 0; i < cm.bales; i++) { const hx = X(300 + (i % 5) * 34), hy = Y(304 + Math.floor(i / 5) * 20); prop(hx, hy, hy + 14, () => blit(IMG.hay, 16, 0, 32, 16, hx, hy)); res.block(hx + 2, hy + 4, 28, 10); }
+  obj(X(296), Y(300), 176, 44, 'grange');
+  res.actors.push({kind: 'idle', sheet: 'npc_lumberjack_jack', x: X(272), y: Y(316), t: 2});
+  // arbres d'ornement : bouleaux dorés et fruitiers
+  [[-420, -120, 'birch'], [-400, -40, 'fruit'], [-300, 40, 'birch'], [330, -40, 'birch'], [400, 20, 'fruit'], [-150, -250, 'fruit'], [176, 260, 'fruit'], [-120, 260, 'birch']].forEach(([a, b, k]) => propTree(res, X(a), Y(b), k));
+  return res;
+}
+
 /* ---- construction du monde ---- */
 function buildScene() {
   const hero = $('hero'); const cssW = hero.clientWidth || 960, cssH = hero.clientHeight || 460;
   cv.width = cssW; cv.height = cssH; cv.style.width = cssW + 'px'; cv.style.marginLeft = '0'; ctx.imageSmoothingEnabled = false;
-  QS = quartiers(); const nCols = Math.max(...QS.map(q => q.col)) + 1, nRows = Math.max(...QS.map(q => q.row)) + 1; worldW = nCols * QW; worldH = nRows * QH;
+  QS = quartiers(); layoutDistricts(); const date = viewDate(); V = globalModel(date); CM = centerModel(date);
+  // emprise : quartiers + centre + marge
+  let x0 = -44, x1 = 40, y0 = -34, y1 = 32; QS.forEach(q => { x0 = Math.min(x0, q.tx - 10); x1 = Math.max(x1, q.tx + QC + 10); y0 = Math.min(y0, q.ty - 10); y1 = Math.max(y1, q.ty + QR + 10); });
+  OX = -x0; OY = -y0; const cols = x1 - x0, rows = y1 - y0; worldW = cols * T; worldH = rows * T;
   world.width = worldW; world.height = worldH; octx = world.getContext('2d'); octx.imageSmoothingEnabled = false;
-  const date = viewDate(); V = globalModel(date); objects = []; actors = []; lights = []; drops = []; cloudShadows = []; props = []; blocked = new Set();
-  const cols = worldW / T, rows = worldH / T; for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) tile(IMG.grass, 0, 0, x * T, y * T);
-  // routes : masque global puis autotile, pour que tout se raccorde
-  const mask = new Set(); const built = q => q.start <= date; QS.forEach(q => { for (const k of roadCells(q, TEMPLATES[q.tpl])) { const [c, rr] = k.split(',').map(Number); mask.add((c + q.x / T) + ',' + (rr + q.y / T)); } });
-  // dans les cases vides (mois à 4 semaines), de la forêt
-  for (let ri = 0; ri < nRows; ri++) for (let ci = 0; ci < nCols; ci++) if (!QS.find(q => q.row === ri && q.col === ci)) { const r = rnd(77 + ri * 10 + ci); for (let i = 0; i < 14; i++) { const x = ci * QW + r() * (QW - 64), y = ri * QH + r() * (QH - 80); props.push({base: y + 76, x, draw: () => blit(IMG.oak, 0, 0, 64, 80, x, y)}); } for (let i = 0; i < 10; i++) { const x = ci * QW + r() * (QW - 32), y = ri * QH + r() * (QH - 48); props.push({base: y + 44, x, draw: () => blit(IMG.oaksmall, 32, 0, 32, 48, x, y)}); } }
-  drawRoads(mask, cols, rows); mask.forEach(k => blocked.delete(k));
-  // touffes d'herbe hors route
-  const rg = rnd(5); for (let i = 0; i < cols * rows * .05; i++) { const c = Math.floor(rg() * cols), rr = Math.floor(rg() * rows); if (!mask.has(c + ',' + rr)) { const k = rg(); if (k < .6) decor(Math.floor(rg() * 3), 0, c * T, rr * T); else if (k < .85) decor(Math.floor(rg() * 3), 1, c * T, rr * T); else decor(1 + Math.floor(rg() * 2), 2, c * T, rr * T); } }
-  QS.forEach(q => { const future = !built(q); const ref = q.end < date ? q.end : date; q.m = future ? null : weekModel(q, ref); const res = drawQuartier(q, q.m || {}, V, {future}); res.objects.forEach(o => { o.q = q; objects.push(o); }); res.actors.forEach(a => { a.q = q; actors.push(a); }); lights.push(...res.lights); props.push(...res.props); res.blocked.forEach(k => blocked.add(k));
-    objects.push({x: q.x, y: q.y, w: QW, h: QH, key: 'quartier', q, big: true}); });
-  const r = rnd(3); for (let i = 0; i < clamp(Math.round((V.wx.cloud || 0) / 20), 0, 12); i++) cloudShadows.push({x: r() * worldW, y: r() * worldH, w: 120 + r() * 160, h: 60 + r() * 60, s: .01 + r() * .015});
+  objects = []; actors = []; lights = []; drops = []; cloudShadows = []; props = []; blocked = new Set();
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) tile(IMG.grass, 0, 0, x * T, y * T);
+  // routes : place, avenues jusqu'au dernier quartier construit, rues des quartiers
+  const built = q => q.start <= date; const road = new Set(); const add = (c, r) => road.add(KEY(c, r));
+  const hole = (c, r) => c >= -10 && c <= 9 && r >= -5 && r <= 4 && !((c === -10 || c === 9) && (r === -5 || r === 4)); // l'étang et sa berge au milieu de la place
+  for (let c = -15; c <= 14; c++) for (let r = -9; r <= 9; r++) if (!hole(c, r)) add(c, r);
+  AV_DIRS.forEach(dir => { const qs = QS.filter(q => q.dir === dir && built(q)); if (!qs.length) return;
+    const ext = dir === 'W' ? Math.min(...qs.map(q => q.laneX)) : dir === 'E' ? Math.max(...qs.map(q => q.laneX + 1)) : dir === 'S' ? Math.max(...qs.map(q => q.laneY + 1)) : Math.min(...qs.map(q => q.laneY));
+    avenueCells(dir, ext, add); qs.forEach(q => districtRoads(q, add)); });
+  drawAuto(road, IMG.path);
+  const cob = new Set(); for (let c = -13; c <= 12; c++) for (let r = -7; r <= 7; r++) if (!hole(c, r)) cob.add(KEY(c, r)); drawAuto(cob, IMG.cobble);
+  // l'étang : masque ovale, eau animée pré-rendue sur 8 images
+  const lrx = 7.4, lry = 3.7; const lcells = new Set(); for (let c = -9; c <= 8; c++) for (let r = -5; r <= 4; r++) if (Math.pow((c + .5) / lrx, 2) + Math.pow((r + .5) / lry, 2) <= 1) lcells.add(KEY(c, r));
+  const lb = {x: pxc(-9), y: pyc(-5), w: 18 * T, h: 10 * T}; const frames = [];
+  if (ok(IMG.water_anim)) for (let f = 0; f < 8; f++) { const cnv = document.createElement('canvas'); cnv.width = lb.w; cnv.height = lb.h; const sv = octx; octx = cnv.getContext('2d'); octx.imageSmoothingEnabled = false; drawAuto(lcells, IMG.water_anim, f * 48, lb.x, lb.y); octx = sv; frames.push(cnv); }
+  if (frames[0]) octx.drawImage(frames[0], lb.x, lb.y);
+  const lcx = pxc(0), lcy = pyc(0), rxp = lrx * T, ryp = lry * T;
+  const cattails = [[-.86, 1], [-.55, 1], [.3, 1], [.62, 1], [-.7, -1], [.5, -1]].map(([u, sgn]) => [Math.round(lcx + u * rxp - 8), Math.round(lcy + sgn * ryp * Math.sqrt(1 - u * u) - (sgn > 0 ? 18 : 6))]);
+  const lilies = [[-84, -14, 'lily_g'], [-58, 20, 'lily_p'], [78, -22, 'lily_g'], [92, 14, 'lily_p'], [-30, 30, 'lily_g'], [40, -42, 'lily_g']].map(([x, y, k]) => [lcx + x, lcy + y, k]);
+  const ring = []; const rr0 = rnd(77); for (let c = -10; c <= 9; c++) for (let r = -5; r <= 4; r++) if (hole(c, r) && !lcells.has(KEY(c, r)) && rr0() < .45) ring.push([pxc(c), pyc(r)]);
+  lake = {cells: lcells, frames, box: lb, cx: lcx, cy: lcy, rx: rxp, ry: ryp, cattails, lilies, ring};
+  // touffes d'herbe et fleurs des champs hors route
+  const rg = rnd(5); for (let i = 0; i < cols * rows * .045; i++) { const c = Math.floor(rg() * cols), rr = Math.floor(rg() * rows); const k = c + ',' + rr; if (!road.has(k) && !lcells.has(k)) { const kk = rg(); if (kk < .6) decor(Math.floor(rg() * 3), 0, c * T, rr * T); else if (kk < .85) decor(Math.floor(rg() * 3), 1, c * T, rr * T); else decor(1 + Math.floor(rg() * 2), 2, c * T, rr * T); } }
+  // centre-ville
+  const cres = drawCenter(CM, V); cres.objects.forEach(o => objects.push(o)); actors.push(...cres.actors); lights.push(...cres.lights); props.push(...cres.props); cres.blocked.forEach(k => blocked.add(k));
+  CENTER_BOX = {x: pxc(-32), y: pyc(-22), w: 64 * T, h: 48 * T};
+  // quartiers
+  QS.forEach(q => { const future = !built(q); const ref = q.end < date ? q.end : date; q.m = future ? null : weekModel(q, ref); const res = drawDistrict(q, q.m || {}, V, {future});
+    res.objects.forEach(o => { o.q = q; objects.push(o); }); res.actors.forEach(a => { a.q = q; actors.push(a); }); lights.push(...res.lights); props.push(...res.props); res.blocked.forEach(k => blocked.add(k)); });
+  road.forEach(k => blocked.delete(k));
+  // forêt autour : partout où il n'y a ni quartier, ni centre, ni route
+  const reserved = new Set(); const reserve = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) reserved.add((c + OX) + ',' + (r + OY)); };
+  reserve(-34, -24, 34, 28); QS.forEach(q => reserve(q.tx - 1, q.ty - 2, q.tx + QC, q.ty + QR + 1)); road.forEach(k => { const [c, r] = k.split(',').map(Number); for (let dc = -2; dc <= 2; dc++) for (let dr = -3; dr <= 2; dr++) reserved.add((c + dc) + ',' + (r + dr)); });
+  const fr = rnd(31); for (let r = 0; r < rows - 5; r += 3) for (let c = 0; c < cols - 4; c += 3) { const cc = c + Math.floor(fr() * 2), rr = r + Math.floor(fr() * 2); let free = true; for (let dc = 0; dc < 4 && free; dc++) for (let dr = 0; dr < 5 && free; dr++) if (reserved.has((cc + dc) + ',' + (rr + dr))) free = false; if (!free || fr() > .55) continue;
+    const k = fr(); const [ik, sx, w, h] = TREES[k < .3 ? 'boak' : k < .55 ? 'spruce' : k < .68 ? 'birch' : k < .85 ? 'oak' : k < .93 ? 'spruce_s' : 'small']; const x = cc * T + (64 - w) / 2, y = rr * T + 80 - h; if (ok(IMG[ik])) props.push({base: y + h - 4, x, draw: () => blit(IMG[ik], sx, 0, w, h, x, y)}); }
+  // météo
+  const r = rnd(3); for (let i = 0; i < clamp(Math.round((V.wx.cloud || 0) / 15), 0, 16); i++) cloudShadows.push({x: r() * worldW, y: r() * worldH, w: 140 + r() * 180, h: 70 + r() * 70, s: .01 + r() * .015});
   if (V.kind === 'rain' || V.kind === 'storm') for (let i = 0; i < 160; i++) drops.push({x: r(), y: r(), v: .006 + r() * .004}); if (V.kind === 'snow') for (let i = 0; i < 90; i++) drops.push({x: r(), y: r(), v: .001 + r() * .001, snow: true});
   // caméra
-  zoomScale = Math.max(1, Math.round(cssH / 345)); fitScale = Math.min(cssW / worldW, cssH / worldH);
-  const cur = quartierOf(date) || QS[QS.length - 1]; const target = VIEW.mode === 'zoom' ? camFor(cur) : camFit();
-  if (!camAnim && cam.s === 2 && cam.x === 0 && cam.y === 0) Object.assign(cam, target); else animateCam(target);
+  zoomScale = Math.max(1, Math.round(cssH / 330)); fitScale = Math.min(cssW / worldW, cssH / worldH);
+  const target = camForMode(); if (!cam.init) { Object.assign(cam, target); cam.init = true; } else animateCam(target);
   renderLegend(); renderTimeline();
 }
-function camFor(q) { const s = zoomScale; return clampCam({x: q.x + QW / 2 - cv.width / s / 2, y: q.y + QH / 2 - cv.height / s / 2, s}); }
+function camForMode() { if (VIEW.mode === 'all') return camFit(); if (VIEW.mode === 'center') return camCenter(); return camFor(quartierOf(viewDate()) || QS[QS.length - 1]); }
+function camFor(q) { const s = zoomScale; const cx = pxc(q.tx) + QW / 2, cy = pyc(q.ty) + QH / 2; return clampCam({x: cx - cv.width / s / 2, y: cy - cv.height / s / 2, s}); }
+function camCenter() { const b = CENTER_BOX; const s = clamp(Math.min(cv.width / b.w, cv.height / b.h) * 1.15, Math.min(1, fitScale * 2), zoomScale); return clampCam({x: b.x + b.w / 2 - cv.width / s / 2, y: b.y + b.h / 2 - cv.height / s / 2, s}); }
 function camFit() { const s = fitScale; return {x: worldW / 2 - cv.width / s / 2, y: worldH / 2 - cv.height / s / 2, s}; }
 function clampCam(c) { const vw = cv.width / c.s, vh = cv.height / c.s; if (vw >= worldW) c.x = (worldW - vw) / 2; else c.x = clamp(c.x, 0, worldW - vw); if (vh >= worldH) c.y = (worldH - vh) / 2; else c.y = clamp(c.y, 0, worldH - vh); return c; }
-function animateCam(target, ms = 700) { camAnim = {from: {x: cam.x, y: cam.y, s: cam.s}, to: target, t0: performance.now(), ms}; }
+function animateCam(target, ms = 800) { camAnim = {from: {x: cam.x, y: cam.y, s: cam.s}, to: target, t0: performance.now(), ms}; }
 function stepCam(now) { if (!camAnim) return; const k = clamp((now - camAnim.t0) / camAnim.ms, 0, 1); const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; const a = camAnim.from, b = camAnim.to;
   const s = a.s * Math.pow(b.s / a.s, e); const cxA = a.x + cv.width / a.s / 2, cyA = a.y + cv.height / a.s / 2, cxB = b.x + cv.width / b.s / 2, cyB = b.y + cv.height / b.s / 2; const cx = cxA + (cxB - cxA) * e, cy = cyA + (cyB - cyA) * e;
   cam.s = s; cam.x = cx - cv.width / s / 2; cam.y = cy - cv.height / s / 2; if (k >= 1) { Object.assign(cam, camAnim.to); camAnim = null; } }
+
+/* ---- personnages et animaux ---- */
 function drawAnimal(a, t) { const im = IMG[a.kind]; if (!ok(im)) return; const frame = Math.floor(t * 2 + a.t * 7) % 2; const row = a.state === 'walk' ? 1 : 0; blit(im, frame * 32, row * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0); }
-function drawNpc(a, t) { if (!ok(IMG.player)) return; const im = hued(IMG.player, a.filter); const frame = Math.floor(t * 4.5 + a.t * 3) % 6; const row = a.axis === 'h' ? 4 : (a.dir > 0 ? 3 : 5); blit(im, frame * 32, row * 32, 32, 32, a.x - 16, a.y - 30, a.axis === 'h' && a.dir < 0); }
+function drawDuck(a, t) { if (!ok(IMG.duck)) return; const f = Math.floor(t * 3 + a.t * 5) % 4; blit(IMG.duck, f * 32, 8 * 32, 32, 32, a.x - 16, a.y - 22, a.dir > 0); }
+function drawSwan(a, t) { if (!ok(IMG.swan)) return; const f = Math.floor(t * 2 + a.t) % 3; blit(IMG.swan, f * 32, 8 * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0); }
+function drawSheet(sheet, row, frame, x, y, flip) { const im = IMG[sheet]; if (!ok(im)) return; blit(im, frame * 64, row * 64, 64, 64, x - 32, y - 42, flip); }
+function drawNpc(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; if (a.axis === 'h') drawSheet(a.sheet, 4, f, a.x, a.y, a.dir > 0); else drawSheet(a.sheet, a.dir > 0 ? 3 : 5, f, a.x, a.y, false); }
+function drawIdle(a, t) { drawSheet(a.sheet, 0, Math.floor(t * 3 + a.t * 4) % 6, a.x, a.y, false); }
+function drawLoop(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f, a.x, a.y, dx > 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f, a.x, a.y, false); }
+function drawWorker(a, t) { const f = Math.floor(t * (a.state === 'work' ? 4 : 5) + a.t * 3) % 6; if (a.state === 'work') drawSheet(a.sheet, a.tool, f, a.x, a.y, false); else if (Math.abs(a.vx) >= Math.abs(a.vy)) drawSheet(a.sheet, 4, f, a.x, a.y, a.vx > 0); else drawSheet(a.sheet, a.vy > 0 ? 3 : 5, f, a.x, a.y, false); }
+function drawBfly(a, t) { if (!ok(IMG.butterfly)) return; const f = Math.floor(t * 8 + a.t) % 2; blit(IMG.butterfly, f * 8, a.color * 8, 8, 8, a.x - 4, a.y - 4); }
 const isBlocked = (x, y) => blocked.has(Math.floor(x / T) + ',' + Math.floor(y / T));
-function stepActors(dt) {
+function stepActors(dt, t) {
   actors.forEach(a => {
     if (a.kind === 'npc') { if (a.axis === 'h') { a.x += a.dir * a.speed * dt; if (a.x < a.x0) { a.x = a.x0; a.dir = 1; } if (a.x > a.x1) { a.x = a.x1; a.dir = -1; } } else { a.y += a.dir * a.speed * dt; if (a.y < a.y0) { a.y = a.y0; a.dir = 1; } if (a.y > a.y1) { a.y = a.y1; a.dir = -1; } } return; }
+    if (a.kind === 'idle') return;
+    if (a.kind === 'loop') { a.p = (a.p + a.speed * dt) % 1; const P = a.path; const seg = [0, 1, 2, 3].map(i => Math.hypot(P[(i + 1) % 4][0] - P[i][0], P[(i + 1) % 4][1] - P[i][1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i]) { d -= seg[i]; i++; } const A = P[i], B = P[(i + 1) % 4], k = d / seg[i]; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k; return; }
+    if (a.kind === 'bfly') { a.t += dt / 60; a.x = a.cx + Math.sin(a.t * .9) * a.rx + Math.sin(a.t * 2.3) * 6; a.y = a.cy + Math.sin(a.t * 1.4) * a.ry - Math.abs(Math.sin(a.t * 3)) * 4; return; }
+    if (a.kind === 'worker') { a.timer -= dt / 60; if (a.state === 'work') { if (a.timer <= 0) { a.state = 'walk'; a.tx = a.box.x0 + Math.random() * (a.box.x1 - a.box.x0); a.ty = a.box.y0 + Math.random() * (a.box.y1 - a.box.y0); } }
+      else { const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy); if (d < 1.5) { a.state = 'work'; a.timer = 5 + Math.random() * 7; a.tool = Math.random() < .5 ? 8 : 11; } else { a.vx = dx / d; a.vy = dy / d; a.x += a.vx * .1 * dt; a.y += a.vy * .1 * dt; } } return; }
     a.t += dt / 60;
-    if (a.free) { // poule : déambule dans toutes les directions, contourne ce qui bloque
-      if (Math.random() < .012 * dt) { a.state = a.state === 'idle' ? 'walk' : 'idle'; const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; }
+    if (a.kind === 'duck' || a.kind === 'swan') { if (Math.random() < .004 * dt) { const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .5; } const nx = a.x + a.vx * a.speed * dt, ny = a.y + a.vy * a.speed * dt; const b = a.box;
+      const inside = (b.ell ? Math.pow((nx - b.cx) / b.rx, 2) + Math.pow((ny - b.cy) / b.ry, 2) <= 1 : (nx >= b.x0 && nx <= b.x1 && ny >= b.y0 && ny <= b.y1)) && !(b.hole && Math.pow((nx - b.hole.cx) / b.hole.rx, 2) + Math.pow((ny - b.hole.cy) / b.hole.ry, 2) < 1); if (inside) { a.x = nx; a.y = ny; } else { a.vx = -a.vx; a.vy = -a.vy; } if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; return; }
+    if (a.free) { if (Math.random() < .012 * dt) { a.state = a.state === 'idle' ? 'walk' : 'idle'; const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; }
       if (a.state === 'walk') { const nx = a.x + a.vx * a.speed * dt, ny = a.y + a.vy * a.speed * dt; const inBox = nx >= a.box.x0 && nx <= a.box.x1 && ny >= a.box.y0 && ny <= a.box.y1;
         if (inBox && !isBlocked(nx, ny)) { a.x = nx; a.y = ny; } else { const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; a.dir = a.vx > 0 ? 1 : -1; } }
       return; }
@@ -660,6 +832,7 @@ function stepActors(dt) {
     if (a.state === 'walk') { a.x += a.dir * a.speed * dt; a.y += Math.sin(a.t * 2) * .03 * dt; if (a.x < a.box.x0) { a.x = a.box.x0; a.dir = 1; } if (a.x > a.box.x1) { a.x = a.box.x1; a.dir = -1; } a.y = clamp(a.y, a.box.y0, a.box.y1); }
   });
 }
+const DRAW = {swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
 let lastT = 0;
 function animate(now) {
   if (!assetsReady || !QS.length) { requestAnimationFrame(animate); return; }
@@ -667,72 +840,95 @@ function animate(now) {
   const s = cam.s, vw = cv.width / s, vh = cv.height / s;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#2f6b3a'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.imageSmoothingEnabled = false;
   ctx.drawImage(world, cam.x, cam.y, vw, vh, 0, 0, cv.width, cv.height);
-  // acteurs (coordonnées monde), seulement ceux dans le champ
-  ctx.setTransform(s, 0, 0, s, -cam.x * s, -cam.y * s); octx = ctx; stepActors(dt);
+  ctx.setTransform(s, 0, 0, s, -cam.x * s, -cam.y * s); octx = ctx; stepActors(dt, t);
+  if (lake && lake.frames.length) { const b = lake.box; if (b.x < cam.x + vw && b.x + b.w > cam.x && b.y < cam.y + vh && b.y + b.h > cam.y) ctx.drawImage(lake.frames[Math.floor(t * 5) % 8], b.x, b.y); }
   const inView = (x, y, m) => x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m;
-  const layer = props.filter(p => p.base > cam.y - 20 && p.base < cam.y + vh + 140 && (p.x == null || (p.x > cam.x - 100 && p.x < cam.x + vw + 100))).map(p => ({y: p.base, p}));
-  actors.forEach(a => { if (inView(a.x, a.y, 40)) layer.push({y: a.y, a}); });
-  layer.sort((u, v) => u.y - v.y).forEach(e => { if (e.p) e.p.draw(); else if (e.a.kind === 'npc') drawNpc(e.a, t); else drawAnimal(e.a, t); });
-  cloudShadows.forEach(c => { const cx = (c.x + t * c.s * 60) % (worldW + c.w) - c.w / 2; ctx.save(); ctx.globalAlpha = V.kind === 'clear' ? .08 : .16; ctx.fillStyle = '#1b2a40'; ctx.beginPath(); ctx.ellipse(cx, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+  const layer = props.filter(p => p.base > cam.y - 20 && p.base < cam.y + vh + 220 && (p.x == null || (p.x > cam.x - 260 && p.x < cam.x + vw + 60))).map(p => ({y: p.base, p}));
+  actors.forEach(a => { if (inView(a.x, a.y, 50)) layer.push({y: a.y, a}); });
+  layer.sort((u, v) => u.y - v.y).forEach(e => { if (e.p) e.p.draw(t); else (DRAW[e.a.kind] || drawAnimal)(e.a, t); });
+  cloudShadows.forEach(c => { const cx = (c.x + t * c.s * 60) % (worldW + c.w) - c.w / 2; ctx.save(); ctx.globalAlpha = V.kind === 'clear' ? .07 : .14; ctx.fillStyle = '#1b2a40'; ctx.beginPath(); ctx.ellipse(cx, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
   const hl = hover || selected; if (hl && !hl.big) { ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1 / s; ctx.strokeRect(hl.x - .5, hl.y - .5, hl.w + 1, hl.h + 1); ctx.restore(); }
-  // lumière et météo (en écran)
+  // lumière et météo
   ctx.setTransform(1, 0, 0, 1, 0, 0); octx = world.getContext('2d'); const day = V.day;
   if (day < 1) { const tw = Math.sin(day * Math.PI); ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = mix(mix('#ffffff', '#46508f', (1 - day) * .78), '#ffb878', tw * .35); ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore();
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; lights.forEach(l => { const lx = (l.x - cam.x) * s, ly = (l.y - cam.y) * s, lr = l.r * s; if (lx < -lr || ly < -lr || lx > cv.width + lr || ly > cv.height + lr) return; const gr = ctx.createRadialGradient(lx, ly, 1, lx, ly, lr); gr.addColorStop(0, `rgba(${l.c},${.55 * (1 - day)})`); gr.addColorStop(1, `rgba(${l.c},0)`); ctx.fillStyle = gr; ctx.fillRect(lx - lr, ly - lr, lr * 2, lr * 2); }); ctx.restore(); }
   if (V.kind === 'fog') { ctx.save(); ctx.globalAlpha = .28; ctx.fillStyle = '#d8dde6'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore(); }
   if (['overcast', 'rain', 'storm', 'snow'].includes(V.kind)) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(190,200,215,.55)'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore(); }
-  drops.forEach(d => { d.y += d.v * dt; d.x += (d.snow ? Math.sin(t + d.y * 30) * .0006 : .0008) * dt; if (d.y > 1) { d.y = -.02; d.x = Math.random(); } if (d.x > 1) d.x = 0; ctx.fillStyle = d.snow ? 'rgba(255,255,255,.9)' : 'rgba(190,215,245,.6)'; ctx.fillRect(d.x * cv.width, d.y * cv.height, s, d.snow ? s : 3 * s); });
+  drops.forEach(d => { d.y += d.v * dt; d.x += (d.snow ? Math.sin(t + d.y * 30) * .0006 : .0008) * dt; if (d.y > 1) { d.y = -.02; d.x = Math.random(); } if (d.x > 1) d.x = 0; ctx.fillStyle = d.snow ? 'rgba(255,255,255,.9)' : 'rgba(190,215,245,.6)'; ctx.fillRect(d.x * cv.width, d.y * cv.height, Math.max(1, s), d.snow ? Math.max(1, s) : 3 * Math.max(1, s)); });
   if (V.kind === 'storm' && Math.floor(t * 3) % 23 === 0 && (t % 1) < .12) { ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore(); }
-  // étiquettes des quartiers quand on est dézoomé
-  if (s < zoomScale * .75) { const date = viewDate(); const cur = quartierOf(date); const fs = Math.max(9, Math.min(13, s * 14)); ctx.font = `${fs}px 'Press Start 2P', monospace`; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-    QS.forEach(q => { const x = (q.x - cam.x) * s, y = (q.y - cam.y) * s, w = QW * s, h = QH * s; const sel = cur && q.start === cur.start; ctx.lineWidth = sel ? 3 : 1; ctx.strokeStyle = sel ? '#f2c14e' : 'rgba(255,255,255,.28)'; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-      const txt = `${q.label} · ${fmtShort(q.start)} → ${fmtShort(q.end)}`; const tw = ctx.measureText(txt).width + 10; ctx.fillStyle = 'rgba(12,10,22,.75)'; ctx.fillRect(x + 4, y + 4, tw, fs + 8); ctx.fillStyle = sel ? '#f2c14e' : '#f3edda'; ctx.fillText(txt, x + 9, y + 8);
-      if (q.col === 0) { const lab = MONTHS_FR[q.month - 1].toUpperCase(); const tw2 = ctx.measureText(lab).width + 10; ctx.fillStyle = 'rgba(12,10,22,.75)'; ctx.fillRect(x + 4, y + h - fs - 12, tw2, fs + 8); ctx.fillStyle = '#9fe0a8'; ctx.fillText(lab, x + 9, y + h - fs - 8); } }); }
+  // étiquettes quand on recule
+  if (zoomedOut()) { const date = viewDate(); const cur = quartierOf(date); const fs = Math.max(9, Math.min(13, s * 22)); ctx.font = `${fs}px 'Press Start 2P', monospace`; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    const label = (txt, x, y, color) => { const tw = ctx.measureText(txt).width + 10; ctx.fillStyle = 'rgba(12,10,22,.78)'; ctx.fillRect(x, y, tw, fs + 8); ctx.fillStyle = color; ctx.fillText(txt, x + 5, y + 4); };
+    QS.forEach(q => { const x = (pxc(q.tx) - cam.x) * s, y = (pyc(q.ty) - cam.y) * s; const sel = cur && q.start === cur.start; if (sel) { ctx.lineWidth = 3; ctx.strokeStyle = '#f2c14e'; ctx.strokeRect(x, y, QW * s, QH * s); }
+      label(`${q.label} · ${fmtShort(q.start)}`, x + 4, y + 4, sel ? '#f2c14e' : q.start > date ? '#a79dc9' : '#f3edda'); if (q.idx === 0) label(MONTHS_FR[q.month - 1].toUpperCase(), x + 4, y + QH * s - fs - 14, '#9fe0a8'); });
+    label('CENTRE-VILLE', (pxc(-8) - cam.x) * s, (pyc(-17) - cam.y) * s, '#ffd36b'); }
   requestAnimationFrame(animate);
 }
 
-/* ---- légende, frise, interactions ---- */
+/* ---- légendes ---- */
 const LEGEND = {
-  houses: m => ['🏠 Les maisons : la vie sociale de la semaine', `${m.socialUnits} jour${m.socialUnits > 1 ? 's' : ''} avec un événement social noté entre le ${fmtShort(m.from)} et le ${fmtShort(m.to)}${m.socialDays.length ? ' (' + m.socialDays.map(fmtShort).join(', ') + ')' : ''}. La première maison est toujours là ; chaque événement ajoute un étage, trois étages font une maison, quatre maisons au maximum.`],
+  houses: m => ['🏠 Les maisons : la vie sociale de la semaine', `${m.socialUnits} jour${m.socialUnits > 1 ? 's' : ''} avec un événement social noté entre le ${fmtShort(m.from)} et le ${fmtShort(m.to)}${m.socialDays.length ? ' (' + m.socialDays.map(fmtShort).join(', ') + ')' : ''}. La première maison est toujours là ; chaque événement ajoute un étage, trois étages font une maison, quatre maisons au maximum. Les cheminées fument quand la maison est finie.`],
   house: m => LEGEND.houses(m),
-  lot: m => { const miss = m.lastStage >= 3 ? 1 : 3 - m.lastStage + 1; return ['🪧 Terrain à bâtir', `La prochaine maison se construira ici. Chaque événement social de la semaine ajoute un étage : encore ${miss} pour poser la première pierre ici.`]; },
-  park: m => ['🌸 Le parc : ton bonheur moyen', `${clamp(Math.round((m.happy7 || 0) / 10 * 20), 0, 20)} fleurs sur 20 : bonheur moyen de ${fmtNum(m.happy7, 1)}/10 sur les 7 jours jusqu'au ${fmtShort(m.to)}.`],
+  lot: () => ['🪧 Terrain à bâtir', `La prochaine maison se construira ici, à partir du prochain événement social de la semaine.`],
+  park: m => ['🌸 Le parc : ton bonheur moyen', `${clamp(Math.round((m.happy7 || 0) / 10 * 20), 0, 20)} fleurs sur 20 : bonheur moyen de ${fmtNum(m.happy7, 1)}/10 sur les 7 jours jusqu'au ${fmtShort(m.to)}. Des papillons à partir de 6/10.`],
   yard: m => [`📦 L'atelier : les heures de travail de la semaine`, `${fmtNum(m.workWeek, 1)} h de travail Toggl du ${fmtShort(m.from)} au ${fmtShort(m.to)}, une caisse pour 4 h. Plafond volontaire : ${WORK_TARGET} h.`],
-  f_2pap: m => ['🌾 Champs 2PaP : le trimestre', `Avancement des quatre quêtes au ${fmtShort(m.to)} : ventes ${m.q.sales.value}/${m.q.sales.target}, leads ${fmtNum(m.q.leads.value)}/${fmtNum(m.q.leads.target)}, vidéos ${m.q.videos.value}/${m.q.videos.target}, webinaires ${m.q.webinars.value}/${m.q.webinars.target}. Graine, pousse, blé vert puis blé doré.`],
-  f_solv: m => ['🌾 Champs SOLV : les encaissements du mois', `${eur(m.solvMonth)} encaissés par SOLV sur le mois au ${fmtShort(m.to)}, contre ${eur(m.solvPrev)} le mois précédent. Champ plein quand le mois égale le précédent.`],
-  pond: m => ['💧 La mare : ton score de sommeil', `${m.sleepScore != null ? 'Score moyen ' + fmtNum(m.sleepScore, 0) + ' %' : 'Score non renseigné'} sur les 7 jours jusqu'au ${fmtShort(m.to)} (Apple Health, sinon ta note du Daily Form). Sous 70 % c'est une flaque de boue ; ensuite la mare grandit par paliers jusqu'à 97 %. À 80 % et plus, une poule vient s'y baigner.`],
-  sign: (m, o) => [`🪧 Quartier ${o.q.label}`, `Semaine du ${fmtDay(o.q.start)} au ${fmtDay(o.q.end)}, arrondissement de ${MONTHS_FR[o.q.month - 1]}.`],
+  f_2pap: m => ['🌾 Champs 2PaP : le trimestre', `Avancement des quatre quêtes au ${fmtShort(m.to)} : ventes ${m.q.sales.value}/${m.q.sales.target}, leads ${fmtNum(m.q.leads.value)}/${fmtNum(m.q.leads.target)}, vidéos ${m.q.videos.value}/${m.q.videos.target}, webinaires ${m.q.webinars.value}/${m.q.webinars.target}. Les plants grandissent avec. ${m.workers ? m.workers + ' fermier' + (m.workers > 1 ? 's' : '') + ' au travail : ' + m.tasks + ' tâches Todoist cette semaine.' : 'Personne aux champs : moins de 15 tâches cette semaine.'}`],
+  f_solv: m => ['🌻 Champs SOLV : les encaissements du mois', `${eur(m.solvMonth)} encaissés par SOLV sur le mois au ${fmtShort(m.to)}, contre ${eur(m.solvPrev)} le mois précédent. Champ plein quand le mois égale le précédent.`],
+  pond: m => ['💧 La mare : ton score de sommeil', `${m.sleepScore != null ? 'Score moyen ' + fmtNum(m.sleepScore, 0) + ' %' : 'Score non renseigné'} sur les 7 jours jusqu'au ${fmtShort(m.to)} (Apple Health, sinon ta note du Daily Form). Sous 70 % c'est une flaque de boue, puis la mare grandit par paliers jusqu'à 97 %. À 80 % et plus, un canard y nage.`],
+  sign: (m, o) => [`🪧 Quartier ${o.q.label}`, `Semaine du ${fmtDay(o.q.start)} au ${fmtDay(o.q.end)}, sur l'avenue de ${MONTHS_FR[o.q.month - 1]}.`],
   pen: m => [`🐑🐖🐄 L'enclos : l'argent de la semaine`, `${m.sheep} mouton${m.sheep > 1 ? 's' : ''} = ${eur(m.cashWeek)} encaissés du ${fmtShort(m.from)} au ${fmtShort(m.to)} (un mouton par millier d'euros) · ${m.pigs} cochon${m.pigs > 1 ? 's' : ''} = vente${m.pigs > 1 ? 's' : ''} 2PaP de la semaine · ${m.payers} vache${m.payers > 1 ? 's' : ''} = client${m.payers > 1 ? 's' : ''} qui ${m.payers > 1 ? 'ont' : 'a'} payé cette semaine.`],
-  street: m => ['🐔 La rue : tâches et habitants', `${m.tasks} tâches Todoist terminées du ${fmtShort(m.from)} au ${fmtShort(m.to)}${m.tasksKnown ? '' : ' (historique non disponible)'}, une poule pour dix, elles vaquent partout sauf dans l'enclos. ${m.npcs} habitant${m.npcs > 1 ? 's' : ''} : toi, plus un par événement social de la semaine.`],
-  tree: m => ['🌳 Les arbres : santé mentale', `Score sur 14 jours au ${fmtShort(m.to)} : ${fmtNum(m.mental * 100, 0)} % (bonheur 40 %, stabilité 25 %, anxiété 20 %, énergie 15 %). Plus le score monte, plus il y a d'arbres et plus ils sont verts ; en dessous de 45 % ils ternissent.`],
-  stump: m => ['🪵 Une souche : il manque un arbre', `Santé mentale à ${fmtNum(m.mental * 100, 0)} % sur 14 jours. Un arbre repousse à chaque palier de 20 %.`],
-  lamp: m => ['🔦 Les lampadaires : les jours à objectif Todoist atteint', `Un lampadaire pour deux jours à 10 tâches ou plus dans la semaine. Ils s'allument à la nuit tombée.`],
-  quartier: (m, o) => { const q = o.q; const st = q.status === 'future' ? 'pas encore construit' : q.status === 'current' ? 'la semaine en cours' : 'terminé'; return [`🏘️ Quartier ${q.label} · ${fmtShort(q.start)} → ${fmtShort(q.end)} · ${MONTHS_FR[q.month - 1]}`, `${st.charAt(0).toUpperCase() + st.slice(1)}. Double-clique ou clique pour zoomer dessus.`]; },
+  street: m => ['🐔 La rue : tâches et habitants', `${m.tasks} tâches Todoist terminées du ${fmtShort(m.from)} au ${fmtShort(m.to)}${m.tasksKnown ? '' : ' (historique non disponible)'}, une poule pour dix. ${m.npcs} habitant${m.npcs > 1 ? 's' : ''} : toi, plus un par événement social de la semaine.`],
+  tree: m => ['🌳 Les arbres : santé mentale', `Score sur 14 jours au ${fmtShort(m.to)} : ${fmtNum(m.mental * 100, 0)} % (bonheur 40 %, stabilité 25 %, anxiété 20 %, énergie 15 %). Plus il monte, plus il y a d'arbres et plus ils sont verts.`],
+  stump: m => ['🪵 Une souche : il manque un arbre', `Santé mentale à ${fmtNum(m.mental * 100, 0)} % sur 14 jours.`],
+  lamp: () => ['🔦 Les lampadaires : les jours à objectif Todoist atteint', `Un lampadaire pour deux jours à 10 tâches ou plus dans la semaine, autour de la petite place du quartier.`],
+  quartier: (m, o) => { const q = o.q; return [`🏘️ Quartier ${q.label} · ${fmtShort(q.start)} → ${fmtShort(q.end)}`, `Avenue de ${MONTHS_FR[q.month - 1]}. Clique pour zoomer dessus.`]; },
+  lot_future: (m, o) => [`🪧 Terrain à bâtir · ${o.q.label}`, `Le quartier de la semaine du ${fmtDay(o.q.start)} n'est pas encore construit. L'avenue l'atteindra ce jour-là.`],
+};
+const LEGEND_C = {
+  mairie: c => { const st = c.cap.steps || []; const done = st.filter(s => s[1] === 'ok').length; return ['🏛️ La mairie : Cap Berlin', `${done} démarches sur ${st.length} bouclées, ${st.filter(s => s[1] === 'wait').length} attendent quelqu'un d'autre. Chaque drapeau devant la mairie est une démarche : vert fait, jaune en attente, gris pas commencé.`]; },
+  flags: c => LEGEND_C.mairie(c),
+  banque: c => ['🏦 La banque : ta trésorerie', `${eur(c.cash)} disponibles hors Wise SOLV, soit ${fmtNum(c.runway, 1)} mois à ${eur(BUDGET)}. Un coffre d'or par mois d'avance devant la porte.`],
+  taverne: c => ['🍺 La taverne : ta vie sociale du mois', `${c.socialList.length} événement${c.socialList.length > 1 ? 's sociaux' : ' social'} sur les 30 derniers jours, ${c.guests} client${c.guests > 1 ? 's' : ''} devant la taverne. ${c.socialList.slice(-3).map(s => fmtShort(s[0]) + ' : ' + s[1].slice(0, 40)).join(' · ')}`],
+  marche: c => ['🛒 Le marché : les ventes 2PaP du trimestre', `${c.sales.length} étal ouvert sur ${c.salesTarget} : une vente, un étal. ${c.sales.map(s => s[1]).join(' · ')}`],
+  fontaine: c => ['⛲ La fontaine : ton humeur de la semaine', c.happy7 == null ? 'Pas de note de bonheur cette semaine.' : `Bonheur moyen ${fmtNum(c.happy7, 1)}/10 sur 7 jours. Elle coule à partir de 5/10.`],
+  puits: () => ['🪣 Le puits', 'Le cœur du village, entre la banque et la mairie.'],
+  lac: c => ['🦆 Le lac : tes bonnes nuits', `${c.goodNights} nuit${c.goodNights > 1 ? 's' : ''} à 80 % ou plus sur les 7 derniers jours : un canard par bonne nuit. ${c.swan ? 'Et un cygne : ta moyenne de sommeil dépasse 90 % (' + fmtNum(c.sleep7, 0) + ' %).' : 'Un cygne viendra quand ta moyenne de sommeil sur 7 jours dépassera 90 %' + (c.sleep7 != null ? ' (' + fmtNum(c.sleep7, 0) + ' % en ce moment).' : '.')}`],
+  moulin: c => ['🌬️ Le moulin : ton rythme Todoist', `${c.tasks7} tâches terminées sur 7 jours. Les ailes tournent à pleine vitesse à 10 tâches par jour, s'arrêtent à zéro.`],
+  grange: c => ['🌾 La grange : les leads du trimestre', `${fmtNum(c.leads)} leads sur ${fmtNum(c.leadsTarget)} : une botte de foin pour 50 leads, dix bottes au maximum.`],
+  serre: c => ['🌱 La serre : les vidéos YouTube', `${c.videos.length} vidéo${c.videos.length > 1 ? 's' : ''} publiée${c.videos.length > 1 ? 's' : ''} sur ${c.videosTarget} : un tonneau fleuri par vidéo. ${c.videos.slice(0, 3).map(v => fmtShort(v.published) + ' ' + v.title.slice(0, 36)).join(' · ')}`],
+  veillee: c => ['🔥 Les veillées : les webinaires', `${c.webs.length} feu${c.webs.length > 1 ? 'x' : ''} allumé${c.webs.length > 1 ? 's' : ''} sur ${c.websTarget}, un par webinaire tenu.${c.nextWeb ? ' Prochain : ' + fmtDay(c.nextWeb) + '.' : ''}`],
+  fete: c => ['🎉 Les guirlandes : c\'est la fête', `Trois événements sociaux ou plus sur les 30 derniers jours (${c.socialList.length} en ce moment) : le village sort les guirlandes.`],
+  centre: () => ['🏘️ Le centre-ville', 'Ce qui compte le trimestre entier : mairie, taverne, banque, marché, fontaine, lac, moulin, grange, serre et veillées. Clique pour y aller.'],
 };
 function renderLegend() {
   const o = selected || hover; const el = $('legend'); const d = viewDate(); const when = d === M.today ? '' : ` <span class="tag">vu au ${fmtDay(d)}</span>`;
-  if (!o || !o.q) { el.innerHTML = `<b>Le village, c'est ton trimestre.</b> Un quartier par semaine, un arrondissement par mois. Maisons = vie sociale cumulée, parc = bonheur moyen, arbres = santé mentale, atelier = heures travaillées, champs = objectifs 2PaP et encaissements SOLV, mare = sommeil, enclos = argent, ventes et clients de la semaine, poules = tâches, lampadaires = jours à objectif.` + when + ` <span class="hint">Molette pour zoomer, glisser pour se déplacer, clic pour le détail, frise pour voyager dans le temps.</span>`; return; }
-  const f = LEGEND[o.key]; const m = o.q.m; if (!f || (!m && o.key !== 'quartier')) { el.innerHTML = `<b>Quartier ${esc(o.q.label)}</b> · pas encore construit (${esc(fmtShort(o.q.start))} → ${esc(fmtShort(o.q.end))}).`; return; } const [t, dd] = f(m || {}, o); el.innerHTML = `<b>${esc(t)}</b>${when}<br>${esc(dd)}`;
+  if (!o) { el.innerHTML = `<b>Le village, c'est ton trimestre.</b> Au centre, ce qui se cumule : mairie (Cap Berlin), taverne (vie sociale), banque (trésorerie), marché (ventes), grange (leads), serre (vidéos), veillées (webinaires), moulin (rythme Todoist), étang (sommeil), fontaine (bonheur). Le long des avenues, un quartier par semaine.` + when + ` <span class="hint">Molette pour zoomer, glisser pour se déplacer, clic pour le détail, frise pour voyager dans le temps.</span>`; return; }
+  if (o.c) { const f = LEGEND_C[o.key]; if (!f) return; const [t, dd] = f(CM, o); el.innerHTML = `<b>${esc(t)}</b>${when}<br>${esc(dd)}`; return; }
+  const f = LEGEND[o.key]; if (!f) return; const m = o.q && o.q.m; if (!m && !['quartier', 'lot_future', 'sign'].includes(o.key)) return; const [t, dd] = f(m || {}, o); el.innerHTML = `<b>${esc(t)}</b>${when}<br>${esc(dd)}`;
 }
 function renderTimeline() {
   const el = $('timeline'); if (!el) return; const d = viewDate(); const cur = quartierOf(d); const n = daysBetween(QSTART, QEND) + 1;
   let cellsHtml = ''; for (let i = 0; i < n; i++) { const iso = addDays(QSTART, i); const mo = +iso.slice(5, 7); const cls = ['tl-day', 'm' + (mo % 3), iso === M.today ? 'today' : '', iso === d ? 'sel' : '', iso > M.today ? 'future' : '', cur && iso >= cur.start && iso <= cur.end ? 'week' : ''].filter(Boolean).join(' '); cellsHtml += `<i class="${cls}" data-d="${iso}" title="${esc(fmtDay(iso))}"></i>`; }
   const months = [8, 9, 10, 11].map(mo => { const start = `2026-${pad(mo)}-01`; const s = start < QSTART ? QSTART : start; const e = addDays(`2026-${pad(mo + 1 > 12 ? 1 : mo + 1)}-01`, -1); if (s > QEND || e < QSTART) return ''; const left = daysBetween(QSTART, s) / n * 100, w = (daysBetween(s, e > QEND ? QEND : e) + 1) / n * 100; return `<span class="tl-month" style="left:${left}%;width:${w}%">${MONTHS_FR[mo - 1]}</span>`; }).join('');
-  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${cur ? 'Quartier ' + cur.label : ''}</b> · ${cur ? fmtShort(cur.start) + ' → ' + fmtShort(cur.end) : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns"><button class="btn ${VIEW.mode === 'zoom' ? 'on' : ''}" data-mode="zoom">Quartier de la semaine</button><button class="btn ${VIEW.mode === 'all' ? 'on' : ''}" data-mode="all">Tout le village</button><button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
-  el.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { VIEW.mode = b.dataset.mode; selected = null; const cur2 = quartierOf(viewDate()) || QS[0]; animateCam(VIEW.mode === 'zoom' ? camFor(cur2) : camFit()); renderTimeline(); renderLegend(); }));
+  const b = (mode, label) => `<button class="btn ${VIEW.mode === mode ? 'on' : ''}" data-mode="${mode}">${label}</button>`;
+  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${cur ? 'Quartier ' + cur.label : ''}</b> · ${cur ? fmtShort(cur.start) + ' → ' + fmtShort(cur.end) : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns">${b('zoom', 'Quartier de la semaine')}${b('center', 'Centre-ville')}${b('all', 'Tout le village')}<button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
+  el.querySelectorAll('[data-mode]').forEach(bt => bt.addEventListener('click', () => { VIEW.mode = bt.dataset.mode; selected = null; animateCam(camForMode()); renderTimeline(); renderLegend(); }));
   el.querySelector('[data-today]').addEventListener('click', () => { VIEW.date = null; selected = null; buildScene(); });
   el.querySelector('.tl-strip').addEventListener('click', e => { const t = e.target.closest('.tl-day'); if (!t) return; VIEW.date = t.dataset.d === M.today ? null : t.dataset.d; selected = null; buildScene(); });
 }
+/* ---- interactions ---- */
 function toWorld(e) { const rc = cv.getBoundingClientRect(); return {x: cam.x + (e.clientX - rc.left) / cam.s, y: cam.y + (e.clientY - rc.top) / cam.s}; }
-function hit(e) { const p = toWorld(e); let best = null, bestA = Infinity; for (const o of objects) { if (o.big && cam.s >= zoomScale * .75) continue; if (p.x >= o.x - 1 && p.x <= o.x + o.w + 1 && p.y >= o.y - 1 && p.y <= o.y + o.h + 1) { const a = o.w * o.h; if (a < bestA) { best = o; bestA = a; } } } return best; }
+const zoomedOut = () => cam.s < Math.min(zoomScale * .72, .9);
+function hitArea(p) { const q = QS.find(q => p.x >= pxc(q.tx) && p.x < pxc(q.tx) + QW && p.y >= pyc(q.ty) && p.y < pyc(q.ty) + QH); if (q) return {key: 'quartier', q, big: true}; const b = CENTER_BOX; if (b && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) return {key: 'centre', c: true, big: true}; return null; }
+function hit(e) { const p = toWorld(e); if (zoomedOut()) return hitArea(p); let best = null, bestA = Infinity; for (const o of objects) { if (o.big) continue; if (p.x >= o.x - 1 && p.x <= o.x + o.w + 1 && p.y >= o.y - 1 && p.y <= o.y + o.h + 1) { const a = o.w * o.h; if (a < bestA) { best = o; bestA = a; } } } return best; }
 cv.addEventListener('mousedown', e => { dragging = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y}; moved = false; });
 window.addEventListener('mousemove', e => { if (dragging) { const dx = (e.clientX - dragging.x) / cam.s, dy = (e.clientY - dragging.y) / cam.s; if (Math.abs(dx) + Math.abs(dy) > 2) moved = true; Object.assign(cam, clampCam({x: dragging.cx - dx, y: dragging.cy - dy, s: cam.s})); camAnim = null; } });
 window.addEventListener('mouseup', () => { dragging = null; });
 cv.addEventListener('mousemove', e => { if (dragging) return; hover = hit(e); cv.style.cursor = hover ? 'pointer' : 'grab'; if (!selected) renderLegend(); });
 cv.addEventListener('mouseleave', () => { hover = null; if (!selected) renderLegend(); });
-cv.addEventListener('click', e => { if (moved) { moved = false; return; } let o = hit(e); if (cam.s < zoomScale * .75) { const p = toWorld(e); const q = QS.find(q => p.x >= q.x && p.x < q.x + QW && p.y >= q.y && p.y < q.y + QH); if (q) o = {key: 'quartier', q}; } if (o && o.key === 'quartier') { VIEW.mode = 'zoom'; animateCam(camFor(o.q)); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
-cv.addEventListener('dblclick', e => { const p = toWorld(e); const q = QS.find(q => p.x >= q.x && p.x < q.x + QW && p.y >= q.y && p.y < q.y + QH); if (q) { VIEW.mode = 'zoom'; animateCam(camFor(q)); renderTimeline(); } });
-cv.addEventListener('wheel', e => { e.preventDefault(); const p = toWorld(e); const f = Math.pow(1.0015, -e.deltaY); const s = clamp(cam.s * f, fitScale, zoomScale * 2.5); const rc = cv.getBoundingClientRect(); const mx = e.clientX - rc.left, my = e.clientY - rc.top; camAnim = null; Object.assign(cam, clampCam({x: p.x - mx / s, y: p.y - my / s, s})); VIEW.mode = s < zoomScale * .75 ? 'all' : 'zoom'; }, {passive: false});
+cv.addEventListener('click', e => { if (moved) { moved = false; return; } const o = hit(e); if (o && o.key === 'quartier' && zoomedOut()) { VIEW.mode = 'zoom'; animateCam(camFor(o.q)); selected = null; renderTimeline(); renderLegend(); return; } if (o && o.key === 'centre') { VIEW.mode = 'center'; animateCam(camCenter()); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
+cv.addEventListener('dblclick', e => { const a = hitArea(toWorld(e)); if (!a) return; if (a.q) { VIEW.mode = 'zoom'; animateCam(camFor(a.q)); } else { VIEW.mode = 'center'; animateCam(camCenter()); } renderTimeline(); });
+cv.addEventListener('wheel', e => { e.preventDefault(); const p = toWorld(e); const f = Math.pow(1.0015, -e.deltaY); const s = clamp(cam.s * f, fitScale, zoomScale * 2.5); const rc = cv.getBoundingClientRect(); const mx = e.clientX - rc.left, my = e.clientY - rc.top; camAnim = null; Object.assign(cam, clampCam({x: p.x - mx / s, y: p.y - my / s, s})); }, {passive: false});
 
 /* ---------- live refresh (connecteurs du lecteur) ---------- */
 const DAILY_COLS = {'c-7N0cyxEVGg': 'date', 'c-tAKEYlcGDn': 'happy', 'c-Od1vxNtX6T': 'anx', 'c-SMeU0olwRC': 'energy', 'c-pW1vO6kRX6': 'sleepq', 'c-kWTDwQNdNf': 'stab', 'c-V60e2oSETX': 'prod', 'c-_sD9DJt71G': 'social', 'c-Odae1HQlUR': 'love', 'c-Kf1O5x9z3j': 'workh', 'c-JsuqbIIW7K': 'lifestyle', 'c-4iFinWTuGO': 'steps', 'c-pua7ZJvXf7': 'sleeph', 'c-0RW9tPoYvW': 'workout', 'c-rQEAz7GNN2': 'where', 'c-f2ng9VRp3c': 'drinks', 'c-BxepVjVc_n': 'coffee', 'c-gg9GjPSZ0s': 'socialev', 'c-PllOHwlhqi': 'friendstalk', 'c-WFYbGCMo_h': 'hrv', 'c-1fE2ZjA9-_': 'rhr', 'c-ikg_tCavhk': 'weight', 'c-ZO6bpLIlaH': 'foodq', 'c-GMIluVkvkY': 'protein', 'c-SZRcU0_foY': 'proteint', 'c-8SBOaCj69l': 'nonvegan', 'c-KZ2qLvlFkY': 'kcalin', 'c-zwVTB7Z1hI': 'kcalout', 'c-RBOb64ZLyq': 'mit', 'c-GUR59bJBoS': 'fasting'};
