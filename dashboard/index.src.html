@@ -40,6 +40,7 @@ button { font: inherit; cursor: pointer; }
 .topbar .qday .px { font-size: 11px; color: var(--gold); }
 .topbar .upd { margin-top: 8px; background: var(--panel2); color: var(--gold); border: 2px solid var(--gold2); box-shadow: 0 3px 0 var(--shadow); padding: 5px 10px; font: 10px/1.2 'Press Start 2P', monospace; }
 .topbar .upd:hover { border-color: var(--gold); } .topbar .upd:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--shadow); } .topbar .upd:disabled { opacity: .6; cursor: wait; }
+.panel h2 .mini { background: transparent; color: var(--gold); border: 1px solid var(--gold2); padding: 1px 6px; font: 700 11px 'Nunito', sans-serif; } .panel h2 .mini:disabled { opacity: .6; }
 .topbar .sync { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 700; }
 .questbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding: 10px clamp(8px, 1.2vw, 16px); background: var(--bg2); border-bottom: 3px solid var(--line); }
 .qchip { background: var(--panel); border: 2px solid var(--line); padding: 8px 10px 9px; display: grid; gap: 5px; min-width: 0; }
@@ -429,7 +430,7 @@ function renderFood() {
   const kcal = []; for (let i = 6; i >= 0; i--) { const iso = addDays(M.today, -i); const d = M.daily.find(x => x.date === iso) || {}; kcal.push({label: fmtDay(iso, {weekday: 'short', day: undefined, month: undefined}).replace('.', ''), vals: [d.kcalin || 0, d.kcalout || 0]}); }
   const k = (v, l, d, big) => `<div class="kpi"><div class="v px ${big ? 'big' : ''}">${v}</div><div class="l">${l}</div>${d ? `<div class="d">${d}</div>` : ''}</div>`;
   const ratio = M.protein7 != null ? M.protein7 / M.proteinT : null;
-  $('p-food').innerHTML = `<h2>🥗 Alimentation <span class="sub">7 derniers jours</span></h2>
+  $('p-food').innerHTML = `<h2>🥗 Alimentation <span class="sub">7 derniers jours · <a href="https://coda.io/d/_d8P2-vrLPqE" target="_blank" rel="noopener">saisir dans Coda</a> · <button class="mini" id="food-upd" title="Relire le Daily Form dans Coda">⟳ relire</button></span></h2>
     <div class="kpis">
       ${k(M.foodq7 != null ? fmtNum(M.foodq7, 1) : '–', 'Qualité / 10', M.foodq7 == null ? 'pas noté cette semaine' : 'règles alimentaires suivies', true)}
       ${k(M.protein7 != null ? fmtNum(M.protein7, 0) + ' g' : '–', 'Protéines / jour', ratio != null ? `${fmtNum(ratio * 100, 0)}% de la cible ${fmtNum(M.proteinT, 0)} g` : 'cible ' + fmtNum(M.proteinT, 0) + ' g')}
@@ -442,7 +443,8 @@ function renderFood() {
     ${barChart(days7, {colors: ['var(--teal)'], h: 95, target: M.proteinT, max: M.proteinT * 1.15, fmt: v => fmtNum(v, 0), aria: 'Protéines par jour'})}
     <p class="lead" style="margin:6px 0 2px"><b>Énergie</b> : <span style="color:var(--orange)">mangée</span> vs <span style="color:var(--blue)">brûlée</span></p>
     ${barChart(kcal, {colors: ['var(--orange)', 'var(--blue)'], h: 95, fmt: v => fmtNum(v / 1000, 1) + 'k', aria: 'Calories mangées et brûlées par jour'})}
-    <p class="note">Sources : Daily Form (qualité, protéines, verres, cafés, jeûne) et Apple Health (kcal). Les jours à zéro sont des jours non saisis.</p>`;
+    <p class="note">Sources : Daily Form (qualité, protéines, verres, cafés, jeûne) et Apple Health (kcal). Les jours à zéro sont des jours non saisis. Le Daily Form est relu toutes les heures ; « relire » le fait tout de suite.</p>`;
+  $('food-upd').addEventListener('click', async e => { const b = e.currentTarget; if (!mcpRef) { location.reload(); return; } b.disabled = true; b.textContent = '⟳ lecture…'; try { await mcpRef.invalidate('Coda', 'table_rows_read'); } catch (err) {} setTimeout(() => { const nb = $('food-upd'); if (nb) { nb.disabled = false; nb.textContent = '⟳ relire'; } }, 6000); });
 }
 function renderAgenda() {
   const W = M.wxDaily; let fc = '';
@@ -1190,11 +1192,11 @@ async function startLive() {
   if (!window.claude || typeof window.claude.use !== 'function') return;
   let mcp = null; try { mcp = await window.claude.use('mcp'); } catch (e) { mcp = null; } if (!mcp) return; mcpRef = mcp;
   const DAY = 86400000; const opts = {cache: {staleTime: DAY / 2}, refetchInterval: DAY};
-  const watch = (server, tool, input, onData) => { markLive(server, 'wait'); try { mcp.watchTool(server, tool, input, ev => { if (ev.type === 'data') { try { onData(ev.result); markLive(server, 'ok'); } catch (e) { console.warn(tool, e); } } else { const c = ev.error && ev.error.code; if (['needs_reauth', 'server_not_connected', 'not_granted', 'consent_required', 'server_not_found', 'not_in_manifest'].includes(c)) markLive(server, 'err'); console.info('mcp', server, tool, c); } }, opts); } catch (e) { console.warn('watch', server, tool, e); } };
+  const watch = (server, tool, input, onData, o2) => { markLive(server, 'wait'); try { mcp.watchTool(server, tool, input, ev => { if (ev.type === 'data') { try { onData(ev.result); markLive(server, 'ok'); } catch (e) { console.warn(tool, e); } } else { const c = ev.error && ev.error.code; if (['needs_reauth', 'server_not_connected', 'not_granted', 'consent_required', 'server_not_found', 'not_in_manifest'].includes(c)) markLive(server, 'err'); console.info('mcp', server, tool, c); } }, o2 || opts); } catch (e) { console.warn('watch', server, tool, e); } };
   const refresh = () => { renderAll(); };
   watch('Coda', 'table_rows_read', {uri: 'coda://docs/8P2-vrLPqE/tables/grid-pHsaGoMNot', rowLimit: 100, filterFormula: 'thisRow.Date >= Today() - Days(70)', columnsToInclude: Object.keys(DAILY_COLS)}, res => {
     const rows = rowsFrom(res.payload, DAILY_COLS).filter(r => r.date); if (!rows.length) return; const byDate = new Map(S.daily.map(d => [d.date, d]));
-    rows.forEach(r => { const cur = byDate.get(r.date) || {date: r.date}; for (const [k, v] of Object.entries(r)) if (v != null && v !== '') cur[k] = v; byDate.set(r.date, cur); }); S.daily = [...byDate.values()].sort((a, b) => a.date < b.date ? -1 : 1); refresh(); });
+    rows.forEach(r => { const cur = byDate.get(r.date) || {date: r.date}; for (const [k, v] of Object.entries(r)) if (v != null && v !== '') cur[k] = v; byDate.set(r.date, cur); }); S.daily = [...byDate.values()].sort((a, b) => a.date < b.date ? -1 : 1); refresh(); }, {cache: {staleTime: 30 * 60000}, refetchInterval: 60 * 60000});
   watch('Coda', 'table_rows_read', {uri: 'coda://docs/8P2-vrLPqE/tables/grid-NULK1_Z2Yv', rowLimit: 8, filterFormula: 'thisRow.[Week Start] >= Today() - Days(21)'}, res => {
     const W = {'c-EkSzQV6vZC': 'week', 'c-_jZ-KgEDfc': 'start', 'c-v2P486YM6B': 'end', 'c-NLpNVmQs_-': 'focus', 'c-aB8J0HP9pO': 'kpi', 'c-RIdDkvaKK2': 'domino', 'c-Npv2B-0DiZ': 'progress', 'c-JRNN04h2nd': 'whynot', 'c-bkBof0xlYB': 'resistance', 'c-RPdDAT09Wm': 'wins'};
     const rows = rowsFrom(res.payload, W).filter(r => r.start); if (!rows.length) return; const map = new Map(S.weeks.map(w => [w.start, w])); rows.forEach(r => { r.start = String(r.start).slice(0, 10); r.end = r.end && String(r.end).slice(0, 10); map.set(r.start, Object.assign(map.get(r.start) || {}, r)); }); S.weeks = [...map.values()].sort((a, b) => a.start < b.start ? -1 : 1); refresh(); });
