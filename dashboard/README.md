@@ -24,46 +24,44 @@ locales ou dans l'artifact Claude.
 ## Le village
 
 Sprites : packs Cute Fantasy Free et Premium (Kenmi), non versionnés (licence sans redistribution).
-Un bourg qui s'étend sur les 90 jours. Au milieu, le centre-ville compte le trimestre entier ; de la
-place partent trois avenues, une par mois (septembre à l'ouest, octobre à l'est, novembre au sud).
-Le long de chacune, un quartier pousse chaque semaine, en alternant les côtés. Les avenues ne vont
-que jusqu'au dernier quartier construit : en remontant la frise, on voit la ville grandir. Chaque
-mois a son style (bois et chênes, pierre et bouleaux dorés, calcaire et sapins). La caméra a trois
-vues (quartier de la semaine, centre-ville, tout le village), plus molette, glisser, double-clic.
+Un bourg serré. Au milieu, le centre-ville compte le trimestre entier ; autour, un quartier par mois
+(septembre à l'ouest, octobre à l'est, novembre au sud). Dans un quartier, les maisons de toutes les
+semaines du mois se rangent par ordre de construction, les premières au plus près de la place ;
+chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. La forêt recouvre ce
+qui n'est pas encore bâti. Vues : « Ce mois-ci », « Centre-ville », « Tout le village ». La molette
+fait défiler la page ; Ctrl + molette, le pincement ou les boutons + et − zooment.
+
+Aucun montant n'apparaît sur la page : l'argent se lit en mois d'avance, en pourcentages ou en moutons.
 
 Le centre-ville :
 
 | Élément | Ce qu'il représente |
 | --- | --- |
-| Mairie et ses 14 drapeaux | démarches Cap Berlin (vert fait, jaune en attente, gris à faire) |
-| Banque et coffres d'or | trésorerie hors Wise SOLV, un coffre par mois d'avance à 2 500 € |
-| Taverne, clients sur les bancs | événements sociaux des 30 derniers jours |
-| Guirlandes au sud de la place | trois événements sociaux ou plus sur 30 jours |
+| Mairie et 14 drapeaux sur la place | démarches Cap Berlin (vert fait, jaune en attente, gris à faire) |
+| Banque et coffres d'or | mois d'avance sur le budget perso, un coffre par mois |
+| Taverne et clients en terrasse | événements sociaux des 30 derniers jours |
+| Guirlandes | trois événements sociaux ou plus sur 30 jours |
 | Étang : canards, cygne | nuits à 80 % ou plus sur 7 jours ; cygne si la moyenne dépasse 90 % |
 | Fontaine au milieu de l'étang | coule si le bonheur moyen sur 7 jours est à 5/10 ou plus |
-| Rue du marché : étals et Chloé | ventes 2PaP du trimestre (un étal par vente, six emplacements) |
-| Grange et bottes de foin | leads du trimestre (une botte pour 50) |
-| Moulin | vitesse des ailes = tâches Todoist sur 7 jours (pleine vitesse à 10 par jour) |
-| Serre et tonneaux fleuris | vidéos YouTube publiées (douze emplacements) |
-| Feux de veillée | webinaires tenus (trois emplacements) |
-| Promeneurs autour de l'étang | vie sociale du mois |
+| Rue du marché, six étals | un étal déballé avec Chloé par vente 2PaP, les autres bâchés |
+| Poulailler, grange et foin | leads du trimestre (une botte pour 50) |
+| Moulin | tâches Todoist sur 7 jours (vitesse des ailes) |
+| Serre et tonneaux fleuris | vidéos YouTube publiées |
+| Feux de veillée | webinaires tenus |
 
-Chaque quartier (ce qui s'accumule sur la semaine, ce qui se lit en moyenne) :
+Chaque quartier mensuel :
 
 | Élément | Ce qu'il représente |
 | --- | --- |
-| Maisons (jusqu'à 4, par étapes de construction, cheminées qui fument) | jours avec un événement social dans la semaine (un étage par jour, trois étages par maison) |
-| Parc : jusqu'à 20 fleurs, papillons | bonheur moyen sur 7 jours (papillons à partir de 6/10) |
-| Arbres, souches, couleur des feuilles | santé mentale sur 14 jours |
-| Mare, couleur de l'herbe, canard | sommeil moyen sur 7 jours (canard à 80 % et plus) |
-| Atelier : caisses | heures Toggl de la semaine (une caisse pour 4 h) |
-| Champs 2PaP et fermiers au travail | avancement des quêtes du trimestre ; un fermier dès 15 tâches dans la semaine, deux dès 45 |
-| Champs SOLV | encaissements SOLV du mois à cette date |
-| Enclos : moutons, cochons, vaches | milliers d'euros encaissés dans la semaine, ventes 2PaP de la semaine, clients qui ont payé dans la semaine |
-| Poules dans la rue | tâches Todoist terminées dans la semaine (une pour dix) |
-| Lampadaires | jours de la semaine à 10 tâches ou plus (un pour deux) |
-| Habitants | toi, plus un par événement social de la semaine |
-| Lumière, ombres de nuages, pluie, neige | heure et météo réelles de Berlin, météo historique pour les dates passées |
+| Maisons (une de base par semaine, jusqu'à 4, par étapes) | jours avec un événement social dans la semaine ; toit et plaque par semaine |
+| Poules en liberté | leads gagnés dans le mois (une pour dix) |
+| Enclos : moutons, cochons, vaches | milliers d'euros encaissés dans le mois, ventes 2PaP du mois, clients qui ont payé |
+| Mare, canard | sommeil moyen du mois (canard à 80 % et plus) |
+| Champs 2PaP, épouvantail, fermiers | avancement des quêtes du trimestre ; fermiers selon les tâches Todoist du mois |
+| Champs SOLV | encaissements SOLV du mois comparés au précédent |
+| Parc : jusqu'à 20 fleurs, papillons | bonheur moyen du mois |
+| Arbres et souches | santé mentale du mois |
+| Habitants | toi, plus un par événement social du mois |
 
 ## Mise à jour
 
