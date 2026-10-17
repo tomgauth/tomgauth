@@ -31,7 +31,9 @@ chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. 
 qui n'est pas encore bâti. Un ruisseau traverse le quartier de septembre (pont, grenouilles, oies), une grande rivière coule à l'ouest
 (pont de pierre, capybaras), un marécage dort dans les bois au nord, la mer borde l'est avec sa plage ;
 des chevaux de toutes les robes paissent au nord-est, des souris et des cochons traînent près de la grange, des abeilles tournent autour des ruches ; le sol a des taches de prairie
-et les routes quelques renflements. Vues : « Ce mois-ci », « Centre-ville », « Tout le village ». La molette
+et les routes quelques renflements. Vues : « Ce mois-ci », « Centre-ville », « Tout le village », et « ▶ Time-lapse » qui rejoue le
+trimestre jour par jour en plein écran (Échap ou Stop pour sortir). Un clic ouvre une bulle à côté de
+l'élément ; le survol donne juste son nom. La molette
 fait défiler la page ; Ctrl + molette, le pincement ou les boutons + et − zooment.
 
 Aucun montant n'apparaît sur la page : l'argent se lit en mois d'avance, en pourcentages ou en moutons.

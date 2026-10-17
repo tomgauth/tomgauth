@@ -50,12 +50,30 @@ button { font: inherit; cursor: pointer; }
 .qchip.big { grid-column: span 2; border-color: var(--gold2); } .qchip.big .v { font-size: 22px; color: var(--gold); }
 .qchip .bar { margin: 2px 2px 0; }
 .pxi { display: inline-block; width: 16px; height: 16px; background-size: 16px 16px; image-rendering: pixelated; vertical-align: -3px; transform: scale(1.25); margin-right: 3px; }
-.stage { display: grid; grid-template-columns: minmax(270px, 21vw) minmax(0, 1fr) minmax(270px, 21vw); gap: 12px; padding: 12px clamp(8px, 1.2vw, 16px) 0; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 19vw); gap: 12px; padding: 12px clamp(8px, 1.2vw, 16px) 0; }
 .stage .mid { min-width: 0; border: 3px solid var(--line); background: var(--panel); align-self: start; }
 .stage .side { contain: size; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; padding: 3px 4px 6px 3px; }
 .stage .side > .panel { flex-shrink: 0; }
-@media (max-width: 1100px) { .stage { grid-template-columns: 1fr; } .stage .side { contain: none; overflow: visible; } .stage .mid { order: -1; } .qchip.big { grid-column: span 1; } }
-.hero { position: relative; width: 100%; height: clamp(440px, 64vh, 860px); overflow: hidden; background: #3c8a4a; }
+@media (max-width: 1100px) { .topbar.slim { grid-template-columns: 1fr auto; } .topbar.slim .questbar { grid-column: 1 / -1; order: 3; justify-content: flex-start; } .stage { grid-template-columns: 1fr; } .stage .side { contain: none; overflow: visible; } .stage .mid { order: -1; } .qchip.big { grid-column: span 1; } }
+.hero { position: relative; width: 100%; height: clamp(460px, calc(100vh - 150px), 1000px); overflow: hidden; background: #3c8a4a; }
+.topbar.slim { grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; padding: 6px clamp(8px, 1.2vw, 16px); }
+.topbar.slim .clock { font-size: 20px; } .topbar.slim .date { margin-top: 3px; font-size: 11.5px; }
+.topbar.slim .tb-right { display: flex; align-items: center; gap: 10px; } .topbar.slim .wx { font-size: 15px; } .topbar.slim .wx small { display: none; } .topbar.slim .upd { margin-top: 0; } .topbar.slim .sync { display: none; }
+.topbar.slim .questbar { display: flex; gap: 8px; padding: 0; background: none; border: 0; justify-content: center; flex-wrap: wrap; }
+.topbar.slim .qchip { padding: 4px 8px 5px; gap: 2px; min-width: 120px; } .topbar.slim .qchip.big { min-width: 190px; }
+.topbar.slim .qchip .v { font-size: 12px; } .topbar.slim .qchip.big .v { font-size: 14px; } .topbar.slim .qchip .bar { height: 8px; margin-top: 2px; }
+.row.grid4b { grid-template-columns: repeat(4, minmax(0, 1fr)); } @media (max-width: 1200px) { .row.grid4b { grid-template-columns: repeat(2, minmax(0, 1fr)); } } @media (max-width: 760px) { .row.grid4b { grid-template-columns: 1fr; } }
+.goal { padding: 7px 0; border-top: 2px dashed var(--line); } .goal:first-of-type { border-top: 0; }
+.goal .gh { display: flex; justify-content: space-between; gap: 8px; font-weight: 800; font-size: 13.5px; align-items: center; } .goal .gh .px { font-size: 11px; color: var(--gold); }
+.mits { list-style: none; margin: 4px 0 2px; padding: 0; font-size: 13px; line-height: 1.35; } .mits li { padding: 4px 0 4px 18px; position: relative; } .mits li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 8px; height: 8px; background: var(--gold); box-shadow: 1px 1px 0 var(--shadow); }
+.info { position: absolute; z-index: 5; width: 300px; max-width: calc(100% - 24px); background: rgba(24,18,36,.96); color: #f3edda; border: 3px solid #f2c14e; box-shadow: 0 4px 0 rgba(0,0,0,.45); padding: 10px 12px 11px; font-size: 13px; line-height: 1.45; }
+.info b { color: #f2c14e; display: block; margin: 0 22px 4px 0; font-size: 13.5px; } .info .x { position: absolute; right: 6px; top: 4px; background: none; border: 0; color: #f2c14e; font: 14px 'Press Start 2P', monospace; padding: 2px; }
+.info .tag { margin-left: 0; }
+.tip { position: absolute; z-index: 4; pointer-events: none; background: rgba(24,18,36,.92); color: #f3edda; border: 2px solid #6b5a8a; padding: 3px 7px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.hidden { display: none !important; }
+.hero.full { position: fixed; inset: 0; z-index: 90; height: 100vh !important; width: 100vw; }
+.lapse-cap { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 6; background: rgba(24,18,36,.9); color: #f2c14e; border: 3px solid #f2c14e; padding: 8px 14px; font: 14px 'Press Start 2P', monospace; text-align: center; }
+.lapse-cap small { display: block; margin-top: 6px; color: #f3edda; font-size: 9px; } .lapse-stop { position: absolute; right: 14px; bottom: 14px; z-index: 6; background: #241b33; color: #f2c14e; border: 3px solid #f2c14e; padding: 8px 12px; font: 11px 'Press Start 2P', monospace; }
 .zoomctl { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 4px; z-index: 2; }
 .zoomctl button { width: 30px; height: 30px; background: rgba(20,16,32,.82); color: #f3edda; border: 2px solid #f2c14e; font: 16px/1 'Press Start 2P', monospace; padding: 0; }
 .hero canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: pan-x pan-y; }
@@ -164,31 +182,25 @@ svg.chart { width: 100%; height: auto; display: block; }
 details summary { cursor: pointer; font-weight: 700; color: var(--ink); font-size: 13px; }
 </style>
 
-<div class="topbar">
+<div class="topbar slim">
   <div class="tb-left"><div class="clock px" id="clock">--:--</div><div class="date" id="date"></div></div>
-  <div class="tb-mid"><h1 class="px" id="greet"></h1><p id="focus"></p></div>
-  <div class="tb-right"><div class="wx px" id="wx">…</div><div class="qday" id="qday"></div><button class="upd" id="upd" title="Recharge les données Coda, Todoist et Agenda, puis la dernière version de l'app">⟳ Mettre à jour</button><div class="sync" id="sync"></div></div>
+  <div class="questbar" id="questbar"></div>
+  <div class="tb-right"><div class="wx px" id="wx">…</div><button class="upd" id="upd" title="Recharge les données Coda, Todoist et Agenda, puis la dernière version de l'app">⟳ Mettre à jour</button><div class="sync" id="sync"></div></div>
 </div>
-<div class="questbar" id="questbar"></div>
 <div class="stage">
-  <aside class="side left">
-    <section class="panel" id="p-day"></section>
-    <section class="panel" id="p-agenda"></section>
-  </aside>
   <div class="mid">
-    <div class="hero" id="hero"><canvas id="scene" aria-label="Village pixel art reflétant l'état du trimestre"></canvas></div>
+    <div class="hero" id="hero"><canvas id="scene" aria-label="Village pixel art reflétant l'état du trimestre"></canvas><div class="info hidden" id="info"></div><div class="tip hidden" id="tip"></div></div>
     <div class="timeline" id="timeline"></div>
-    <div class="legend" id="legend"></div>
   </div>
   <aside class="side right">
-    <section class="panel" id="p-week"></section>
-    <section class="panel" id="p-mood"></section>
+    <section class="panel" id="p-goals"></section>
   </aside>
 </div>
 
 <div class="wrap">
-  <div class="row grid3">
+  <div class="row grid4b">
     <section class="panel" id="p-quarter"></section>
+    <section class="panel" id="p-mood"></section>
     <section class="panel" id="p-money"></section>
     <section class="panel" id="p-food"></section>
   </div>
@@ -349,6 +361,16 @@ function renderQuarter() {
     <p class="note">North Star du trimestre : 500 leads, 3 webinaires, 6 ventes 2PaP d'ici le 30 novembre. Contrainte : 20 h de travail par semaine.</p>`;
   $('p-quarter').querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', () => $('x-' + el.dataset.toggle).classList.toggle('hidden')));
 }
+function renderGoals() { // l'encart de la semaine : les objectifs du lundi et trois jauges, rien de plus
+  const el = $('p-goals'); if (!el) return; const mits = M.mit ? String(M.mit.text).split(/\n|(?=\b[1-9][.)]\s)/).map(x => x.replace(/^\s*[1-9][.)]\s*/, '').replace(/^[^\wÀ-ÿ(]+/u, '').trim()).filter(x => x && !/^\(?détail/i.test(x)) : [];
+  const g = (ic, name, v, t, color) => `<div class="goal"><div class="gh"><span>${ic} ${name}</span><span class="px">${v} / ${t}</span></div>${bar(v, t, color, M.wkDay / 7)}</div>`;
+  const capW = ((S.capberlin && S.capberlin.this_week) || []).length;
+  el.innerHTML = `<h2>🎯 Cette semaine <span class="sub">S${M.wkNum} · jour ${M.wkDay}/7</span></h2>
+    ${mits.length ? `<ul class="mits">${mits.slice(0, 4).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="lead">Pas encore d\'objectifs du lundi dans le Daily Form.</p>'}
+    ${g(icon('webinaires', '🎤'), 'Sprint webinaire', M.sprintDone, M.sprint.length || 7, 'pink')}
+    ${g(icon('muay', '🥊'), 'Muay Thai', M.muayDone, M.muayTarget, 'red')}
+    ${capW ? `<div class="goal"><div class="gh"><span>${icon('cap', '🏛️')} Cap Berlin</span><span class="px">${capW} à faire</span></div></div>` : ''}`;
+}
 function renderWeek() {
   const wr = M.weekRow; const pw = M.prevWeekRow;
   const focus = wr && wr.focus ? esc(wr.focus) : `Pas encore de ligne Weekly dans Coda pour la semaine ${M.wkNum}. Objectif business tranché lundi : <b>dater et lancer le webinaire d'octobre</b> (piste A), live le ${M.q.webinars.next ? fmtDay(M.q.webinars.next, {weekday: 'short'}) : '27 octobre'}.`;
@@ -422,8 +444,7 @@ function renderQuestbar() {
   const mStart = M.today.slice(0, 8) + '01'; const leadsMonth = Math.max(0, Math.round(leadsAt(M.today) - leadsAt(addDays(mStart, -1))));
   $('questbar').innerHTML = chip(icon('leads', '🐔'), 'Leads', q.leads.value, q.leads.target, 'teal', `+${fmtNum(leadsMonth)} ce mois · ${fmtNum(q.leads.value / q.leads.target * 100, 0)} %`, 'big')
     + chip(icon('ventes', '🛒'), 'Ventes 2PaP', q.sales.value, q.sales.target, 'green', '') + chip(icon('webinaires', '🎤'), 'Webinaires', q.webinars.value, q.webinars.target, 'pink', q.webinars.next ? 'J-' + daysBetween(M.today, q.webinars.next) : '')
-    + chip(icon('videos', '🎥'), 'Vidéos', q.videos.value, q.videos.target, 'red', '') + chip(icon('cap', '🏛️'), 'Cap Berlin', q.capDone, q.capTotal, 'gold', '') + chip(icon('muay', '🥊'), 'Muay Thai', M.muayDone, M.muayTarget, 'red', '')
-    + `<div class="qchip"><div class="k"><span>${icon('trimestre', '⏳')} Trimestre</span><b>J-${M.qTotal - M.qDay}</b></div><div class="v px">J${M.qDay}<small> / ${M.qTotal}</small></div>${bar(M.qDay, M.qTotal, 'blue')}</div>`;
+    + chip(icon('videos', '🎥'), 'Vidéos', q.videos.value, q.videos.target, 'red', '') + chip(icon('cap', '🏛️'), 'Cap Berlin', q.capDone, q.capTotal, 'gold', '');
 }
 function renderFood() {
   const days7 = []; for (let i = 6; i >= 0; i--) { const iso = addDays(M.today, -i); const d = M.daily.find(x => x.date === iso) || {}; days7.push({label: fmtDay(iso, {weekday: 'short', day: undefined, month: undefined}).replace('.', ''), vals: [d.protein || 0]}); }
@@ -459,13 +480,10 @@ function renderAgenda() {
 }
 function renderHUD() {
   const b = berlinNow(); $('clock').textContent = pad(Math.floor(b.h)) + ':' + pad(Math.floor((b.h % 1) * 60)); $('date').textContent = fmtDay(M.today);
-  const hour = b.h; const greet = hour < 5 ? 'Bonne nuit, Tom.' : hour < 12 ? 'Bonjour, Tom.' : hour < 18 ? 'Bon après-midi, Tom.' : 'Bonsoir, Tom.'; $('greet').textContent = greet;
-  const open = M.tasksToday.filter(t => !t.done); const p1 = open.find(t => t.prio === 'p1'); const nextEv = M.evToday.find(e => (e.end || e.start) >= M.nowKey);
-  $('focus').innerHTML = p1 ? `Prochaine quête : ${esc(p1.content)}` + (nextEv ? ` · ${esc(nextEv.start.slice(11, 16))} ${esc(nextEv.title)}` : '') : nextEv ? `${esc(nextEv.start.slice(11, 16))} ${esc(nextEv.title)}` : (M.doneToday >= M.dailyGoal ? 'Objectif du jour atteint. Le village respire.' : 'Rien d\'urgent. Choisis ta quête.');
   if (M.wxNow) { const w = wx(M.wxNow.weather_code); $('wx').innerHTML = `${w[0]} ${Math.round(M.wxNow.temperature_2m)}°<small>${esc(w[1])} · ressenti ${Math.round(M.wxNow.apparent_temperature)}° · vent ${Math.round(M.wxNow.wind_speed_10m)} km/h</small>`; } else $('wx').innerHTML = '☁ –<small>météo indisponible</small>';
-  $('qday').innerHTML = `<span class="px">Jour ${M.qDay}/${M.qTotal}</span><br>semaine ${M.wkNum} · ${M.doneToday}/${M.dailyGoal} tâches · série ${(S.productivity || {}).currentDailyStreak || 0} j`;
+  showSync();
 }
-function renderAll() { deriveModel(); renderHUD(); renderQuestbar(); renderQuarter(); renderWeek(); renderDay(); renderMood(); renderMoney(); renderFood(); renderAgenda(); $('gen').textContent = S.generated_at ? new Date(S.generated_at).toLocaleString('fr-FR', {timeZone: TZ, dateStyle: 'short', timeStyle: 'short'}) : '–'; buildScene(); }
+function renderAll() { deriveModel(); renderHUD(); renderQuestbar(); renderGoals(); renderQuarter(); renderMood(); renderMoney(); renderFood(); $('gen').textContent = S.generated_at ? new Date(S.generated_at).toLocaleString('fr-FR', {timeZone: TZ, dateStyle: 'short', timeStyle: 'short'}) : '–'; buildScene(); }
 
 /* ====================== VILLAGE (Cute Fantasy, Kenmi) ======================
    Un bourg serré qui s'étend sur les 90 jours. Au milieu, le centre-ville : mairie, banque, taverne,
@@ -473,7 +491,11 @@ function renderAll() { deriveModel(); renderHUD(); renderQuestbar(); renderQuart
    Autour, un quartier par mois : maisons de chaque semaine, enclos, mare, champs, parc et poules. */
 const ASSETS = /*__ASSETS__*/{};
 const IMG = {}; let assetsReady = false;
-(function loadAssets() { const names = Object.keys(ASSETS); if (!names.length) return; let n = 0; names.forEach(k => { const im = new Image(); im.onload = im.onerror = () => { if (++n === names.length) { assetsReady = true; buildScene(); try { renderQuestbar(); } catch (e) {} } }; im.src = ASSETS[k]; IMG[k] = im; }); })();
+function keyGrass() { // le vert uni que les tuiles de route, d'eau et de champs peignent sur leurs bords devient transparent : la texture de l'herbe passe dessous
+  ['path', 'water', 'water_anim', 'farm', 'cobble'].forEach(k => { const im = IMG[k]; if (!im || !im.naturalWidth) return; const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    const d = x.getImageData(0, 0, c.width, c.height), p = d.data; for (let i = 0; i < p.length; i += 4) if (p[i] === 62 && p[i + 1] === 137 && p[i + 2] === 72) p[i + 3] = 0; x.putImageData(d, 0, 0); IMG[k] = c; });
+}
+(function loadAssets() { const names = Object.keys(ASSETS); if (!names.length) return; let n = 0; names.forEach(k => { const im = new Image(); im.onload = im.onerror = () => { if (++n === names.length) { keyGrass(); assetsReady = true; buildScene(); try { renderQuestbar(); renderGoals(); } catch (e) {} } }; im.src = ASSETS[k]; IMG[k] = im; }); })();
 const T = 16;
 const cv = $('scene'); const ctx = cv.getContext('2d');
 const world = document.createElement('canvas'); let octx = world.getContext('2d');
@@ -564,7 +586,7 @@ function monthLayout(dir) { // tout en tuiles relatives au centre de l'étang
     L.fac = {pen: [XR(-40, -23)[0], 15], pond: [XR(-52, -45)[0], 15], fields: [XR(-36, -24)[0], 23], park: [XR(-53, -45)[0], 21], bench: [XR(-40, -39)[0], 25]};
     L.beds = [[XR(-31, -24)[0], -24], [XR(-40, -33)[0], -24], [XR(-31, -24)[0], -18], [XR(-40, -33)[0], -18]]; L.bedPath = [XR(-41, -23), -20, -19];
     L.orchard = [-46, -50, -54].flatMap(c => [[XR(c, c + 1)[0], -24], [XR(c, c + 1)[0], -18]]); L.square = [XR(-20, -17)[0], 2]; L.hive = [XR(-57, -56)[0], 21];
-    L.sign = [XR(-20, -19)[0], -6]; L.lamps = [[XR(-17, -17)[0], -3], [XR(-20, -20)[0], 14], [XR(-31, -31)[0], 13], [XR(-48, -48)[0], 13]]; L.farW = dir === 'W' ? -92 : null;
+    L.sign = [XR(-20, -19)[0], -6]; L.lamps = [[XR(-17, -17)[0], -3], [XR(-20, -20)[0], 14], [XR(-31, -31)[0], 13], [XR(-48, -48)[0], 13]]; L.farW = dir === 'W' ? -92 : dir === 'E' ? 71 : null; // l'ouest file vers la rivière, l'est jusqu'à la plage
     L.trails = [[XR(-26, -25)[0], 13, 14]]; L.stream = XR(-43, -43)[0]; L.bEnd = XR(-50, -50)[0];
     L.box = {x0: dir === 'W' ? -62 : 21, x1: dir === 'W' ? -21 : 62, y0: -27, y1: 29};
   } else { // au sud : des rues de part et d'autre de l'avenue
@@ -864,20 +886,23 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
 
 /* ---- l'eau, la faune, les arbres de la forêt ---- */
 let WATERS = [], sea = null;
-function waterBody(cells, kind) { // pré-rend 8 images d'eau animée sur l'emprise des cellules
-  if (!cells.size) return null; const xs = [], ys = []; cells.forEach(k => { const [c, r] = k.split(',').map(Number); xs.push(c); ys.push(r); });
+const waterMemo = new Map();
+function waterBody(cells, kind) { // pré-rend 8 images d'eau animée sur l'emprise des cellules (mémorisées : l'eau ne bouge pas d'un jour à l'autre)
+  if (!cells.size) return null; const mk = kind + '|' + worldW + 'x' + worldH + '|' + [...cells].sort().join(';'); const hit = waterMemo.get(mk); if (hit) { if (hit.frames[0]) octx.drawImage(hit.frames[0], hit.box.x, hit.box.y); WATERS.push(hit); return hit; } const xs = [], ys = []; cells.forEach(k => { const [c, r] = k.split(',').map(Number); xs.push(c); ys.push(r); });
   const box = {x: Math.min(...xs) * T, y: Math.min(...ys) * T, w: (Math.max(...xs) - Math.min(...xs) + 1) * T, h: (Math.max(...ys) - Math.min(...ys) + 1) * T}; const frames = [];
   if (ok(IMG.water_anim)) for (let f = 0; f < 8; f++) { const cnv = document.createElement('canvas'); cnv.width = box.w; cnv.height = box.h; const sv = octx; octx = cnv.getContext('2d'); octx.imageSmoothingEnabled = false; drawAuto(cells, IMG.water_anim, f * 48, box.x, box.y); octx = sv; frames.push(cnv); }
-  if (frames[0]) octx.drawImage(frames[0], box.x, box.y); const w = {box, frames, cells, kind}; WATERS.push(w); return w;
+  if (frames[0]) octx.drawImage(frames[0], box.x, box.y); const w = {box, frames, cells, kind}; if (assetsReady) waterMemo.set(mk, w); WATERS.push(w); return w;
 }
+let seaMemo = null;
 function seaBody(shoreX) { // la mer : l'eau animée du pack, une ligne d'écume qui va et vient sur le sable
+  if (seaMemo && seaMemo.key === worldW + 'x' + worldH) { octx.drawImage(seaMemo.sea.frames[0], seaMemo.sea.box.x, 0); return seaMemo.sea; }
   const x0 = Math.floor((Math.min(...[0, .25, .5, .75, 1].map(k => shoreX(k * worldH))) - 40) / T) * T, w = worldW - x0; if (w <= 0 || !ok(IMG.water_anim)) return null; const frames = [];
   for (let f = 0; f < 4; f++) { const cnv = document.createElement('canvas'); cnv.width = w; cnv.height = worldH; const c = cnv.getContext('2d'); c.imageSmoothingEnabled = false;
     for (let y = 0; y < worldH; y += T) for (let x = 0; x < w; x += T) c.drawImage(IMG.water_anim, f * 2 * 48 + 16, 16, T, T, x, y, T, T);
     const sw = Math.sin(f / 4 * Math.PI * 2);
     for (let y = 0; y < worldH; y += 2) { const sx = Math.round(shoreX(y) - x0 + 3 * sw); c.clearRect(0, y, Math.max(0, sx), 2); c.fillStyle = 'rgba(255,255,255,.85)'; c.fillRect(sx, y, 2 + (y % 6 === 0 ? 1 : 0), 2); c.fillStyle = 'rgba(160,220,255,.6)'; c.fillRect(sx + 3 + Math.round(2 * Math.sin(y / 9 + f)), y, 2, 2); }
     frames.push(cnv); }
-  octx.drawImage(frames[0], x0, 0); return {box: {x: x0, y: 0, w, h: worldH}, frames};
+  octx.drawImage(frames[0], x0, 0); const sea = {box: {x: x0, y: 0, w, h: worldH}, frames}; seaMemo = {key: worldW + 'x' + worldH, sea}; return sea;
 }
 function drawWaters(t, vw, vh) {
   WATERS.forEach(w => { if (!w || !w.frames.length) return; const b = w.box; if (b.x > cam.x + vw || b.x + b.w < cam.x || b.y > cam.y + vh || b.y + b.h < cam.y) return; const sy = Math.max(b.y, cam.y), sh = Math.min(b.y + b.h, cam.y + vh) - sy; if (sh > 0) ctx.drawImage(w.frames[Math.floor(t * 5) % 8], 0, sy - b.y, b.w, sh, b.x, sy, b.w, sh); });
@@ -907,10 +932,37 @@ function wildlife(o) { // les bêtes qui n'ont rien à mesurer : elles sont là 
   // la prairie des chevaux, de toutes les robes
   const hb = {x0: pxc(26), x1: pxc(44), y0: pyc(-38), y1: pyc(-29)}; HORSES.forEach((sh, i) => actors.push({kind: 'horse', sheet: sh, x: hb.x0 + rw() * (hb.x1 - hb.x0), y: hb.y0 + rw() * (hb.y1 - hb.y0), box: hb, free: true, dir: i % 2 ? 1 : -1, vx: 0, vy: 0, state: night ? 'sleep' : 'graze', timer: 2 + rw() * 6, t: rw() * 9, speed: .045}));
   for (let i = 0; i < 6; i++) { const x = hb.x0 - 16 + i * ((hb.x1 - hb.x0 + 32) / 5); tile(IMG.fences, i === 0 ? 1 : i === 5 ? 3 : 2, 0, Math.round(x), hb.y1 + 14); }
-  // la mer : un bateau qui se balance, des cygnes au large
+  // la plage : un pêcheur au bord de l'eau, deux promeneurs, des choses qui flottent
+  { const fy = pyc(2) + 4; actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: o.shoreX(fy) - 18, y: fy, t: 5});
+    const wy0 = pyc(-24), wy1 = pyc(24); ['npc_bartender_katy', 'npc_miner_mike'].forEach((sh, i) => { const x = o.shoreX(pyc(i ? 10 : -10)) - 40 - i * 12; actors.push({kind: 'npc', sheet: sh, x, y: wy0 + (i ? .7 : .2) * (wy1 - wy0), dir: i ? -1 : 1, axis: 'v', y0: wy0, y1: wy1, t: i * 3, speed: .05}); });
+    [[-30, 70, 'wlog'], [-6, 130, 'wrock'], [26, 96, 'wlog'], [44, 60, 'lily_g']].forEach(([r, dx, k], i) => { const y = pyc(r), x = o.shoreX(y) + dx; props.push({x, base: y - 30, draw: t => blit(IMG[k], ((Math.floor(t * 3) + i) % 8) * (k === 'wlog' ? 32 : 16), 0, k === 'wlog' ? 32 : 16, 16, x, y + Math.round(Math.sin(t * 1.2 + i) * 1.5))}); }); }
+  // la mer : un bateau qui se balance
   const by = pyc(18); props.push({x: o.shoreX(by) + 40, base: by + 36, draw: t => blit(IMG.boat, 0, 0, 48, 48, o.shoreX(by) + 40, by + Math.round(Math.sin(t * 1.3) * 2))});
   // des papillons au-dessus des prés
   const rf = rnd(87); for (let i = 0; i < 10; i++) { const c = Math.floor(rf() * 140) - 70, r = Math.floor(rf() * 90) - 35; actors.push({kind: 'bfly', cx: pxc(c), cy: pyc(r), x: 0, y: 0, color: Math.floor(rf() * 8), t: rf() * 10, rx: 30 + rf() * 40, ry: 14 + rf() * 16}); }
+}
+function bridgeGroups(cells) { // regroupe les cases de pont qui se touchent : un pont par traversée
+  const left = cells.slice(), out = []; while (left.length) { const g = [left.pop()]; for (let k = 0; k < g.length; k++) for (let i = left.length - 1; i >= 0; i--) if (left[i][2] === g[k][2] && Math.abs(left[i][0] - g[k][0]) <= 1 && Math.abs(left[i][1] - g[k][1]) <= 1) g.push(left.splice(i, 1)[0]);
+    const cs = g.map(x => x[0]), rs = g.map(x => x[1]); out.push({kind: g[0][2], c0: Math.min(...cs), c1: Math.max(...cs), r0: Math.min(...rs), r1: Math.max(...rs)}); } return out;
+}
+function woodBridge(g) { // un vrai petit pont de bois : tablier en planches, garde-corps sur poteaux, ombre sur l'eau
+  const x0 = pxc(g.c0) - 8, x1 = pxc(g.c1 + 1) + 8, y0 = pyc(g.r0) - 3, y1 = pyc(g.r1 + 1) + 3, w = x1 - x0;
+  return {x: x0, base: y1 + 2, draw: () => { const o = octx;
+    o.fillStyle = 'rgba(0,30,60,.28)'; o.fillRect(x0 + 2, y1, w - 2, 5);
+    o.fillStyle = '#5e3a1f'; o.fillRect(x0, y0, w, y1 - y0);
+    for (let x = x0 + 1; x < x1 - 1; x += 4) { o.fillStyle = (x >> 2) % 3 === 0 ? '#9c6a3e' : (x >> 2) % 3 === 1 ? '#a8744a' : '#946339'; o.fillRect(x, y0 + 1, 3, y1 - y0 - 2); o.fillStyle = 'rgba(255,230,190,.25)'; o.fillRect(x, y0 + 1, 3, 1); o.fillStyle = '#4a2a1a'; o.fillRect(x + 1, y0 + 4, 1, 1); o.fillRect(x + 1, y1 - 5, 1, 1); }
+    const rail = (y) => { o.fillStyle = '#4a2a1a'; o.fillRect(x0 - 1, y - 1, w + 2, 5); o.fillStyle = '#8a5a34'; o.fillRect(x0, y, w, 3); o.fillStyle = '#b07c4c'; o.fillRect(x0, y, w, 1);
+      for (let x = x0; x <= x1 - 4; x += Math.max(12, Math.floor((w - 4) / Math.max(1, Math.round((w - 4) / 14))))) { o.fillStyle = '#3b2314'; o.fillRect(x, y - 4, 4, 9); o.fillStyle = '#7a4e2a'; o.fillRect(x + 1, y - 4, 2, 7); } o.fillStyle = '#3b2314'; o.fillRect(x1 - 4, y - 4, 4, 9); };
+    rail(y0 - 2); rail(y1 - 3); }};
+}
+function stoneBridge(g) { // un pont de pierre : dalles, parapets, piles qui trempent dans l'eau
+  const x0 = pxc(g.c0) - 10, x1 = pxc(g.c1 + 1) + 10, y0 = pyc(g.r0), y1 = pyc(g.r1 + 1), w = x1 - x0;
+  return {x: x0, base: y1 + 6, draw: () => { const o = octx;
+    o.fillStyle = 'rgba(0,30,60,.3)'; o.fillRect(x0 + 4, y1 + 6, w - 4, 6);
+    for (let x = x0 + 14; x < x1 - 14; x += 32) { o.fillStyle = '#5b6170'; o.fillRect(x, y1 + 4, 10, 8); o.fillStyle = '#7d8494'; o.fillRect(x + 1, y1 + 4, 8, 2); }
+    for (let y = y0; y < y1; y += 16) for (let x = x0; x < x1; x += 16) blit(IMG.bridgest, 16, 16 + ((y - y0) / 16 % 2) * 16, Math.min(16, x1 - x), 16, x, y);
+    const parapet = (y) => { for (let x = x0; x < x1; x += 16) blit(IMG.bridgest, 16, 0, Math.min(16, x1 - x), 16, x, y); o.fillStyle = '#3e4250'; o.fillRect(x0 - 3, y - 2, 6, 18); o.fillRect(x1 - 3, y - 2, 6, 18); o.fillStyle = '#8d94a4'; o.fillRect(x0 - 2, y - 2, 4, 2); o.fillRect(x1 - 2, y - 2, 4, 2); };
+    parapet(y0 - 12); parapet(y1 - 4); }};
 }
 function settleActors() { // aucune bête ne doit apparaître sur une case bloquée : on la déplace dans son enclos, sinon on la retire
   const bad = (x, y) => isBlocked(x, y) || isBlocked(x, y - 6);
@@ -948,7 +1000,8 @@ function buildScene() {
   const hole = (c, r) => c >= -10 && c <= 9 && r >= -5 && r <= 4 && !((c === -10 || c === 9) && (r === -5 || r === 4)); // l'étang et sa berge au milieu de la place
   for (let c = -15; c <= 14; c++) for (let r = -9; r <= 9; r++) if (!hole(c, r)) add(c, r);
   for (let r = 10; r <= 24; r++) { add(-1, r); add(0, r); } for (let c = -19; c <= 19; c++) { add(c, 23); add(c, 24); }
-  [[-6, -5], [10, 11], [17, 18], [3, 4]].forEach(([a, b]) => { add(a, 22); add(b, 22); }); // seuils de la serre, de la grange, du poulailler, du moulin
+  [[-6, -5], [10, 11], [17, 18], [3, 4]].forEach(([a, b]) => { add(a, 22); add(b, 22); });
+  [[-13, -12], [-1, 0], [11, 12], [-7, -6]].forEach(([a, b]) => { add(a, -10); add(b, -10); }); // seuils de la banque, de la mairie, de la taverne, du puits // seuils de la serre, de la grange, du poulailler, du moulin
   MOS.forEach(mo => monthRoads(mo, add));
   // un peu de fantaisie : des renflements le long des routes, là où rien n'est construit
   const noBump = new Set(); const nb = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) noBump.add(KEY(c, r)); };
@@ -963,7 +1016,7 @@ function buildScene() {
   bumps.forEach(([c, r]) => add(c, r));
   // le ruisseau de septembre, la grande rivière à l'ouest, un marécage dans les bois ; un pont là où une rue les croise
   const inWorld = (c, r) => c + OX >= 0 && c + OX < cols && r + OY >= 0 && r + OY < rows; const bridges = [];
-  const carve = (cells, c, r, kind) => { if (!inWorld(c, r)) return; if (road.has(KEY(c, r))) bridges.push([c, r, kind]); else cells.add(KEY(c, r)); };
+  const carve = (cells, c, r, kind) => { if (!inWorld(c, r)) return; if (road.has(KEY(c, r))) bridges.push([c, r, kind]); cells.add(KEY(c, r)); };
   const sMo = MOS.find(mo => mo.L.stream != null); const streamCol = r => sMo.L.stream + Math.round(.6 * Math.sin(r / 5.5) + .5 * Math.sin(r / 2.2 + 1) + (r < -12 || r > 28 ? 1.5 * Math.sin(r / 7) : 0));
   const wcells = new Set(); if (sMo) { let prev = null; for (let r = y0; r < y1; r++) { const c = streamCol(r); [c, c + 1].concat(prev != null ? [prev, prev + 1] : []).forEach(cc => carve(wcells, cc, r, 'wood')); prev = c; } }
   const rcol = r => -78 + Math.round(2 * Math.sin(r / 8) + 1.2 * Math.sin(r / 3.1)), riverCol = r => rcol(r >= -2 && r <= 3 ? 0 : r); const rcells = new Set(); for (let r = y0; r < y1; r++) { const c = riverCol(r); for (let cc = c - 3; cc <= c + 2; cc++) carve(rcells, cc, r, 'stone'); }
@@ -989,9 +1042,7 @@ function buildScene() {
   // prés fleuris : des touffes de fleurs de la même espèce, ici et là
   const fm = rnd(17); for (let i = 0; i < cols * rows * .006; i++) { const c0 = Math.floor(fm() * cols), r0 = Math.floor(fm() * rows), kind = Math.floor(fm() * 10), col = Math.floor(fm() * 5), n = 3 + Math.floor(fm() * 7);
     for (let j = 0; j < n; j++) { const c = c0 + Math.floor(fm() * 4) - 1, rr = r0 + Math.floor(fm() * 3) - 1; const k = c + ',' + rr; if (road.has(k) || lcells.has(k) || allWater.has(k) || c * T > shoreX(rr * T) - 70) continue; blit(IMG.flowers, col * 16, kind * 16, 16, 16, c * T + Math.floor(fm() * 6) - 3, rr * T + Math.floor(fm() * 6) - 3); } }
-  bridges.forEach(([c, r, kind]) => { const x = pxc(c), y = pyc(r); if (kind === 'stone') { props.push({x, base: y - 40, draw: () => { blit(IMG.bridgest, 16, 16 + (r % 2) * 16, 16, 16, x, y); if (!road.has(KEY(c, r - 1))) blit(IMG.bridgest, 16, 0, 16, 16, x, y - 12); }});
-      if (!road.has(KEY(c, r + 1))) props.push({x, base: y + 18, draw: () => blit(IMG.bridgest, 16, 48, 16, 16, x, y + 8)}); return; }
-    props.push({x, base: y - 40, draw: () => { octx.fillStyle = '#6b4226'; octx.fillRect(x - 2, y, T + 4, T); octx.fillStyle = '#9a6b3f'; for (let k = 0; k < 4; k++) octx.fillRect(x - 2, y + k * 4 + 1, T + 4, 2); octx.fillStyle = '#4a2a1a'; octx.fillRect(x - 3, y, 2, T); octx.fillRect(x + T + 1, y, 2, T); }}); });
+  bridgeGroups(bridges).forEach(g => props.push(g.kind === 'stone' ? stoneBridge(g) : woodBridge(g)));
   allWater.forEach(k => blocked.add(k)); wildlife({sMo, streamCol, riverCol, wcells, rcells, mcells, swamp, shoreX});
   // des herbes folles qui ondulent un peu partout
   const fg = rnd(53); for (let i = 0; i < cols * rows * .012; i++) { const c = Math.floor(fg() * cols), rr = Math.floor(fg() * rows), k = c + ',' + rr; if (road.has(k) || lcells.has(k) || allWater.has(k) || c * T > shoreX(rr * T) - 64) continue; const x = c * T, y = rr * T, ph = Math.floor(fg() * 8), im = ['fgrass', 'fg1', 'fg5', 'fg9', 'fg12', 'fg14', 'gra1', 'gra2', 'gra1'][Math.floor(fg() * 9)]; props.push({x, base: y + 2, draw: t => blit(IMG[im], ((Math.floor(t * 2.5) + ph) % 8) * 16, 0, 16, 16, x, y)}); }
@@ -1017,7 +1068,7 @@ function buildScene() {
   if (V.kind === 'rain' || V.kind === 'storm') for (let i = 0; i < 160; i++) drops.push({x: r(), y: r(), v: .006 + r() * .004}); if (V.kind === 'snow') for (let i = 0; i < 90; i++) drops.push({x: r(), y: r(), v: .001 + r() * .001, snow: true});
   // caméra
   zoomScale = Math.max(1, Math.round(cssH / 330)); fitScale = Math.min(cssW / worldW, cssH / worldH);
-  const target = camForMode(); if (!cam.init) { Object.assign(cam, target); cam.init = true; } else animateCam(target);
+  const target = camForMode(); if (!cam.init || lapse) { Object.assign(cam, target); cam.init = true; camAnim = null; } else animateCam(target);
   renderLegend(); renderTimeline();
 }
 function monthFrame(mo) { // ce qui est construit dans le quartier, plus un bout du centre pour situer
@@ -1103,7 +1154,7 @@ function animate(now) {
     MOS.forEach(mo => { const f = monthFrame(mo), x = (pxc(mo.L.box.x0) - cam.x) * s, y = (pyc(mo.L.dir === 'S' ? 27 : f.y0) - cam.y) * s; const sel = cur === mo; if (sel) { ctx.lineWidth = 3; ctx.strokeStyle = '#f2c14e'; ctx.strokeRect((pxc(mo.L.box.x0) - cam.x) * s, (pyc(mo.L.box.y0) - cam.y) * s, (mo.L.box.x1 - mo.L.box.x0) * T * s, (mo.L.box.y1 - mo.L.box.y0) * T * s); }
       label(`${mo.label.toUpperCase()} · ${mo.weeks[0].label}-${mo.weeks[mo.weeks.length - 1].label}`, x + 6, y + 6, sel ? '#f2c14e' : mo.built ? '#f3edda' : '#a79dc9'); });
     label('CENTRE-VILLE', (pxc(-6) - cam.x) * s, (pyc(-21) - cam.y) * s, '#ffd36b'); }
-  requestAnimationFrame(animate);
+  placeInfo(); requestAnimationFrame(animate);
 }
 
 
@@ -1141,19 +1192,47 @@ const LEGEND_C = {
   fete: c => ['🎉 Les guirlandes : c\'est la fête', `Trois événements sociaux ou plus sur les 30 derniers jours (${c.socialList.length} en ce moment) : le village sort les guirlandes.`],
   centre: () => ['🏘️ Le centre-ville', 'Ce qui compte le trimestre entier : mairie, banque, taverne, marché, étang, moulin, grange, poulailler, serre et veillées. Clique pour y aller.'],
 };
-function renderLegend() {
-  const o = selected || hover; const el = $('legend'); const d = viewDate(); const when = d === M.today ? '' : ` <span class="tag">vu au ${fmtDay(d)}</span>`;
-  if (!o) { el.innerHTML = `<b>Le village, c'est ton trimestre.</b> Au centre, ce qui se cumule : mairie (Cap Berlin), banque (avance), taverne (vie sociale), marché (ventes), poulailler et grange (leads), serre (vidéos), veillées (webinaires), étang (sommeil). Autour, un quartier par mois : maisons, enclos, mare, champs, parc et poules.` + when + ` <span class="hint">Glisser pour se déplacer, Ctrl + molette ou les boutons pour zoomer, clic pour le détail, frise pour voyager dans le temps.</span>`; return; }
-  if (o.c) { const f = LEGEND_C[o.key]; if (!f) return; const [t, dd] = f(CM, o); el.innerHTML = `<b>${esc(t)}</b>${when}<br>${esc(dd)}`; return; }
-  const f = LEGEND[o.key]; if (!f) return; const m = o.mo && o.mo.m; if (!m && !['quartier', 'sign'].includes(o.key)) return; const [t, dd] = f(m || {}, o); el.innerHTML = `<b>${esc(t)}</b>${when}<br>${esc(dd)}`;
+function legendFor(o) { if (!o) return null; if (o.c) { const f = LEGEND_C[o.key]; return f ? f(CM, o) : null; } const f = LEGEND[o.key]; if (!f) return null; const m = o.mo && o.mo.m; if (!m && !['quartier', 'sign'].includes(o.key)) return null; return f(m || {}, o); }
+let mouseAt = {x: 0, y: 0}, clickAt = {x: 0, y: 0};
+function placeInfo() { // la bulle se pose à côté de l'élément cliqué, du côté où il y a de la place
+  const info = $('info'); if (!selected || !info || info.classList.contains('hidden')) return; const hero = $('hero'), W = hero.clientWidth, H = hero.clientHeight, ew = info.offsetWidth, eh = info.offsetHeight, o = selected;
+  const sx = o.x != null ? (o.x - cam.x) * cam.s : clickAt.x - 8, sy = o.y != null ? (o.y - cam.y) * cam.s : clickAt.y - 8, sw = o.x != null ? (o.w || 16) * cam.s : 16, sh = o.y != null ? (o.h || 16) * cam.s : 16;
+  let x = sx + sw + 14; if (x + ew > W - 8) x = sx - ew - 14; if (x < 8) x = clamp(sx + sw / 2 - ew / 2, 8, Math.max(8, W - ew - 8));
+  info.style.left = Math.round(x) + 'px'; info.style.top = Math.round(clamp(sy + sh / 2 - eh / 2, 8, Math.max(8, H - eh - 8))) + 'px';
 }
+function renderLegend() {
+  const tip = $('tip'), info = $('info'); if (!tip || !info) return; const d = viewDate(); const when = d === M.today ? '' : `<br><span class="tag">vu au ${esc(fmtDay(d))}</span>`;
+  const H = hover && hover !== selected ? legendFor(hover) : null;
+  if (H) { tip.textContent = H[0]; tip.classList.remove('hidden'); const hero = $('hero'); tip.style.left = Math.round(Math.min(mouseAt.x + 14, hero.clientWidth - tip.offsetWidth - 6)) + 'px'; tip.style.top = Math.round(Math.max(6, mouseAt.y - 30)) + 'px'; } else tip.classList.add('hidden');
+  const L = selected ? legendFor(selected) : null; if (!L) { info.classList.add('hidden'); return; }
+  info.innerHTML = `<button class="x" aria-label="Fermer">×</button><b>${esc(L[0])}</b>${esc(L[1])}${when}`; info.classList.remove('hidden'); placeInfo();
+  info.querySelector('.x').addEventListener('click', () => { selected = null; renderLegend(); });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (lapse) stopLapse(); else if (selected) { selected = null; renderLegend(); } } });
+/* ---- time-lapse : le village se construit jour après jour, en plein écran ---- */
+let lapse = null;
+function startLapse() {
+  if (lapse) return; const hero = $('hero'); selected = null; hover = null; renderLegend(); hero.classList.add('full'); try { if (hero.requestFullscreen) hero.requestFullscreen().catch(() => {}); } catch (e) {}
+  const cap = document.createElement('div'); cap.className = 'lapse-cap'; hero.appendChild(cap); const stop = document.createElement('button'); stop.className = 'lapse-stop'; stop.textContent = '■ Stop'; stop.addEventListener('click', stopLapse); hero.appendChild(stop);
+  lapse = {d: QSTART, cap, stop, mode: VIEW.mode}; VIEW.mode = 'all'; cam.init = false;
+  const step = () => { if (!lapse) return; VIEW.date = lapse.d; buildScene(); const mo = monthOf(lapse.d), wk = quartierOf(lapse.d); const n = MOS.reduce((a, m) => a + m.houses.filter(h => !h.annex && m.built).length, 0);
+    lapse.cap.innerHTML = `${esc(fmtDay(lapse.d))}<small>${wk ? 'semaine ' + wk.label + ' · ' : ''}${n} ${n > 1 ? 'maisons' : 'maison'} · ${fmtNum(CM.leads)} leads · ${CM.sales.length} ${CM.sales.length > 1 ? 'ventes' : 'vente'}</small>`;
+    if (lapse.d >= M.today) { lapse.timer = setTimeout(stopLapse, 2500); return; } lapse.d = addDays(lapse.d, 1); lapse.timer = setTimeout(step, 320); };
+  step();
+}
+function stopLapse() {
+  if (!lapse) return; clearTimeout(lapse.timer); lapse.cap.remove(); lapse.stop.remove(); const mode = lapse.mode; lapse = null; const hero = $('hero'); hero.classList.remove('full'); try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {}
+  VIEW.date = null; VIEW.mode = mode; cam.init = false; buildScene();
+}
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && lapse) stopLapse(); });
 function renderTimeline() {
   const el = $('timeline'); if (!el) return; const d = viewDate(); const cur = quartierOf(d), mo = monthOf(d); const n = daysBetween(QSTART, QEND) + 1;
   let cellsHtml = ''; for (let i = 0; i < n; i++) { const iso = addDays(QSTART, i); const m2 = +iso.slice(5, 7); const cls = ['tl-day', 'm' + (m2 % 3), iso === M.today ? 'today' : '', iso === d ? 'sel' : '', iso > M.today ? 'future' : '', cur && iso >= cur.start && iso <= cur.end ? 'week' : ''].filter(Boolean).join(' '); cellsHtml += `<i class="${cls}" data-d="${iso}" title="${esc(fmtDay(iso))}"></i>`; }
   const months = [8, 9, 10, 11].map(m3 => { const start = `2026-${pad(m3)}-01`; const s = start < QSTART ? QSTART : start; const e = addDays(`2026-${pad(m3 + 1 > 12 ? 1 : m3 + 1)}-01`, -1); if (s > QEND || e < QSTART) return ''; const left = daysBetween(QSTART, s) / n * 100, w = (daysBetween(s, e > QEND ? QEND : e) + 1) / n * 100; return `<span class="tl-month" style="left:${left}%;width:${w}%">${MONTHS_FR[m3 - 1]}</span>`; }).join('');
   const b = (mode, label) => `<button class="btn ${VIEW.mode === mode ? 'on' : ''}" data-mode="${mode}">${label}</button>`;
-  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${mo ? 'Quartier de ' + mo.label : ''}</b>${cur ? ' · semaine ' + cur.label : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns">${b('month', 'Ce mois-ci')}${b('center', 'Centre-ville')}${b('all', 'Tout le village')}<button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
+  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${mo ? 'Quartier de ' + mo.label : ''}</b>${cur ? ' · semaine ' + cur.label : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns">${b('month', 'Ce mois-ci')}${b('center', 'Centre-ville')}${b('all', 'Tout le village')}<button class="btn" data-lapse="1" title="Revoir le village se construire jour après jour">▶ Time-lapse</button><button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
   el.querySelectorAll('[data-mode]').forEach(bt => bt.addEventListener('click', () => { VIEW.mode = bt.dataset.mode; selected = null; animateCam(camForMode()); renderTimeline(); renderLegend(); }));
+  el.querySelector('[data-lapse]').addEventListener('click', () => startLapse());
   el.querySelector('[data-today]').addEventListener('click', () => { VIEW.date = null; selected = null; buildScene(); });
   el.querySelector('.tl-strip').addEventListener('click', e => { const t = e.target.closest('.tl-day'); if (!t) return; VIEW.date = t.dataset.d === M.today ? null : t.dataset.d; selected = null; buildScene(); });
 }
@@ -1168,9 +1247,9 @@ const goMonth = mo => { VIEW.mode = 'month'; selected = null; animateCam(camBox(
 cv.addEventListener('mousedown', e => { dragging = {x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y}; moved = false; });
 window.addEventListener('mousemove', e => { if (dragging) { const dx = (e.clientX - dragging.x) / cam.s, dy = (e.clientY - dragging.y) / cam.s; if (Math.abs(dx) + Math.abs(dy) > 2) moved = true; Object.assign(cam, clampCam({x: dragging.cx - dx, y: dragging.cy - dy, s: cam.s})); camAnim = null; } });
 window.addEventListener('mouseup', () => { dragging = null; });
-cv.addEventListener('mousemove', e => { if (dragging) return; hover = hit(e); cv.style.cursor = hover ? 'pointer' : 'grab'; if (!selected) renderLegend(); });
-cv.addEventListener('mouseleave', () => { hover = null; if (!selected) renderLegend(); });
-cv.addEventListener('click', e => { if (moved) { moved = false; return; } const o = hit(e); if (o && o.key === 'quartier' && zoomedOut()) { if (o.mo.built) goMonth(o.mo); return; } if (o && o.key === 'centre') { VIEW.mode = 'center'; animateCam(camCenter()); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
+cv.addEventListener('mousemove', e => { if (dragging) return; const rc = cv.getBoundingClientRect(); mouseAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; hover = hit(e); cv.style.cursor = hover ? 'pointer' : 'grab'; renderLegend(); });
+cv.addEventListener('mouseleave', () => { hover = null; renderLegend(); });
+cv.addEventListener('click', e => { if (moved) { moved = false; return; } { const rc = cv.getBoundingClientRect(); clickAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; } const o = hit(e); if (o && o.key === 'quartier' && zoomedOut()) { if (o.mo.built) goMonth(o.mo); return; } if (o && o.key === 'centre') { VIEW.mode = 'center'; animateCam(camCenter()); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
 cv.addEventListener('dblclick', e => { const a = hitArea(toWorld(e)); if (!a) return; if (a.mo) goMonth(a.mo); else { VIEW.mode = 'center'; animateCam(camCenter()); renderTimeline(); } });
 // la molette fait défiler la page ; Ctrl + molette (ou le pincement du pavé tactile) zoome
 cv.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const rc = cv.getBoundingClientRect(); zoomBy(Math.pow(1.0015, -e.deltaY * (e.ctrlKey && Math.abs(e.deltaY) < 20 ? 6 : 1)), e.clientX - rc.left, e.clientY - rc.top); }, {passive: false});
