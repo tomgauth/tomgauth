@@ -38,6 +38,9 @@ button { font: inherit; cursor: pointer; }
 .topbar .wx small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 6px; font-family: 'Nunito', sans-serif; font-weight: 700; }
 .topbar .qday { font-size: 11.5px; color: var(--muted); margin-top: 6px; font-weight: 700; }
 .topbar .qday .px { font-size: 11px; color: var(--gold); }
+.topbar .upd { margin-top: 8px; background: var(--panel2); color: var(--gold); border: 2px solid var(--gold2); box-shadow: 0 3px 0 var(--shadow); padding: 5px 10px; font: 10px/1.2 'Press Start 2P', monospace; }
+.topbar .upd:hover { border-color: var(--gold); } .topbar .upd:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--shadow); } .topbar .upd:disabled { opacity: .6; cursor: wait; }
+.topbar .sync { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 700; }
 .questbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding: 10px clamp(8px, 1.2vw, 16px); background: var(--bg2); border-bottom: 3px solid var(--line); }
 .qchip { background: var(--panel); border: 2px solid var(--line); padding: 8px 10px 9px; display: grid; gap: 5px; min-width: 0; }
 .qchip .k { font-size: 11px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: .05em; display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; overflow: hidden; }
@@ -163,7 +166,7 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); font-siz
 <div class="topbar">
   <div class="tb-left"><div class="clock px" id="clock">--:--</div><div class="date" id="date"></div></div>
   <div class="tb-mid"><h1 class="px" id="greet"></h1><p id="focus"></p></div>
-  <div class="tb-right"><div class="wx px" id="wx">…</div><div class="qday" id="qday"></div></div>
+  <div class="tb-right"><div class="wx px" id="wx">…</div><div class="qday" id="qday"></div><button class="upd" id="upd" title="Recharge les données Coda, Todoist et Agenda, puis la dernière version de l'app">⟳ Mettre à jour</button><div class="sync" id="sync"></div></div>
 </div>
 <div class="questbar" id="questbar"></div>
 <div class="stage">
@@ -1180,7 +1183,8 @@ const DAILY_COLS = {'c-7N0cyxEVGg': 'date', 'c-tAKEYlcGDn': 'happy', 'c-Od1vxNtX
 function codaVal(v) { if (v == null) return null; if (typeof v !== 'object') return v === '' ? null : v; if (Array.isArray(v)) return v.map(codaVal).filter(x => x != null); if (v.type === 'dt') return v.input; if (v.type === 'dur') return Math.round((v.seconds || 0) / 36) / 100; if ('scalar' in v) return v.scalar; if (v.type === 'slate') return (v.root && v.root.children || []).map(ch => (ch.children || []).map(c => c.text || '').join('')).join('\n'); if ('name' in v) return v.name; return null; }
 function rowsFrom(payload, cols) { const rows = payload && payload.result && payload.result.rows ? payload.result.rows : (payload && payload.rows) || []; return rows.map(r => { const o = {}; for (const [k, name] of Object.entries(cols)) if (r.values && r.values[k]) o[name] = codaVal(r.values[k].value); if (Array.isArray(o.workout)) o.workout = o.workout.join(', '); if (o.date) o.date = String(o.date).slice(0, 10); return o; }); }
 const LIVE = {}; let mcpRef = null;
-function markLive(name, state) { LIVE[name] = state; $('live').innerHTML = Object.entries(LIVE).map(([k, v]) => `<span class="${v === 'ok' ? 'on' : v === 'err' ? 'err' : ''}" title="${v}">${esc(k)}</span>`).join(''); }
+let lastSync = null; function showSync() { const el = $('sync'); if (el) el.textContent = lastSync ? 'données : ' + lastSync.toLocaleTimeString('fr-FR', {timeZone: TZ, hour: '2-digit', minute: '2-digit'}) : (S.generated_at ? 'données du ' + new Date(S.generated_at).toLocaleString('fr-FR', {timeZone: TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}) : ''); }
+function markLive(name, state) { LIVE[name] = state; if (state === 'ok') { lastSync = new Date(); showSync(); } $('live').innerHTML = Object.entries(LIVE).map(([k, v]) => `<span class="${v === 'ok' ? 'on' : v === 'err' ? 'err' : ''}" title="${v}">${esc(k)}</span>`).join(''); }
 function parseJsonFile(res, key) { if (res.payload && typeof res.payload === 'object' && res.payload[key]) return res.payload; let txt = typeof res.payload === 'string' ? res.payload : ''; for (const b of res.content || []) { if (b.type === 'resource' && b.resource && typeof b.resource.text === 'string') txt = b.resource.text; else if (b.type === 'text' && b.text && b.text.includes(key)) txt = b.text; } const i = txt.indexOf('{"' + key); if (i < 0) return null; try { return JSON.parse(txt.slice(i, txt.lastIndexOf('}') + 1)); } catch (e) { return null; } }
 async function startLive() {
   if (!window.claude || typeof window.claude.use !== 'function') return;
@@ -1198,7 +1202,12 @@ async function startLive() {
   watch('Todoist', 'get-productivity-stats', {}, res => { const p = res.payload; if (!p || !p.karma) return; const g = p.goals || {}; S.productivity = {completedCount: p.completedCount, karma: p.karma, karmaTrend: p.karmaTrend, dailyGoal: g.dailyGoal, weeklyGoal: g.weeklyGoal, currentDailyStreak: g.currentDailyStreak && g.currentDailyStreak.count, currentWeeklyStreak: g.currentWeeklyStreak && g.currentWeeklyStreak.count, maxDailyStreak: g.maxDailyStreak && g.maxDailyStreak.count, maxWeeklyStreak: g.maxWeeklyStreak && g.maxWeeklyStreak.count, days: (p.daysItems || []).map(d => ({date: d.date, n: d.totalCompleted})), weeks: (p.weekItems || []).map(w => ({from: w.from, to: w.to, n: w.totalCompleted}))}; refresh(); });
   watch('Google Calendar', 'list_events', {pageSize: 40, orderBy: 'startTime', timeZone: TZ}, res => { const p = res.payload; const ev = p && p.events ? p.events : null; if (!ev) return; S.calendar = ev.filter(e => e.status !== 'cancelled').map(e => ({start: (e.start && (e.start.dateTime || e.start.date) || '').slice(0, 16), end: (e.end && (e.end.dateTime || e.end.date) || '').slice(0, 16), allday: !!(e.start && e.start.date && !e.start.dateTime), title: e.summary || '(sans titre)', where: (e.location || (e.conferenceUrl ? 'meet' : '')).slice(0, 60)})); refresh(); });
 }
-$('refresh').addEventListener('click', async () => { if (mcpRef) { try { await mcpRef.invalidate(); } catch (e) {} } else location.reload(); });
+async function updateAll(btn) { // vide le cache des connecteurs (Coda, Todoist, Agenda) puis recharge la page : données fraîches et dernière version de l'app
+  ['upd', 'refresh'].forEach(id => { const b = $(id); if (b) { b.disabled = true; b.textContent = '⟳ Mise à jour…'; } });
+  if (mcpRef) { try { await Promise.race([mcpRef.invalidate(), new Promise(r => setTimeout(r, 4000))]); } catch (e) {} }
+  location.reload();
+}
+$('refresh').addEventListener('click', () => updateAll()); $('upd').addEventListener('click', () => updateAll()); showSync();
 $('theme').addEventListener('click', () => { const cur = document.documentElement.getAttribute('data-theme'); const next = cur === 'light' ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', next); try { localStorage.setItem('dash-theme', next); } catch (e) {} });
 (() => { let th = null; try { th = localStorage.getItem('dash-theme'); } catch (e) {} document.documentElement.setAttribute('data-theme', th || 'dark'); })();
 
