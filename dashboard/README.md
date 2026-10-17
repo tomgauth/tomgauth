@@ -28,8 +28,9 @@ Un bourg serré. Au milieu, le centre-ville compte le trimestre entier ; autour,
 (septembre à l'ouest, octobre à l'est, novembre au sud). Dans un quartier, les maisons de toutes les
 semaines du mois se rangent par ordre de construction, les premières au plus près de la place ;
 chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. La forêt recouvre ce
-qui n'est pas encore bâti. Un ruisseau traverse le quartier de septembre (pont, grenouilles, oies),
-des chevaux paissent au nord, des abeilles tournent autour des ruches ; le sol a des taches de prairie
+qui n'est pas encore bâti. Un ruisseau traverse le quartier de septembre (pont, grenouilles, oies), une grande rivière coule à l'ouest
+(pont de pierre, capybaras), un marécage dort dans les bois au nord, la mer borde l'est avec sa plage ;
+des chevaux de toutes les robes paissent au nord-est, des souris et des cochons traînent près de la grange, des abeilles tournent autour des ruches ; le sol a des taches de prairie
 et les routes quelques renflements. Vues : « Ce mois-ci », « Centre-ville », « Tout le village ». La molette
 fait défiler la page ; Ctrl + molette, le pincement ou les boutons + et − zooment.
 
@@ -43,7 +44,7 @@ Le centre-ville :
 | Banque et coffres d'or | mois d'avance sur le budget perso, un coffre par mois |
 | Taverne et clients en terrasse | événements sociaux des 30 derniers jours |
 | Guirlandes | trois événements sociaux ou plus sur 30 jours |
-| Étang : canards, cygne | nuits à 80 % ou plus sur 7 jours ; cygne si la moyenne dépasse 90 % |
+| Étang : canards, cygnes blancs, cygne noir | nuits à 80 % ou plus sur 7 jours ; un cygne blanc par nuit à 90 % ou plus ; cygne noir après une nuit sous 70 % |
 | Fontaine au milieu de l'étang | coule si le bonheur moyen sur 7 jours est à 5/10 ou plus |
 | Rue du marché, six étals | un étal déballé avec Chloé par vente 2PaP, les autres bâchés |
 | Poulailler, grange et foin | leads du trimestre (une botte pour 50) |
@@ -62,7 +63,8 @@ Chaque quartier mensuel :
 | Champs 2PaP, épouvantail, fermiers | avancement des quêtes du trimestre ; fermiers selon les tâches Todoist du mois |
 | Champs SOLV | encaissements SOLV du mois comparés au précédent |
 | Parc : jusqu'à 20 fleurs, papillons | bonheur moyen du mois |
-| Arbres et souches | santé mentale du mois |
+| Potager : quatre planches (joie, énergie, stabilité, calme) | un plant par jour, grand si la note du jour est bonne : carottes, maïs, choux, fraises |
+| Verger : un arbre fruitier par semaine | santé mentale de la semaine ; fruits à partir de 74 % |
 | Habitants | toi, plus un par événement social du mois |
 
 ## Mise à jour

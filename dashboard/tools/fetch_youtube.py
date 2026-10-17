@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Lit le flux Atom public de la chaîne YouTube (pas de clé API) et écrit un petit JSON :
-titres, dates et nombre de vidéos publiées depuis le début du trimestre.
+titres, dates et nombre de vidéos publiées depuis le début du trimestre. Le dashboard
+complète ce relevé par le décompte de Tom (kpi_live.videos) quand le flux a du retard.
 Usage : python3 fetch_youtube.py <sortie.json> [date_debut AAAA-MM-JJ]
 """
 import json, os, sys, time, urllib.request, datetime as dt
