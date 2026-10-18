@@ -36,6 +36,14 @@ trimestre jour par jour en plein écran (Échap ou Stop pour sortir). Un clic ou
 l'élément ; le survol donne juste son nom. La molette
 fait défiler la page ; Ctrl + molette, le pincement ou les boutons + et − zooment.
 
+Le village vit à l'heure de Berlin et avec sa météo. Au coucher du soleil, la moitié des gens rentre
+et les fermiers quittent les champs ; à 20 h les poules se regroupent et s'endorment au pied des maisons ;
+à partir de 21 h il ne reste qu'un promeneur avec sa lanterne, les bêtes dorment en tas. Sous la pluie,
+la moitié des gens reste chez soi et les autres sortent le parapluie, la terrasse de la taverne se vide,
+les bêtes des enclos (et les chevaux, dans leur paddock) se serrent sous leur abri. La terrasse a trois
+tables : les clients arrivent, s'assoient un moment et repartent. En time-lapse, la caméra se pose sur ce
+qui se construit, les routes poussent case par case depuis le réseau existant et les bêtes arrivent une à une.
+
 Aucun montant n'apparaît sur la page : l'argent se lit en mois d'avance, en pourcentages ou en moutons.
 
 Le centre-ville :

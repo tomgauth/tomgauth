@@ -675,7 +675,10 @@ function centerModel(date) { // ce que le centre-ville cumule sur le trimestre, 
 function globalModel(date) { // météo et lumière du jour regardé
   const g = {}; const isToday = date === M.today; const W = S.weather;
   if (isToday && W && W.current) g.wx = {code: W.current.weather_code, cloud: W.current.cloud_cover}; else { const h = W && W.history ? W.history.find(x => x.date === date) : null; g.wx = h ? {code: h.weather_code, cloud: h.weather_code >= 3 ? 80 : h.weather_code * 25} : {code: null, cloud: 30}; }
-  const now = berlinNow(); g.day = isToday ? dayness(now.h, sunTimes(date, now.offset)) : 1; g.kind = weatherKind(g.wx.code); return g;
+  if (typeof window.FORCE_WX === 'number') g.wx = {code: window.FORCE_WX, cloud: window.FORCE_WX >= 3 ? 80 : 20}; // pour les essais
+  const now = berlinNow(), sun = sunTimes(date, now.offset); g.day = isToday ? dayness(now.h, sun) : 1; g.kind = weatherKind(g.wx.code);
+  g.hour = isToday ? now.h : 12; g.rain = g.kind === 'rain' || g.kind === 'storm'; const rise = sun.rise == null ? 7 : sun.rise, set = sun.set == null ? 18 : sun.set;
+  g.phase = g.hour >= 21 || g.hour < rise - .5 ? 'night' : g.hour >= set - .25 ? 'evening' : 'day'; return g;
 }
 
 const leadPoints = () => { const K = S.kpi_live || {}; return (K.leads && K.leads.points) || [[QSTART, 0], [(K.leads || {}).as_of || M.today, (K.leads || {}).value || 0]]; };
@@ -769,10 +772,11 @@ function drawMonth(mo, g) {
   // l'enclos : l'argent du mois, avec de la place pour gambader
   const [penC, penR] = L.fac.pen, penW = 18, penH = 6; autoRect(IMG.fences, OX + penC, OY + penR, penW, penH, true, 1, 1); obj(P(penC), Q(penR), penW * T, penH * T, 'pen');
   for (let c = 0; c < penW; c++) { res.blocked.add(KEY(penC + c, penR)); res.blocked.add(KEY(penC + c, penR + penH - 1)); } for (let rr = 0; rr < penH; rr++) { res.blocked.add(KEY(penC, penR + rr)); res.blocked.add(KEY(penC + penW - 1, penR + rr)); }
-  blit(IMG.troughs, 16, 0, 32, 16, P(penC + 2), Q(penR + 1) + 2); blit(IMG.hay, 16, 0, 32, 16, P(penC + penW - 4), Q(penR + 1) + 2); decor(1, 1, P(penC + 8), Q(penR + 3)); decor(0, 1, P(penC + 12), Q(penR + 2)); decor(2, 0, P(penC + 5), Q(penR + 4));
+  blit(IMG.troughs, 16, 0, 32, 16, P(penC + 2), Q(penR + 1) + 2); decor(1, 1, P(penC + 8), Q(penR + 3)); decor(0, 1, P(penC + 4), Q(penR + 3)); const shel = propShelter(res, P(penC + penW - 8), Q(penR) + 4, 7 * T); decor(2, 0, P(penC + 5), Q(penR + 4));
   const pen = {x0: P(penC) + 24, x1: P(penC + penW) - 28, y0: Q(penR) + 30, y1: Q(penR + penH) - 14};
-  const addAnimal = (kind, n, box, free) => { for (let i = 0; i < n; i++) res.actors.push({kind, mo, x: box.x0 + r() * (box.x1 - box.x0), y: box.y0 + r() * (box.y1 - box.y0), box, free: !!free, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: kind === 'chicken' ? .11 : .07}); };
-  addAnimal('cow', m.payers, pen, true); addAnimal('pig', m.pigs, pen, true); addAnimal('sheep', m.sheep, pen, true);
+  const penHome = {shelter: shel, mid: {x: (pen.x0 + pen.x1) / 2 - 40, y: (pen.y0 + pen.y1) / 2 + 6}};
+  const addAnimal = (kind, n, box, free, home) => { for (let i = 0; i < n; i++) res.actors.push({kind, mo, sheet: farmSheet(kind, i + mo.mi * 3), home: typeof home === 'function' ? home(i) : home, x: box.x0 + r() * (box.x1 - box.x0), y: box.y0 + r() * (box.y1 - box.y0), box, free: !!free, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: kind === 'chicken' ? .11 : .07}); };
+  addAnimal('cow', m.payers, pen, true, penHome); addAnimal('pig', m.pigs, pen, true, penHome); addAnimal('sheep', m.sheep, pen, true, penHome);
   // la mare : le sommeil du mois
   const tiers = [[1, 1], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3], [7, 3], [8, 3]]; const [pw, ph] = tiers[m.pondTier]; const [pondC, pondR] = L.fac.pond; const pC = pondC + Math.floor((8 - pw) / 2);
   if (m.pondTier === 0) { octx.fillStyle = '#6b4a2e'; octx.beginPath(); octx.ellipse(P(pC) + 8, Q(pondR) + 8, 9, 5, 0, 0, Math.PI * 2); octx.fill(); octx.fillStyle = '#4f3a26'; octx.beginPath(); octx.ellipse(P(pC) + 8, Q(pondR) + 8, 6, 3, 0, 0, Math.PI * 2); octx.fill(); }
@@ -812,7 +816,8 @@ function drawMonth(mo, g) {
     const bx2 = P(sc0) + 8, by2 = Q(sr0 + 5); prop(bx2, by2 + 20, () => blit(IMG.benches, 32, 0, 32, 32, bx2, by2)); res.block(bx2 + 2, by2 + 12, 28, 10);
     [[P(sc0) - 2, Q(sr0) + 2], [P(sc0 + 3) + 2, Q(sr0 + 5) + 2]].forEach(([x, y], k) => prop(x, y + 14, () => blit(IMG.flowers, (5 + (k + mo.mi) % 5) * 16, ((k * 4 + mo.mi * 3) % 10) * 16, 16, 16, x, y))); }
   // poules : les leads du mois, en liberté partout sauf dans l'enclos
-  const b = L.box; addAnimal('chicken', m.chickens, {x0: P(b.x0) + 16, x1: P(b.x1) - 16, y0: Q(b.y0) + 40, y1: Q(b.y1) - 8}, true);
+  const b = L.box; const roosts = mo.houses.filter(h => !h.annex).filter((h, k) => k % 2 === 0).map(h => ({mid: {x: P(h.x1) + 10, y: Q(h.R) + 8}})); // le soir, les poules rejoignent les nids au pied des maisons
+  addAnimal('chicken', m.chickens, {x0: P(b.x0) + 16, x1: P(b.x1) - 16, y0: Q(b.y0) + 40, y1: Q(b.y1) - 8}, true, i => roosts.length ? roosts[i % roosts.length] : penHome);
   // habitants : toi, plus un par événement social du mois
   const xsA = mo.houses.filter(h => h.row === 'A'); const avX = L.dir === 'S' ? [P(-16), P(15)] : [P(L.inner), xsA.length ? (L.dir === 'W' ? P(Math.min(...xsA.map(h => h.x0))) : P(Math.max(...xsA.map(h => h.x1)))) : P(L.lane[0])].sort((u, v) => u - v);
   for (let i = 0; i < m.npcs; i++) res.actors.push({kind: 'npc', mo, sheet: NPC_SHEETS[(mo.mi * 2 + i) % NPC_SHEETS.length], x: avX[0] + r() * (avX[1] - avX[0]), y: Q(L.dir === 'S' ? 39 : 1) + 4 + (i % 2) * 6, dir: i % 2 ? 1 : -1, axis: 'h', x0: avX[0], x1: avX[1], t: r() * 9, speed: .06 + r() * .03});
@@ -845,9 +850,13 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
   const tx = X(64), ty = Y(-323); prop(tx, ty, ty + 176, t => { blit(IMG.inn, 0, 0, 240, 192, tx, ty); drawPlate(tx + 128, ty + 150, 'TAVERNE'); blit(IMG.smoke, (Math.floor(t * 5) % 5) * 32, 0, 32, 32, tx + 9, ty + 4); blit(IMG.smoke, ((Math.floor(t * 5) + 2) % 5) * 32, 0, 32, 32, tx + 100, ty - 4); });
   res.block(tx + 4, ty + 120, 232, 58); obj(tx + 4, ty + 20, 232, 160, 'taverne');
   if (night) [[40, 132], [140, 132], [186, 132], [218, 132], [86, 108], [106, 108]].forEach(([a, b]) => res.lights.push({x: tx + a, y: ty + b, r: 16, c: '255,206,110'}));
-  res.actors.push({kind: 'idle', sheet: 'npc_bartender_bruno', x: tx + 122, y: ty + 192, t: r() * 6});
-  [[X(236), Y(-134)], [X(276), Y(-134)]].forEach(([x, y]) => { prop(x, y, y + 20, () => blit(IMG.benches, 32, 0, 32, 32, x, y)); res.block(x + 2, y + 12, 28, 10); });
-  for (let i = 0; i < cm.guests; i++) res.actors.push({kind: 'idle', sheet: NPC_SHEETS[(i + 2) % NPC_SHEETS.length], x: X(244 + (i % 3) * 24), y: Y(i > 2 ? -90 : -102), t: r() * 6});
+  res.actors.push({kind: 'idle', staff: 'door', sheet: 'npc_bartender_bruno', x: tx + 122, y: ty + 192, t: r() * 6});
+  // la terrasse : trois tables à nappe ; les clients (les événements sociaux du mois) arrivent, s'assoient un moment et repartent
+  const seats = []; [[X(214), Y(-130)], [X(292), Y(-130)], [X(238), Y(-92)]].forEach(([x, y]) => { prop(x, y, y + 20, () => blit(IMG.i_tables, 72, 856, 34, 33, x, y)); res.block(x + 2, y + 16, 30, 14);
+    [[x - 14, 1, 1], [x + 36, 51, -1]].forEach(([cx, sx, dir]) => { prop(cx, y + 4, y + 22, () => blit(IMG.i_chairs, sx, 8, 12, 23, cx, y + 4)); seats.push({x: cx + (dir > 0 ? 5 : 7), y: y + 26, dir}); }); });
+  const exits = [[X(212), Y(-60)], [X(300), Y(-60)], [X(232), Y(-150)]];
+  for (let i = 0; i < Math.min(cm.guests, seats.length); i++) { const sit = i < Math.ceil(cm.guests / 2), st = sit ? seats[[0, 3, 4, 1, 2, 5][i]] : null; if (st) st.taken = true;
+    res.actors.push({kind: 'guest', sheet: NPC_SHEETS[(i + 2) % NPC_SHEETS.length], seats, exits, seat: st, state: sit ? 'sit' : 'away', sit, hidden: !sit, dir: st ? st.dir : 1, x: st ? st.x : exits[0][0], y: st ? st.y : exits[0][1], vx: 0, vy: 0, timer: sit ? 6 + r() * 25 : 2 + i * 6 + r() * 6, t: r() * 6}); }
   obj(X(230), Y(-140), 90, 64, 'taverne');
   // l'étang au cœur de la place : canards (bonnes nuits), cygne (sommeil excellent), fontaine (bonheur)
   const lk = lake; if (lk) { lk.cells.forEach(k => res.blocked.add(k));
@@ -870,7 +879,7 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
   [-184, -128, -72, 24, 80, 136].forEach((sx, i) => { const x = X(sx), y = Y(172); const open = i < cm.sales.length;
     prop(x, y, y + 42, () => { if (open) { blit(IMG.stalls, (i % 4) * 48, 0, 48, 48, x, y); blit(IMG.crops, 5 * 16, CROP_ROWS[(i + 3) % 6] * 32 + 8, 16, 24, x + 8, y + 14); blit(IMG.crops, 5 * 16, CROP_ROWS[(i + 1) % 6] * 32 + 8, 16, 24, x + 24, y + 14); }
       else { blit(IMG.stalls, (i % 4) * 48, 0, 48, 48, x, y, false, 'grayscale(.75) brightness(.85)'); octx.fillStyle = '#7d6a55'; octx.fillRect(x + 5, y + 26, 38, 13); octx.fillStyle = '#9c8669'; octx.fillRect(x + 5, y + 26, 38, 2); octx.fillStyle = '#5c4c3c'; for (let k = 0; k < 4; k++) octx.fillRect(x + 9 + k * 10, y + 28, 1, 11); } });
-    if (open) res.actors.push({kind: 'idle', sheet: 'npc_chef_chloe', x: x + 24, y: y + 54, t: i}); res.block(x + 2, y + 24, 44, 20); });
+    if (open) res.actors.push({kind: 'idle', staff: 'stall', sheet: 'npc_chef_chloe', x: x + 24, y: y + 54, t: i}); res.block(x + 2, y + 24, 44, 20); });
   const msx = X(-238), msy = Y(176); prop(msx, msy, msy + 30, () => drawSign(msx, msy, 'MARCHE', cm.sales.length + '/' + cm.salesTarget)); obj(X(-240), Y(170), 430, 56, 'marche');
   // au sud-est, la ferme : moulin (rythme Todoist), grange et foin (leads), poulailler (leads)
   const wmx = X(36), wmy = Y(257); prop(wmx, wmy, wmy + 108, t => { blit(IMG.windmill, 0, 0, 64, 112, wmx, wmy); blit(IMG.sails, (Math.floor(t * 5 * cm.windSpeed) % 4) * 64, 0, 64, 80, wmx, wmy - 3); }); res.block(wmx + 12, wmy + 60, 40, 48); obj(wmx + 6, wmy, 52, 110, 'moulin');
@@ -878,10 +887,10 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
   const cpx = X(248), cpy = Y(246); prop(cpx, cpy, cpy + 118, () => blit(IMG.coop, 0, 0, 80, 128, cpx, cpy)); res.block(cpx + 6, cpy + 70, 68, 48); obj(cpx + 4, cpy + 10, 72, 112, 'poulailler');
   for (let i = 0; i < cm.bales; i++) { const hx = X(108 + (i % 5) * 34), hy = Y(406 + Math.floor(i / 5) * 18); prop(hx, hy, hy + 14, () => blit(IMG.hay, 16, 0, 32, 16, hx, hy)); res.block(hx + 2, hy + 4, 28, 10); }
   obj(X(104), Y(402), 176, 40, 'grange');
-  for (let i = 0; i < Math.min(6, Math.round(cm.leads / 40)); i++) res.actors.push({kind: 'chicken', x: X(232 + (i % 3) * 20), y: Y(410 + Math.floor(i / 3) * 12), box: {x0: X(196), x1: X(318), y0: Y(404), y1: Y(440)}, free: true, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: .1});
+  const coopHome = {mid: {x: cpx + 40, y: cpy + 136}}; for (let i = 0; i < Math.min(6, Math.round(cm.leads / 40)); i++) res.actors.push({kind: 'chicken', sheet: farmSheet('chicken', i + 5), home: coopHome, x: X(232 + (i % 3) * 20), y: Y(410 + Math.floor(i / 3) * 12), box: {x0: X(196), x1: X(318), y0: Y(404), y1: Y(440)}, free: true, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: .1});
   res.actors.push({kind: 'idle', sheet: 'npc_lumberjack_jack', x: X(96), y: Y(386), t: 2});
   for (let i = 0; i < 3; i++) res.actors.push({kind: 'wild', sheet: 'mouse', x: X(110 + i * 40), y: Y(380 + (i % 2) * 8), row: 2, frames: 10, walkRow: 1, fps: 6, free: true, box: {x0: X(96), x1: X(240), y0: Y(372), y1: Y(396)}, dir: 1, vx: 0, vy: 0, state: 'idle', t: i * 2, speed: .05});
-  for (let i = 0; i < 2; i++) res.actors.push({kind: 'pig', x: X(270 + i * 20), y: Y(420), box: {x0: X(200), x1: X(318), y0: Y(404), y1: Y(446)}, free: true, dir: i ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: i, speed: .05});
+  const pigHome = {mid: {x: X(262), y: Y(426)}}; for (let i = 0; i < 2; i++) res.actors.push({kind: 'pig', sheet: farmSheet('pig', i + 2), home: pigHome, x: X(270 + i * 20), y: Y(420), box: {x0: X(200), x1: X(318), y0: Y(404), y1: Y(446)}, free: true, dir: i ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: i, speed: .05});
   // au sud-ouest : la serre (vidéos) et les veillées (webinaires)
   const ghx = X(-136), ghy = Y(252); prop(ghx, ghy, ghy + 112, () => blit(IMG.greenhouse, 96, 0, 96, 128, ghx, ghy)); res.block(ghx + 4, ghy + 66, 88, 48); obj(ghx, ghy + 6, 96, 112, 'serre');
   for (let i = 0; i < Math.min(12, cm.videosTarget); i++) { const px2 = X(-244 + (i % 6) * 17), py2 = Y(404 + Math.floor(i / 6) * 22); const done = i < cm.videos.length; prop(px2, py2, py2 + 30, () => blit(IMG.barrels, done ? (i % 6) * 16 : 48, done ? 32 : 0, 16, 32, px2, py2)); }
@@ -943,8 +952,9 @@ function wildlife(o) { // les bêtes qui n'ont rien à mesurer : elles sont là 
   const sw = o.swamp; capy(pxc(sw[0][0]) + 8, pyc(sw[0][1]) + 6); for (let i = 0; i < 4; i++) { const [cx, cy, rx, ry] = sw[i % sw.length]; frog(pxc(cx + (i % 2 ? rx + .6 : -rx - .8)), pyc(cy) + 6, i); }
   actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: pxc(-43) + 6, y: pyc(-31) + 2, t: 4});
   // la prairie des chevaux, de toutes les robes
-  const hb = {x0: pxc(26), x1: pxc(44), y0: pyc(-38), y1: pyc(-29)}; HORSES.forEach((sh, i) => actors.push({kind: 'horse', sheet: sh, x: hb.x0 + rw() * (hb.x1 - hb.x0), y: hb.y0 + rw() * (hb.y1 - hb.y0), box: hb, free: true, dir: i % 2 ? 1 : -1, vx: 0, vy: 0, state: night ? 'sleep' : 'graze', timer: 2 + rw() * 6, t: rw() * 9, speed: .045}));
-  for (let i = 0; i < 6; i++) { const x = hb.x0 - 16 + i * ((hb.x1 - hb.x0 + 32) / 5); tile(IMG.fences, i === 0 ? 1 : i === 5 ? 3 : 2, 0, Math.round(x), hb.y1 + 14); }
+  autoRect(IMG.fences, OX + 24, OY - 40, 23, 13, true, 1, 1); for (let c = 24; c <= 46; c++) { blocked.add(KEY(c, -40)); blocked.add(KEY(c, -28)); } for (let r = -40; r <= -28; r++) { blocked.add(KEY(24, r)); blocked.add(KEY(46, r)); }
+  const hb = {x0: pxc(26), x1: pxc(44), y0: pyc(-36), y1: pyc(-29)}, hhome = {shelter: propShelter({props}, pxc(27), pyc(-40) + 4, 8 * T), mid: {x: pxc(38), y: pyc(-33)}};
+  HORSES.forEach((sh, i) => actors.push({kind: 'horse', sheet: sh, home: hhome, x: hb.x0 + rw() * (hb.x1 - hb.x0), y: hb.y0 + rw() * (hb.y1 - hb.y0), box: hb, free: true, dir: i % 2 ? 1 : -1, vx: 0, vy: 0, state: night ? 'sleep' : 'graze', timer: 2 + rw() * 6, t: rw() * 9, speed: .045}));
   // la plage : un pêcheur au bord de l'eau, deux promeneurs, des choses qui flottent
   { const fy = pyc(2) + 4; actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: o.shoreX(fy) - 18, y: fy, t: 5});
     const wy0 = pyc(-24), wy1 = pyc(24); ['npc_bartender_katy', 'npc_miner_mike'].forEach((sh, i) => { const x = o.shoreX(pyc(i ? 10 : -10)) - 40 - i * 12; actors.push({kind: 'npc', sheet: sh, x, y: wy0 + (i ? .7 : .2) * (wy1 - wy0), dir: i ? -1 : 1, axis: 'v', y0: wy0, y1: wy1, t: i * 3, speed: .05}); });
@@ -1022,11 +1032,11 @@ function buildScene() {
   MOS.forEach(mo => { const L = mo.L, f = L.fac; mo.houses.forEach(h => { nb(h.x0 - 1, h.R - 10, h.x1 + 1, h.R - 1); nb(h.pc - 2, h.R - 1, h.pc + 3, h.st - 1); });
     nb(f.pen[0] - 1, f.pen[1] - 1, f.pen[0] + 18, f.pen[1] + 6); nb(f.pond[0] - 1, f.pond[1] - 1, f.pond[0] + 8, f.pond[1] + 4); nb(f.fields[0] - 1, f.fields[1] - 1, f.fields[0] + 13, f.fields[1] + 3); nb(f.park[0] - 1, f.park[1] - 2, f.park[0] + 10, f.park[1] + 5); nb(L.sign[0] - 1, L.sign[1] - 1, L.sign[0] + 2, L.sign[1] + 2); });
   const has = (c, r) => road.has(KEY(c, r)), free = (c, r) => !road.has(KEY(c, r)) && !noBump.has(KEY(c, r)); const rb = rnd(99); const bumps = [];
-  road.forEach(k => { const [wc, wr] = k.split(',').map(Number); const c = wc - OX, r = wr - OY; const roll = rb();
+  road.forEach(k => { const [wc, wr] = k.split(',').map(Number); const c = wc - OX, r = wr - OY; const roll = hashStr(c + ':' + r) / 4294967296;
     if (roll < .07 && has(c, r - 1) && has(c + 1, r) && has(c + 1, r - 1) && free(c, r + 1) && free(c + 1, r + 1)) bumps.push([c, r + 1], [c + 1, r + 1]);
     else if (roll > .955 && has(c - 1, r) && has(c, r + 1) && has(c - 1, r + 1) && free(c + 1, r) && free(c + 1, r + 1)) bumps.push([c + 1, r], [c + 1, r + 1]);
     else if (roll > .91 && roll < .935 && has(c + 1, r) && has(c, r + 1) && has(c + 1, r + 1) && free(c - 1, r) && free(c - 1, r + 1)) bumps.push([c - 1, r], [c - 1, r + 1]); });
-  bumps.forEach(([c, r]) => add(c, r));
+  bumps.forEach(([c, r]) => add(c, r)); ROADREL = new Set([...road].map(k => { const [a, b] = k.split(',').map(Number); return (a - OX) + ',' + (b - OY); }));
   // le ruisseau de septembre, la grande rivière à l'ouest, un marécage dans les bois ; un pont là où une rue les croise
   const inWorld = (c, r) => c + OX >= 0 && c + OX < cols && r + OY >= 0 && r + OY < rows; const bridges = [];
   const carve = (cells, c, r, kind) => { if (!inWorld(c, r)) return; if (road.has(KEY(c, r))) bridges.push([c, r, kind]); cells.add(KEY(c, r)); };
@@ -1075,7 +1085,7 @@ function buildScene() {
   const fr = rnd(31); for (let r = 0; r < rows - 5; r += 3) for (let c = 0; c < cols - 4; c += 3) { const cc = c + Math.floor(fr() * 2), rr = r + Math.floor(fr() * 2); let free = true; for (let dc = 0; dc < 4 && free; dc++) for (let dr = 0; dr < 5 && free; dr++) if (reserved.has((cc + dc) + ',' + (rr + dr))) free = false; const edge = Math.min(cc, rr, cols - cc, rows - rr) < 10; if (!free || fr() > (edge ? .8 : .6)) continue;
     const k = fr(); const [ik, sx, w, h] = TREES[FOREST[Math.min(FOREST.length - 1, Math.floor(k * FOREST.length))]]; const x = cc * T + (64 - w) / 2, y = rr * T + 80 - h; if (ok(IMG[ik])) props.push({base: y + h - 4, x, draw: () => blit(IMG[ik], sx, 0, w, h, x, y)});
     if (fr() < .25) { const cu = CUTE[[1, 2, 3, 6, 7, 8][Math.floor(fr() * 6)]]; const ux = cc * T + 40, uy = rr * T + 70; props.push({base: uy + 12, x: ux, draw: () => odecor(cu[0], cu[1], ux, uy, cu[2], cu[3])}); } }
-  settleActors(); assignResidents(date);
+  settleActors(); restForTime(); assignResidents(date);
   // météo
   const r = rnd(3); for (let i = 0; i < clamp(Math.round((V.wx.cloud || 0) / 15), 0, 16); i++) cloudShadows.push({x: r() * worldW, y: r() * worldH, w: 140 + r() * 180, h: 70 + r() * 70, s: .01 + r() * .015});
   if (V.kind === 'rain' || V.kind === 'storm') for (let i = 0; i < 160; i++) drops.push({x: r(), y: r(), v: .006 + r() * .004}); if (V.kind === 'snow') for (let i = 0; i < 90; i++) drops.push({x: r(), y: r(), v: .001 + r() * .001, snow: true});
@@ -1100,6 +1110,105 @@ function stepCam(now) { if (!camAnim) return; const k = clamp((now - camAnim.t0)
   cam.s = s; cam.x = cx - cv.width / s / 2; cam.y = cy - cv.height / s / 2; if (k >= 1) { Object.assign(cam, camAnim.to); camAnim = null; } }
 function zoomBy(f, px, py) { const s = clamp(cam.s * f, fitScale, zoomScale * 2.5); const wx = cam.x + px / cam.s, wy = cam.y + py / cam.s; camAnim = null; Object.assign(cam, clampCam({x: wx - px / s, y: wy - py / s, s})); }
 
+/* ---- le rythme du village : le soir les rues se vident, la nuit tout le monde dort ----
+   Sous la pluie, la moitié des gens rentre et les autres sortent le parapluie ; les bêtes des enclos se serrent sous leur abri.
+   La nuit, il ne reste qu'un promeneur avec sa lanterne ; les bêtes dorment groupées (sous l'abri s'il pleut),
+   les poules se regroupent près de leurs nids dès 20 h. */
+const HUMANS = new Set(['npc', 'idle', 'loop', 'worker', 'fish', 'guest']);
+const FARM = { // planches du pack premium : [rangée, images, vitesse]
+  cow: {sheets: ['f_cow1', 'f_cow2', 'f_cow3', 'f_cow4', 'f_cow5'], idle: [0, 2, 1.5], walk: [3, 8, 7], eat: [6, 8, 4], sleep: [11, 8, 2.5]},
+  sheep: {sheets: ['f_sheep1', 'f_sheep1', 'f_sheep2'], idle: [0, 2, 1.5], walk: [3, 8, 7], eat: [6, 8, 4], sleep: [11, 8, 2.5]},
+  pig: {sheets: ['f_pig1', 'f_pig2', 'f_pig3', 'f_pig4', 'f_pig5'], idle: [0, 2, 1.5], walk: [3, 8, 7], eat: [6, 9, 4], sleep: [11, 8, 2.5]},
+  chicken: {sheets: ['f_hen1', 'f_hen2', 'f_hen3', 'f_hen4', 'f_hen5', 'f_hen6', 'f_rooster'], idle: [0, 2, 2], walk: [2, 8, 9], eat: [1, 6, 5], sleep: [6, 8, 2.5]}};
+const farmSheet = (kind, i) => { const L = FARM[kind].sheets; return kind === 'chicken' && i % 9 === 8 ? 'f_rooster' : L[i % (kind === 'chicken' ? L.length - 1 : L.length)]; };
+function drawFarm(a, t) {
+  const F = FARM[a.kind], im = IMG[a.sheet]; if (!F || !ok(im)) { drawAnimal(a, t); return; }
+  const st = a.rest === 'sleep' ? F.sleep : a.rest ? F.idle : a.state === 'walk' ? F.walk : a.eat ? F.eat : F.idle;
+  blit(im, (Math.floor(t * st[2] + a.t * 3) % st[1]) * 32, st[0] * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0);
+}
+function propShelter(sink, x, y, w, key) { // un abri de planches : mur du fond et toit, deux poteaux devant ; les bêtes se mettent dessous
+  const pl = (yy, h, c1, c2) => { octx.fillStyle = c1; octx.fillRect(x, yy, w, h); octx.fillStyle = c2; for (let k = 5; k < w; k += 7) octx.fillRect(x + k, yy, 1, h); };
+  octx.fillStyle = 'rgba(40,30,20,.22)'; octx.fillRect(x + 2, y + 24, w - 4, 26); // l'ombre au sol, cuite dans le décor
+  sink.props.push({x, base: y + 24, draw: () => { pl(y + 6, 20, '#7a4a26', '#5c361b'); octx.fillStyle = '#c8a24a'; octx.fillRect(x + 6, y + 18, 18, 7); octx.fillStyle = '#e0bf63'; octx.fillRect(x + 8, y + 17, 14, 3); // le foin
+    pl(y - 8, 15, '#a8703a', '#8b5a2b'); octx.fillStyle = '#c98c4c'; octx.fillRect(x, y - 8, w, 2); octx.fillStyle = '#5c361b'; octx.fillRect(x - 1, y + 7, w + 2, 2); octx.fillStyle = '#3b2314'; octx.fillRect(x - 1, y - 9, w + 2, 1); }});
+  sink.props.push({x, base: y + 52, draw: () => { octx.fillStyle = '#5c361b'; [x + 1, x + w - 4].forEach(px => octx.fillRect(px, y + 7, 3, 42)); octx.fillStyle = '#3b2314'; [x + 1, x + w - 4].forEach(px => octx.fillRect(px, y + 47, 3, 2)); }});
+  if (key) sink.objects && sink.objects.push(Object.assign({x, y: y - 8, w, h: 58}, key));
+  return {x, y, w};
+}
+function huddle(list, spot, sleep) { // les bêtes se serrent : sous l'abri en rangées, sinon en petit tas
+  list.forEach((a, i) => { const big = a.kind === 'horse' ? 22 : a.kind === 'chicken' ? 9 : 15; const j = ((hashStr(a.sheet + i) % 5) - 2);
+    if (spot.w) { const cols = Math.max(1, Math.floor((spot.w - 10) / big)); a.x = spot.x + 12 + (i % cols) * big + j; a.y = spot.y + 34 + Math.floor(i / cols) * 9 + (i % 2); }
+    else { const rr = Math.sqrt(i) * big * .55, an = i * 2.4; a.x = spot.x + Math.cos(an) * rr * 1.5 + j; a.y = spot.y + Math.sin(an) * rr * .7; }
+    a.rest = sleep ? 'sleep' : 'idle'; a.dir = i % 2 ? 1 : -1; if (a.kind === 'horse') a.state = sleep ? 'sleep' : 'idle'; });
+}
+const UMB = ['#d94a4a', '#4a8fd9', '#e8c547', '#5bb06a', '#9a6ad9', '#e07b39'];
+function restForTime() {
+  const ph = V.phase, rain = V.rain, rr = rnd(707); let owl = 0;
+  actors = actors.filter(a => {
+    if (a.kind === 'bfly' || a.kind === 'bee') return ph === 'day' && !rain;
+    if (a.kind === 'wild' && a.sheet === 'mouse') return ph !== 'night' && !rain;
+    if (!HUMANS.has(a.kind)) return true;
+    if (ph === 'night') { if (a.kind === 'loop' && !owl) { owl++; a.lantern = true; return true; } return false; } // un seul noctambule, avec sa lanterne
+    if (a.staff === 'stall') return true; // la marchande reste sous l'auvent de son étal
+    if (a.kind === 'worker') return ph === 'day' && !rain;
+    if (a.kind === 'guest' || a.staff === 'door') return !rain; // sous la pluie, la terrasse rentre dans la taverne
+    return rr() < (ph === 'evening' ? .5 : 1) * (rain ? .5 : 1);
+  });
+  actors.forEach((a, i) => { if (rain && HUMANS.has(a.kind) && a.staff !== 'stall') a.umb = UMB[i % UMB.length];
+    if (a.lantern) lights.push({get x() { return a.x + 6; }, get y() { return a.y - 14; }, r: 26, c: '255,200,110'}); });
+  const sleep = ph === 'night', roost = sleep || V.hour >= 20, groups = new Map();
+  actors.forEach(a => { if (!FARM[a.kind] && a.kind !== 'horse') return; const h = a.home; if (!h) return;
+    const spot = a.kind === 'chicken' ? ((roost || rain) && h.mid) : rain ? (h.shelter || h.mid) : sleep && h.mid; if (!spot) return;
+    if (!groups.has(spot)) groups.set(spot, []); groups.get(spot).push(a); });
+  groups.forEach((list, spot) => huddle(list, spot, list[0].kind === 'chicken' ? roost : sleep));
+}
+function drawGear(a, t) { // le parapluie sous la pluie, la lanterne la nuit
+  const x = Math.round(a.x), y = Math.round(a.y) - (a.sit ? 6 : 0);
+  if (a.umb) { const c = a.umb, top = y - 27; octx.fillStyle = '#3b2314'; octx.fillRect(x + 2, top + 4, 1, 15); octx.fillRect(x + 2, top - 1, 1, 1);
+    [[6, 7], [3, 13], [1, 17], [0, 19]].forEach(([o, w], i) => { octx.fillStyle = i === 0 ? mix(c, '#ffffff', .35) : c; octx.fillRect(x - 7 + o, top + i, w, 1); });
+    octx.fillStyle = mix(c, '#000000', .3); for (let k = 0; k < 19; k += 3) octx.fillRect(x - 7 + k, top + 4, 2, 1); }
+  if (a.lantern) { octx.fillStyle = '#3b2314'; octx.fillRect(x + 6, y - 19, 1, 3); octx.fillStyle = Math.sin(t * 9) > -.6 ? '#ffd35a' : '#ffb03a'; octx.fillRect(x + 5, y - 16, 3, 4); }
+}
+/* ---- la terrasse de la taverne : on arrive, on s'assoit un moment, on repart ---- */
+function stepGuest(a, dt) {
+  const go = (tx, ty) => { const dx = tx - a.x, dy = ty - a.y; if (Math.abs(dx) > 1) { a.vx = Math.sign(dx); a.vy = 0; a.x += a.vx * Math.min(Math.abs(dx), .32 * dt); return false; } if (Math.abs(dy) > 1) { a.vx = 0; a.vy = Math.sign(dy); a.y += a.vy * Math.min(Math.abs(dy), .32 * dt); return false; } a.x = tx; a.y = ty; return true; };
+  a.timer -= dt / 60;
+  if (a.state === 'away') { if (a.timer > 0) return; const free = a.seats.filter(s => !s.taken); if (!free.length) { a.timer = 3; return; } a.seat = free[Math.floor(Math.random() * free.length)]; a.seat.taken = true; const e = a.exits[Math.floor(Math.random() * a.exits.length)]; a.x = e[0]; a.y = e[1]; a.state = 'in'; a.hidden = false; return; }
+  if (a.state === 'in') { if (go(a.seat.x, a.seat.y)) { a.state = 'sit'; a.sit = true; a.dir = a.seat.dir; a.timer = 18 + Math.random() * 30; } return; }
+  if (a.state === 'sit') { if (a.timer <= 0) { a.state = 'out'; a.sit = false; a.exit = a.exits[Math.floor(Math.random() * a.exits.length)]; } return; }
+  if (a.state === 'out' && go(a.exit[0], a.exit[1])) { a.seat.taken = false; a.seat = null; a.state = 'away'; a.hidden = true; a.timer = 6 + Math.random() * 20; }
+}
+function drawGuest(a, t) {
+  if (a.hidden) return; if (a.sit) { drawSheet(a.sheet, 6, 1, a.x, a.y - 6, a.dir < 0); return; } // accroupi sur la chaise : la pose assise des planches
+  const f = Math.floor(t * 5 + a.t * 3) % 6; if (a.vx) drawSheet(a.sheet, 4, f, a.x, a.y, a.vx < 0); else drawSheet(a.sheet, a.vy > 0 ? 3 : 5, f, a.x, a.y, false);
+}
+/* ---- le time-lapse : la veille sert de point de départ ; les routes poussent case par case, les bêtes arrivent une à une ---- */
+let lapsePrev = null, ROADREL = new Set();
+const actorKey = a => a.kind + '|' + (a.mo ? a.mo.mi : 'c') + '|' + (a.sheet || '');
+function lapseSnapshot() {
+  const snap = {OX, OY, roads: ROADREL, counts: {}, cam: Object.assign({}, cam)}; actors.forEach(a => { const k = actorKey(a); snap.counts[k] = (snap.counts[k] || 0) + 1; });
+  if (!lapsePrev) lapsePrev = document.createElement('canvas'); lapsePrev.width = world.width; lapsePrev.height = world.height; lapsePrev.getContext('2d').drawImage(world, 0, 0); return snap;
+}
+function lapseGrow(prev, d) { // ce qui est nouveau depuis la veille : routes révélées depuis le réseau existant, bêtes étalées, caméra sur le chantier
+  const now = performance.now(), N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]], fresh = [...ROADREL].filter(k => !prev.roads.has(k)), fs = new Set(fresh), dist = new Map();
+  const xy = k => k.split(',').map(Number); let q = [];
+  fresh.forEach(k => { const [c, r] = xy(k); if (N4.some(([a, b]) => prev.roads.has((c + a) + ',' + (r + b)))) { dist.set(k, 0); q.push(k); } });
+  const bfs = () => { for (let i = 0; i < q.length; i++) { const [c, r] = xy(q[i]); N4.forEach(([a, b]) => { const k = (c + a) + ',' + (r + b); if (fs.has(k) && !dist.has(k)) { dist.set(k, dist.get(q[i]) + 1); q.push(k); } }); } };
+  bfs(); fresh.forEach(k => { if (!dist.has(k)) { dist.set(k, 0); q = [k]; bfs(); } });
+  const dur = fresh.length ? clamp(700 + fresh.length * 9, 900, 3400) : 340, maxD = Math.max(1, ...dist.values());
+  lapse.reveal = {img: lapsePrev, dx: (OX - prev.OX) * T, dy: (OY - prev.OY) * T, cells: fresh.map(k => { const [c, r] = xy(k); return {x: pxc(c), y: pyc(r), at: now + 60 + dist.get(k) / maxD * dur * .72}; })};
+  const seen = {}; actors.forEach(a => { const k = actorKey(a); seen[k] = (seen[k] || 0) + 1; if (seen[k] > (prev.counts[k] || 0)) a.appear = now + 80 + Math.random() * dur * .8; });
+  Object.assign(cam, clampCam({x: prev.cam.x + lapse.reveal.dx, y: prev.cam.y + lapse.reveal.dy, s: prev.cam.s})); camAnim = null;
+  const pts = fresh.map(xy); MOS.forEach(m => m.built && m.houses.filter(h => !h.annex && h.q.start === d).forEach(h => { pts.push([h.x0, h.R - 8], [h.x1, h.R]); }));
+  if (pts.length) { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const w = Math.max(60, Math.max(...xs) - Math.min(...xs) + 24), h = Math.max(36, Math.max(...ys) - Math.min(...ys) + 16); animateCam(camBox({x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2}), 900); lapse.idle = 0; }
+  else if (++lapse.idle === 6) animateCam(camFit(), 1400);
+  return dur;
+}
+function drawReveal(now) { // la veille, par-dessus les cases de route pas encore posées ; un nuage de poussière quand elles apparaissent
+  const R = lapse && lapse.reveal; if (!R) return;
+  R.cells.forEach(c => { if (c.at > now) ctx.drawImage(R.img, c.x - R.dx, c.y - R.dy, T, T, c.x, c.y, T, T); else if (now - c.at < 350) { ctx.fillStyle = `rgba(240,220,170,${(.55 * (1 - (now - c.at) / 350)).toFixed(2)})`; ctx.fillRect(c.x - 1, c.y - 1, T + 2, T + 2); } });
+}
 /* ---- personnages et animaux ---- */
 function drawAnimal(a, t) { const im = IMG[a.kind]; if (!ok(im)) return; const frame = Math.floor(t * 2 + a.t * 7) % 2; const row = a.state === 'walk' ? 1 : 0; blit(im, frame * 32, row * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0); }
 function drawDuck(a, t) { if (!ok(IMG.duck)) return; const f = Math.floor(t * 3 + a.t * 5) % 4; blit(IMG.duck, f * 32, 8 * 32, 32, 32, a.x - 16, a.y - 22, a.dir > 0); }
@@ -1115,7 +1224,7 @@ function drawWorker(a, t) { const f = Math.floor(t * (a.state === 'work' ? 4 : 5
 function drawBfly(a, t) { if (!ok(IMG.butterfly)) return; const f = Math.floor(t * 8 + a.t) % 2; blit(IMG.butterfly, f * 8, a.color * 8, 8, 8, a.x - 4, a.y - 4); }
 const isBlocked = (x, y) => blocked.has(Math.floor(x / T) + ',' + Math.floor(y / T));
 function stepActors(dt, t) {
-  actors.forEach(a => { if (selected && selected.a === a) return;
+  actors.forEach(a => { if (selected && selected.a === a) return; if (a.rest) return; if (a.kind === 'guest') { stepGuest(a, dt); return; }
     if (a.kind === 'npc') { if (a.axis === 'h') { a.x += a.dir * a.speed * dt; if (a.x < a.x0) { a.x = a.x0; a.dir = 1; } if (a.x > a.x1) { a.x = a.x1; a.dir = -1; } } else { a.y += a.dir * a.speed * dt; if (a.y < a.y0) { a.y = a.y0; a.dir = 1; } if (a.y > a.y1) { a.y = a.y1; a.dir = -1; } } return; }
     if (a.kind === 'idle' || a.kind === 'fish') return;
     if (a.kind === 'horse') { stepHorse(a, dt); return; }
@@ -1128,7 +1237,7 @@ function stepActors(dt, t) {
     a.t += dt / 60;
     if (a.kind === 'duck' || a.kind === 'swan') { if (Math.random() < .004 * dt) { const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .5; } const nx = a.x + a.vx * a.speed * dt, ny = a.y + a.vy * a.speed * dt; const b = a.box;
       const inside = (b.ell ? Math.pow((nx - b.cx) / b.rx, 2) + Math.pow((ny - b.cy) / b.ry, 2) <= 1 : (nx >= b.x0 && nx <= b.x1 && ny >= b.y0 && ny <= b.y1)) && !(b.hole && Math.pow((nx - b.hole.cx) / b.hole.rx, 2) + Math.pow((ny - b.hole.cy) / b.hole.ry, 2) < 1); if (inside) { a.x = nx; a.y = ny; } else { a.vx = -a.vx; a.vy = -a.vy; } if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; return; }
-    if (a.free) { if (Math.random() < .012 * dt) { a.state = a.state === 'idle' ? 'walk' : 'idle'; const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; }
+    if (a.free) { if (Math.random() < .012 * dt) { a.state = a.state === 'idle' ? 'walk' : 'idle'; a.eat = Math.random() < .5; const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; }
       if (a.state === 'walk') { const nx = a.x + a.vx * a.speed * dt, ny = a.y + a.vy * a.speed * dt; const inBox = nx >= a.box.x0 && nx <= a.box.x1 && ny >= a.box.y0 && ny <= a.box.y1;
         if (inBox && !isBlocked(nx, ny)) { a.x = nx; a.y = ny; } else { const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; a.dir = a.vx > 0 ? 1 : -1; } }
       return; }
@@ -1136,7 +1245,7 @@ function stepActors(dt, t) {
     if (a.state === 'walk') { a.x += a.dir * a.speed * dt; a.y += Math.sin(a.t * 2) * .03 * dt; if (a.x < a.box.x0) { a.x = a.box.x0; a.dir = 1; } if (a.x > a.box.x1) { a.x = a.box.x1; a.dir = -1; } a.y = clamp(a.y, a.box.y0, a.box.y1); }
   });
 }
-const DRAW = {horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
+const DRAW = {chicken: drawFarm, cow: drawFarm, pig: drawFarm, sheep: drawFarm, guest: drawGuest, horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
 let lastT = 0;
 function animate(now) {
   if (!assetsReady || !QS.length) { requestAnimationFrame(animate); return; }
@@ -1147,10 +1256,11 @@ function animate(now) {
   ctx.setTransform(s, 0, 0, s, -cam.x * s, -cam.y * s); octx = ctx; stepActors(dt, t);
   drawWaters(t, vw, vh);
   if (lake && lake.frames.length) { const b = lake.box; if (b.x < cam.x + vw && b.x + b.w > cam.x && b.y < cam.y + vh && b.y + b.h > cam.y) ctx.drawImage(lake.frames[Math.floor(t * 5) % 8], b.x, b.y); }
+  drawReveal(now);
   const inView = (x, y, m) => x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m;
   const layer = props.filter(p => p.base > cam.y - 20 && p.base < cam.y + vh + 220 && (p.x == null || (p.x > cam.x - 260 && p.x < cam.x + vw + 60))).map(p => ({y: p.base, p}));
-  actors.forEach(a => { if (inView(a.x, a.y, 50)) layer.push({y: a.y, a}); });
-  layer.sort((u, v) => u.y - v.y).forEach(e => { if (e.p) e.p.draw(t); else if (selected && selected.a === e.a && e.a.kind !== 'fish') drawIdle(e.a, t); else (DRAW[e.a.kind] || drawAnimal)(e.a, t); });
+  actors.forEach(a => { if (a.hidden || (a.appear && now < a.appear)) return; if (inView(a.x, a.y, 50)) layer.push({y: a.y, a}); });
+  layer.sort((u, v) => u.y - v.y).forEach(e => { if (e.p) e.p.draw(t); else { if (selected && selected.a === e.a && e.a.kind !== 'fish' && !e.a.sit) drawIdle(e.a, t); else (DRAW[e.a.kind] || drawAnimal)(e.a, t); if (e.a.umb || e.a.lantern) drawGear(e.a, t); } });
   cloudShadows.forEach(c => { const cx = (c.x + t * c.s * 60) % (worldW + c.w) - c.w / 2; ctx.save(); ctx.globalAlpha = V.kind === 'clear' ? .07 : .14; ctx.fillStyle = '#1b2a40'; ctx.beginPath(); ctx.ellipse(cx, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
   [hover, selected].forEach(o => { if (o && o.a) { o.x = o.a.x - 8; o.y = o.a.y - 27; } });
   const hl = hover || selected; if (hl && !hl.big) { ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1 / s; ctx.strokeRect(hl.x - .5, hl.y - .5, hl.w + 1, hl.h + 1); ctx.restore(); }
@@ -1276,7 +1386,7 @@ const resTitle = r => `${r.name} ${r.epi}`;
 const resHTML = r => `<div class="born">${gx(r.sx, 'Né', 'Née')} le ${esc(fmtShort(r.date))} · ce jour-là</div>${statBars(r.st)}${r.lines.map(l => `<p>${esc(l)}</p>`).join('')}`;
 function assignResidents(date) { // chaque personnage du village reçoit son jour de naissance
   RES = {}; RES_NAMES = new Set(); RES_EPI = new Set(); NAMEC = null; const used = new Set(); const days = S.daily.filter(d => d.date && d.date >= QSTART && d.date <= date).sort((a, b) => a.date < b.date ? -1 : 1);
-  const human = a => ['npc', 'idle', 'loop', 'worker', 'fish'].includes(a.kind) && IMG[a.sheet];
+  const human = a => HUMANS.has(a.kind) && IMG[a.sheet];
   const take = (list, role, a) => { const d = list.find(x => !used.has(x.date)) || list[0]; if (!d) return; used.add(d.date); a.res = makeResident(d, role, a.sheet); };
   const by = f => [...days].sort((a, b) => (f(b) ?? -1) - (f(a) ?? -1));
   const socialScore = d => (d.socialev ? 100 : 0) + (num(d.social) || 0) * 3 + (d.wins ? 5 : 0) + (num(d.happy) || 0);
@@ -1284,7 +1394,7 @@ function assignResidents(date) { // chaque personnage du village reçoit son jou
     actors.filter(a => a.mo === mo && a.kind === 'npc' && human(a)).forEach(a => take(list, 'social', a));
     const wk = [...md].sort((a, b) => ((tasksOn(b.date) || {}).n || num(b.workh) || 0) - ((tasksOn(a.date) || {}).n || num(a.workh) || 0)); actors.filter(a => a.mo === mo && a.kind === 'worker' && human(a)).forEach(a => take(wk, 'worker', a)); });
   const recent = days.filter(d => d.socialev && d.date > addDays(date, -30)).reverse(); const sleepy = by(sleepOf), joyful = by(d => num(d.happy));
-  actors.filter(a => human(a) && !a.res).forEach(a => { if (a.kind === 'fish') take(sleepy, 'fisher', a); else if (a.kind === 'idle' && recent.some(d => !used.has(d.date))) take(recent, 'social', a); else take(joyful, 'joy', a); });
+  actors.filter(a => human(a) && !a.res).forEach(a => { if (a.kind === 'fish') take(sleepy, 'fisher', a); else if ((a.kind === 'idle' || a.kind === 'guest') && recent.some(d => !used.has(d.date))) take(recent, 'social', a); else take(joyful, 'joy', a); });
 }
 function residentsOfWeek(h) { // les gens nés pendant la semaine de la maison : ses événements sociaux
   return h.days.map(date => RES[date] && RES[date].role === 'social' ? RES[date] : makeResident(S.daily.find(d => d.date === date) || {date}, 'social', NPC_SHEETS[hashStr(date) % NPC_SHEETS.length]));
@@ -1417,7 +1527,7 @@ const LEGEND = {
   f_2pap: m => ['🌾 Champs 2PaP : le trimestre', `Avancement des quatre quêtes au ${fmtShort(m.to)} : ventes ${m.q.sales.value}/${m.q.sales.target}, leads ${fmtNum(m.q.leads.value)}/${fmtNum(m.q.leads.target)}, vidéos ${m.q.videos.value}/${m.q.videos.target}, webinaires ${m.q.webinars.value}/${m.q.webinars.target}. Les plants grandissent avec.${m.workers ? ' ' + m.workers + ' ' + plural(m.workers, 'fermier', 'fermiers') + ' au travail (tâches Todoist du mois).' : ''}`],
   f_solv: m => ['🌻 Champs SOLV : les encaissements du mois', `Rempli à ${fmtNum(m.pctSolv * 100, 0)} % : les encaissements SOLV du mois comparés au mois précédent. Plein quand le mois égale le précédent.`],
   pond: m => [`💧 La mare de ${m.mo.label} : ton sommeil`, `${m.sleepScore != null ? 'Score moyen ' + fmtNum(m.sleepScore, 0) + ' %' : 'Score non renseigné'} du ${fmtShort(m.from)} au ${fmtShort(m.to)}, ${m.goodNights} ${plural(m.goodNights, 'nuit', 'nuits')} à 80 % ou plus. Sous 70 % c'est une flaque de boue, puis la mare grandit par paliers jusqu'à 97 %. Un canard à partir de 80 %, deux après quinze bonnes nuits.`],
-  pen: m => [`🐑🐖🐄 L'enclos de ${m.mo.label}`, `${m.sheep} ${plural(m.sheep, 'mouton', 'moutons')} : un par millier d'euros encaissé dans le mois · ${m.pigs} ${plural(m.pigs, 'cochon', 'cochons')} : les ventes 2PaP du mois · ${m.payers} ${plural(m.payers, 'vache', 'vaches')} : les clients qui ont payé ce mois-ci.`],
+  pen: m => [`🐑🐖🐄 L'enclos de ${m.mo.label}`, `${m.sheep} ${plural(m.sheep, 'mouton', 'moutons')} : un par millier d'euros encaissé dans le mois · ${m.pigs} ${plural(m.pigs, 'cochon', 'cochons')} : les ventes 2PaP du mois · ${m.payers} ${plural(m.payers, 'vache', 'vaches')} : les clients qui ont payé ce mois-ci. Sous la pluie, les bêtes se serrent sous l'abri ; la nuit, elles dorment en tas.`],
   poules: m => [`🐔 Les poules de ${m.mo.label} : tes leads`, `${fmtNum(m.leads)} nouveaux leads du ${fmtShort(m.from)} au ${fmtShort(m.to)}, une poule pour dix (${m.chickens}). Elles se promènent partout sauf dans l'enclos. Le trimestre en est à ${fmtNum(CM.leads)}/${fmtNum(CM.leadsTarget)}.`],
   bed: (m, o) => { const b = o.bed; return [`🌱 Le potager de ${m.mo.label} : ${b.mt.name}`, `Un plant de ${b.mt.icon} par jour, de plus en plus grand selon ${b.mt.what} ce jour-là (pousse sous 4,5, petit plant, plant, plant mûr à 8 et plus). ${b.n} ${plural(b.n, 'jour noté', 'jours notés')}, moyenne ${fmtNum(b.avg, 1)}/10. Les cases vides sont des jours sans note.`]; },
   orchard: (m, o) => { const w = o.week; return [`🍎 Le verger : semaine ${w.q.label} (lundi ${fmtShort(w.q.start)})`, `Un arbre fruitier par semaine, qui grandit avec ta santé mentale de la semaine (bonheur, stabilité, anxiété, énergie) : ${w.mental != null ? fmtNum(w.mental * 100, 0) + ' %' : 'pas de note'}. Il porte des fruits à partir de 74 %.`]; },
@@ -1464,10 +1574,10 @@ let lapse = null;
 function startLapse() { closeRoom();
   if (lapse) return; const hero = $('hero'); selected = null; hover = null; renderLegend(); hero.classList.add('full'); try { if (hero.requestFullscreen) hero.requestFullscreen().catch(() => {}); } catch (e) {}
   const cap = document.createElement('div'); cap.className = 'lapse-cap'; hero.appendChild(cap); const stop = document.createElement('button'); stop.className = 'lapse-stop'; stop.textContent = '■ Stop'; stop.addEventListener('click', stopLapse); hero.appendChild(stop);
-  lapse = {d: QSTART, cap, stop, mode: VIEW.mode}; VIEW.mode = 'all'; cam.init = false;
-  const step = () => { if (!lapse) return; VIEW.date = lapse.d; buildScene(); const mo = monthOf(lapse.d), wk = quartierOf(lapse.d); const n = MOS.reduce((a, m) => a + m.houses.filter(h => !h.annex && m.built).length, 0);
+  lapse = {d: QSTART, cap, stop, mode: VIEW.mode, idle: 0}; VIEW.mode = 'all'; cam.init = false;
+  const step = () => { if (!lapse) return; const prev = lapse.started ? lapseSnapshot() : null; VIEW.date = lapse.d; buildScene(); const dur = prev ? lapseGrow(prev, lapse.d) : 340; lapse.started = true; const mo = monthOf(lapse.d), wk = quartierOf(lapse.d); const n = MOS.reduce((a, m) => a + m.houses.filter(h => !h.annex && m.built).length, 0);
     lapse.cap.innerHTML = `${esc(fmtDay(lapse.d))}<small>${wk ? 'semaine ' + wk.label + ' · ' : ''}${n} ${n > 1 ? 'maisons' : 'maison'} · ${fmtNum(CM.leads)} leads · ${CM.sales.length} ${CM.sales.length > 1 ? 'ventes' : 'vente'}</small>`;
-    if (lapse.d >= M.today) { lapse.timer = setTimeout(stopLapse, 2500); return; } lapse.d = addDays(lapse.d, 1); lapse.timer = setTimeout(step, 320); };
+    if (lapse.d >= M.today) { lapse.timer = setTimeout(stopLapse, 2500); return; } lapse.d = addDays(lapse.d, 1); lapse.timer = setTimeout(step, dur); };
   step();
 }
 function stopLapse() {
@@ -1491,7 +1601,7 @@ function toWorld(e) { const rc = cv.getBoundingClientRect(); return {x: cam.x + 
 const zoomedOut = () => cam.s < .7;
 function hitArea(p) { const mo = MOS.find(mo => { const b = mo.L.box; return p.x >= pxc(b.x0) && p.x < pxc(b.x1) && p.y >= pyc(b.y0) && p.y < pyc(b.y1); }); if (mo) return {key: 'quartier', mo, big: true}; const b = CENTER_BOX; if (b && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) return {key: 'centre', c: true, big: true}; return null; }
 function hit(e) { const p = toWorld(e); if (zoomedOut()) return hitArea(p);
-  const who = actors.filter(a => a.res && Math.abs(a.x - p.x) < 9 && p.y > a.y - 28 && p.y < a.y + 3).sort((a, b) => b.y - a.y)[0]; if (who) return {key: 'pnj', a: who, x: who.x - 8, y: who.y - 27, w: 16, h: 29};
+  const who = actors.filter(a => a.res && !a.hidden && !(a.appear && performance.now() < a.appear) && Math.abs(a.x - p.x) < 9 && p.y > a.y - 28 && p.y < a.y + 3).sort((a, b) => b.y - a.y)[0]; if (who) return {key: 'pnj', a: who, x: who.x - 8, y: who.y - 27, w: 16, h: 29};
   const hen = actors.find(a => a.kind === 'chicken' && a.mo && Math.abs(a.x - p.x) < 10 && p.y > a.y - 20 && p.y < a.y + 4); if (hen) return {key: 'poules', mo: hen.mo, x: hen.x - 9, y: hen.y - 18, w: 18, h: 20};
   let best = null, bestA = Infinity; for (const o of objects) { if (o.big) continue; if (p.x >= o.x - 1 && p.x <= o.x + o.w + 1 && p.y >= o.y - 1 && p.y <= o.y + o.h + 1) { const a = o.w * o.h; if (a < bestA) { best = o; bestA = a; } } } return best; }
 const goMonth = mo => { VIEW.mode = 'month'; selected = null; animateCam(camBox(monthFrame(mo))); renderTimeline(); renderLegend(); };
