@@ -67,7 +67,37 @@ Chaque quartier mensuel :
 | Parc : jusqu'à 20 fleurs, papillons | bonheur moyen du mois |
 | Potager : quatre planches (joie, énergie, stabilité, calme) | un plant par jour, grand si la note du jour est bonne : carottes, maïs, choux, fraises |
 | Verger : un arbre fruitier par semaine | santé mentale de la semaine ; fruits à partir de 74 % |
-| Habitants | toi, plus un par événement social du mois |
+| Habitants | un par événement social du mois (au moins un, né du jour le plus social) |
+
+Les habitants et les intérieurs :
+
+Chaque personnage est né un jour qui comptait : les gens des quartiers d'un événement social du mois, les
+fermiers des plus grosses journées de tâches, les pêcheurs des meilleures nuits, les promeneurs des jours
+les plus joyeux. Un clic sur l'un d'eux l'arrête et ouvre sa fiche : date de naissance, notes de ce jour-là
+(joie, énergie, calme, stabilité, sommeil), un caractère tiré de ces notes et des humeurs du Daily Form,
+ce que le journal disait ce jour-là, et une question sur tes objectifs du moment.
+
+Un clic sur une maison fait entrer dedans. La pièce a la taille de la maison : une petite maison n'a qu'un
+lit, une table et un coffre ; une auberge a son comptoir, ses tables et ses clients. Les gens dedans sont
+nés cette semaine-là. Les objets racontent la semaine :
+
+| Objet | Ce qu'il raconte |
+| --- | --- |
+| Lit (couleur des draps) | sommeil moyen, meilleure nuit |
+| Fenêtre | météo de la semaine (ou Gap, avant Berlin) |
+| Calendrier | santé mentale jour par jour : les hauts et les bas |
+| Horloge | heures de travail notées |
+| Feu (allumé à 6/10) | énergie moyenne |
+| Plantes | jours de joie à 7/10 ou plus |
+| Tapis (bleu, jaune, rose) | calme moyen |
+| Table | les grandes tâches (MIT) de la semaine |
+| Coffre | le vœu de la semaine (Focus de la Weekly) |
+| Bibliothèque | la leçon de la semaine |
+| Lampe | ce qui a résisté : la question de la semaine |
+| Tableau | la victoire de la semaine |
+
+Ce qui vient du journal passe au tamis : une ligne qui contient un prénom, un montant ou un sujet intime
+est écartée en entier, les événements sociaux sont racontés sans les noms.
 
 ## Mise à jour
 

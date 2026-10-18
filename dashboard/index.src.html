@@ -70,6 +70,19 @@ button { font: inherit; cursor: pointer; }
 .info b { color: #f2c14e; display: block; margin: 0 22px 4px 0; font-size: 13.5px; } .info .x { position: absolute; right: 6px; top: 4px; background: none; border: 0; color: #f2c14e; font: 14px 'Press Start 2P', monospace; padding: 2px; }
 .info .tag { margin-left: 0; }
 .tip { position: absolute; z-index: 4; pointer-events: none; background: rgba(24,18,36,.92); color: #f3edda; border: 2px solid #6b5a8a; padding: 3px 7px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.info .stats, .room-side .stats { margin: 6px 0 4px; } .st { display: grid; grid-template-columns: 62px 1fr 34px; gap: 6px; align-items: center; font: 8px 'Press Start 2P', monospace; color: #cbbfa6; margin: 3px 0; }
+.st i { height: 7px; background: #3a2d4c; border: 1px solid #6b5a8a; display: block; } .st em { display: block; height: 100%; } .st b { display: inline !important; margin: 0 !important; font-size: 8px !important; color: #f3edda !important; text-align: right; }
+.info p, .room-side p { margin: 5px 0 0; } .info .born, .room-side .born { font-size: 11px; color: #cbbfa6; }
+.room { position: absolute; inset: 0; z-index: 8; background: rgba(12,9,20,.9); display: flex; align-items: center; justify-content: center; padding: 10px; }
+.room-in { display: flex; gap: 10px; align-items: center; max-width: 100%; max-height: 100%; } .room-view canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; border: 3px solid #f2c14e; box-shadow: 0 4px 0 rgba(0,0,0,.5); cursor: pointer; }
+.room-side { position: relative; width: 290px; max-height: calc(100% - 8px); overflow-y: auto; background: rgba(24,18,36,.97); color: #f3edda; border: 3px solid #f2c14e; padding: 10px 12px 12px; font-size: 13px; line-height: 1.45; align-self: stretch; }
+.room-x { float: right; background: #241b33; color: #f2c14e; border: 2px solid #f2c14e; font: 9px 'Press Start 2P', monospace; padding: 5px 7px; margin: 0 0 6px 8px; }
+.room-side .rt { color: #f2c14e; display: block; font-size: 14px; } .room-side .rsub { color: #cbbfa6; font-size: 11.5px; margin: 3px 0 8px; }
+.room-side .rsel { border-top: 2px dashed #4a3d63; padding-top: 7px; } .room-side .rsel > b { color: #f2c14e; display: block; }
+.rchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; border-top: 2px dashed #4a3d63; padding-top: 8px; } .rchips button { background: #2c2240; color: #f3edda; border: 2px solid #4a3d63; font-size: 11.5px; padding: 3px 6px; cursor: pointer; } .rchips button.on { border-color: #f2c14e; color: #f2c14e; }
+.cal { display: flex; gap: 4px; height: 64px; align-items: flex-end; margin: 6px 0 2px; } .cal span { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; text-align: center; } .cal i { display: block; min-height: 2px; } .cal small { font-size: 9.5px; color: #cbbfa6; margin-top: 2px; }
+.mitl { list-style: none; margin: 6px 0 0; padding: 0; } .mitl li { padding: 3px 0 3px 14px; position: relative; font-size: 12.5px; } .mitl li::before { content: '·'; position: absolute; left: 3px; color: #cbbfa6; } .mitl li.ok::before { content: '✓'; color: #7bc67b; } .mitl small { color: #cbbfa6; }
+@media (max-width: 760px) { .room-in { flex-direction: column; } .room-side { width: auto; max-height: 240px; align-self: auto; } }
 .hidden { display: none !important; }
 .hero.full { position: fixed; inset: 0; z-index: 90; height: 100vh !important; width: 100vw; }
 .lapse-cap { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 6; background: rgba(24,18,36,.9); color: #f2c14e; border: 3px solid #f2c14e; padding: 8px 14px; font: 14px 'Press Start 2P', monospace; text-align: center; }
@@ -189,7 +202,7 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); font-siz
 </div>
 <div class="stage">
   <div class="mid">
-    <div class="hero" id="hero"><canvas id="scene" aria-label="Village pixel art reflétant l'état du trimestre"></canvas><div class="info hidden" id="info"></div><div class="tip hidden" id="tip"></div></div>
+    <div class="hero" id="hero"><canvas id="scene" aria-label="Village pixel art reflétant l'état du trimestre"></canvas><div class="info hidden" id="info"></div><div class="tip hidden" id="tip"></div><div class="room hidden" id="room"><div class="room-in"><div class="room-view"><canvas id="roomcv" aria-label="Intérieur de la maison"></canvas></div><div class="room-side"><button class="room-x" id="room-x">✕ Sortir</button><div id="room-txt"></div></div></div></div></div>
     <div class="timeline" id="timeline"></div>
   </div>
   <aside class="side right">
@@ -982,7 +995,7 @@ function merge(res, tag) { res.objects.forEach(o => objects.push(Object.assign(o
 function buildScene() {
   const hero = $('hero'); const cssW = hero.clientWidth || 960, cssH = hero.clientHeight || 460;
   cv.width = cssW; cv.height = cssH; cv.style.width = cssW + 'px'; cv.style.marginLeft = '0'; ctx.imageSmoothingEnabled = false;
-  QS = quartiers(); MOS = monthsOf(QS); const date = viewDate(); V = globalModel(date); CM = centerModel(date); MOS.forEach(mo => planMonth(mo, date));
+  QS = quartiers(); MOS = monthsOf(QS); const date = viewDate(); if (room && room.vd !== date) closeRoom(); V = globalModel(date); CM = centerModel(date); MOS.forEach(mo => planMonth(mo, date));
   // emprise : centre + quartiers, et une bonne lisière de forêt tout autour
   let x0 = -22, x1 = 22, y0 = -24, y1 = 30; MOS.forEach(mo => { const hs = mo.houses; const hb = hs.length ? {x0: Math.min(...hs.map(h => h.x0)) - 3, x1: Math.max(...hs.map(h => h.x1)) + 3, y0: Math.min(...hs.map(h => h.R)) - 14, y1: Math.max(...hs.map(h => h.st)) + 3} : mo.L.box; const B = mo.L.box; const b = mo.built ? {x0: Math.min(B.x0, hb.x0), x1: Math.max(B.x1, hb.x1), y0: Math.min(B.y0, hb.y0), y1: Math.max(B.y1, hb.y1)} : hb; x0 = Math.min(x0, b.x0); x1 = Math.max(x1, b.x1); y0 = Math.min(y0, b.y0); y1 = Math.max(y1, b.y1); });
   x0 = Math.min(x0 - 16, -106); x1 = Math.max(x1 + 16, 100); y0 -= 18; y1 += 14; OX = -x0; OY = -y0; const cols = x1 - x0, rows = y1 - y0; worldW = cols * T; worldH = rows * T;
@@ -1062,7 +1075,7 @@ function buildScene() {
   const fr = rnd(31); for (let r = 0; r < rows - 5; r += 3) for (let c = 0; c < cols - 4; c += 3) { const cc = c + Math.floor(fr() * 2), rr = r + Math.floor(fr() * 2); let free = true; for (let dc = 0; dc < 4 && free; dc++) for (let dr = 0; dr < 5 && free; dr++) if (reserved.has((cc + dc) + ',' + (rr + dr))) free = false; const edge = Math.min(cc, rr, cols - cc, rows - rr) < 10; if (!free || fr() > (edge ? .8 : .6)) continue;
     const k = fr(); const [ik, sx, w, h] = TREES[FOREST[Math.min(FOREST.length - 1, Math.floor(k * FOREST.length))]]; const x = cc * T + (64 - w) / 2, y = rr * T + 80 - h; if (ok(IMG[ik])) props.push({base: y + h - 4, x, draw: () => blit(IMG[ik], sx, 0, w, h, x, y)});
     if (fr() < .25) { const cu = CUTE[[1, 2, 3, 6, 7, 8][Math.floor(fr() * 6)]]; const ux = cc * T + 40, uy = rr * T + 70; props.push({base: uy + 12, x: ux, draw: () => odecor(cu[0], cu[1], ux, uy, cu[2], cu[3])}); } }
-  settleActors();
+  settleActors(); assignResidents(date);
   // météo
   const r = rnd(3); for (let i = 0; i < clamp(Math.round((V.wx.cloud || 0) / 15), 0, 16); i++) cloudShadows.push({x: r() * worldW, y: r() * worldH, w: 140 + r() * 180, h: 70 + r() * 70, s: .01 + r() * .015});
   if (V.kind === 'rain' || V.kind === 'storm') for (let i = 0; i < 160; i++) drops.push({x: r(), y: r(), v: .006 + r() * .004}); if (V.kind === 'snow') for (let i = 0; i < 90; i++) drops.push({x: r(), y: r(), v: .001 + r() * .001, snow: true});
@@ -1102,7 +1115,7 @@ function drawWorker(a, t) { const f = Math.floor(t * (a.state === 'work' ? 4 : 5
 function drawBfly(a, t) { if (!ok(IMG.butterfly)) return; const f = Math.floor(t * 8 + a.t) % 2; blit(IMG.butterfly, f * 8, a.color * 8, 8, 8, a.x - 4, a.y - 4); }
 const isBlocked = (x, y) => blocked.has(Math.floor(x / T) + ',' + Math.floor(y / T));
 function stepActors(dt, t) {
-  actors.forEach(a => {
+  actors.forEach(a => { if (selected && selected.a === a) return;
     if (a.kind === 'npc') { if (a.axis === 'h') { a.x += a.dir * a.speed * dt; if (a.x < a.x0) { a.x = a.x0; a.dir = 1; } if (a.x > a.x1) { a.x = a.x1; a.dir = -1; } } else { a.y += a.dir * a.speed * dt; if (a.y < a.y0) { a.y = a.y0; a.dir = 1; } if (a.y > a.y1) { a.y = a.y1; a.dir = -1; } } return; }
     if (a.kind === 'idle' || a.kind === 'fish') return;
     if (a.kind === 'horse') { stepHorse(a, dt); return; }
@@ -1137,8 +1150,9 @@ function animate(now) {
   const inView = (x, y, m) => x > cam.x - m && x < cam.x + vw + m && y > cam.y - m && y < cam.y + vh + m;
   const layer = props.filter(p => p.base > cam.y - 20 && p.base < cam.y + vh + 220 && (p.x == null || (p.x > cam.x - 260 && p.x < cam.x + vw + 60))).map(p => ({y: p.base, p}));
   actors.forEach(a => { if (inView(a.x, a.y, 50)) layer.push({y: a.y, a}); });
-  layer.sort((u, v) => u.y - v.y).forEach(e => { if (e.p) e.p.draw(t); else (DRAW[e.a.kind] || drawAnimal)(e.a, t); });
+  layer.sort((u, v) => u.y - v.y).forEach(e => { if (e.p) e.p.draw(t); else if (selected && selected.a === e.a && e.a.kind !== 'fish') drawIdle(e.a, t); else (DRAW[e.a.kind] || drawAnimal)(e.a, t); });
   cloudShadows.forEach(c => { const cx = (c.x + t * c.s * 60) % (worldW + c.w) - c.w / 2; ctx.save(); ctx.globalAlpha = V.kind === 'clear' ? .07 : .14; ctx.fillStyle = '#1b2a40'; ctx.beginPath(); ctx.ellipse(cx, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+  [hover, selected].forEach(o => { if (o && o.a) { o.x = o.a.x - 8; o.y = o.a.y - 27; } });
   const hl = hover || selected; if (hl && !hl.big) { ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1 / s; ctx.strokeRect(hl.x - .5, hl.y - .5, hl.w + 1, hl.h + 1); ctx.restore(); }
   // lumière et météo
   ctx.setTransform(1, 0, 0, 1, 0, 0); octx = world.getContext('2d'); const day = V.day;
@@ -1158,6 +1172,242 @@ function animate(now) {
 }
 
 
+/* ---- les habitants : chacun est né un jour qui comptait ----
+   Les gens des quartiers naissent des événements sociaux du mois, les fermiers des grosses journées de tâches,
+   les pêcheurs des nuits les plus calmes, les promeneurs des jours les plus joyeux. Leur caractère vient des notes
+   de ce jour-là ; ce qu'ils racontent vient du journal, passé au tamis : ni prénom, ni montant, ni histoire de cœur. */
+const SEX = {npc_bartender_katy: 'f', npc_chef_chloe: 'f', npc_farmer_buba: 'f'};
+const FIRST = {f: ['Rose', 'Lila', 'Maëlle', 'Jeanne', 'Iris', 'Nina', 'Louise', 'Capucine', 'Mona', 'Elsa', 'Suzon', 'Margot', 'Anouk', 'Prune', 'Agathe', 'Céleste', 'Odile', 'Blanche'],
+  m: ['Gaspard', 'Léon', 'Hugo', 'Basile', 'Émile', 'Félix', 'Jules', 'Octave', 'Marius', 'Anatole', 'Noé', 'Victor', 'Lucien', 'Aristide', 'Firmin', 'Achille', 'Barnabé', 'Ernest']};
+const gx = (sx, m, f) => sx === 'f' ? f : m;
+const hashStr = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+const num = v => v == null || v === '' || isNaN(+v) ? null : +v;
+const mentalOf = d => { const p = []; if (num(d.happy) != null) p.push([d.happy / 10, .4]); if (num(d.stab) != null) p.push([d.stab / 10, .25]); if (num(d.anx) != null) p.push([1 - d.anx / 10, .2]); if (num(d.energy) != null) p.push([d.energy / 10, .15]); const w = sum(p.map(x => x[1])); return w ? sum(p.map(x => x[0] * x[1])) / w : null; };
+// le tamis : une phrase passe si elle n'a ni prénom, ni montant, ni rien d'intime
+const OKCAP = new Set('Muay Thai Ringside Gym Timeleft Berlin Meta YouTube Instagram Opus Focusmate Tom Quest VRChat Probetraining Amazon Sony Gap France Thaïlande Descript Todoist Coda Drive Cookiebot Lundoufle Mastermind Daily Weekly Review Lead Leads Magnet North Star Cap Webinaire Allemagne Europe Paris Google Notion Ads Live'.split(' '));
+const MONEY = /€|\beuros?\b|\bPEL\b|salaire|loyer|\bprix\b|tarif|banque|budget|dette|\bcash\b|\d\s?k\b|\bmille\b/i;
+const INTIME = /\bdates?\b|dating|rencard|amour|amoureu|sexe|libido|pleur|crying|cried|thérap|therap|\bpsy|rupture|\bex\b|célibat|tinder|bumble|hinge|copine|petite amie|dragu|déprim|suicid|médic|alcool|cuite|boucle ouverte|smit|crush|bisou|embrass|tracass|solitude|famille|maman|papa|\bmère|\bpère|frère|sœur|soeur|épuis|angoiss|anxi/i;
+let NAMEC = null;
+const bare = w => w.replace(/^[«"'(\[“]+|[»"'’).,;:!?\]”]+$/g, '');
+function nameCounts() { // les mots à majuscule en milieu de phrase qui ne sont pas des marques : des prénoms, très probablement
+  if (NAMEC) return NAMEC; NAMEC = {};
+  const add = t => { if (!t) return; String(t).split(/\n+/).forEach(line => line.replace(/^\s*(\d+[.)]|[-•*])\s*/, '').split(/(?<=[.!?:])\s+/).forEach(s => s.split(/\s+/).slice(1).forEach(w => { const c = bare(w); if (/^[A-ZÀ-Ý][a-zà-ÿ]+$/.test(c) && !OKCAP.has(c)) NAMEC[c] = (NAMEC[c] || 0) + 1; }))); };
+  S.daily.forEach(d => ['socialev', 'wins', 'grateful', 'mit', 'feel'].forEach(k => add(d[k])));
+  (S.weeks || []).forEach(w => ['focus', 'domino', 'progress', 'whynot', 'resistance', 'wins', 'kpi', 'decisions', 'journal', 'notes'].forEach(k => add(w[k])));
+  (S.reviews || []).forEach(r => ['wins', 'lesson', 'resistance', 'domino', 'brief'].forEach(k => add(r[k]))); return NAMEC;
+}
+function cleanPhrase(s) {
+  if (!s || MONEY.test(s) || INTIME.test(s) || /@|https?:/.test(s)) return false; const N = nameCounts();
+  return s.split(/\s+/).every((w, i) => { const c = bare(w); if (!/^[A-ZÀ-Ý][a-zà-ÿ'’-]+$/.test(c) || OKCAP.has(c)) return true; return i === 0 && (N[c] || 0) < 2; });
+}
+const NEG = /feignant|paresse|raté|nul\b|pas fait|pas top|fatigu|crevé|honte/i;
+function cleanBits(text, n = 1, max = 150, pos) { // les premières phrases qui passent le tamis ; une ligne passe entière ou pas du tout
+  const out = []; if (!text || INTIME.test(String(text))) return out;
+  String(text).split(/\n+/).forEach(line => { line = line.replace(/^\s*(\d+[.)]|[-•*])\s*/, '').trim(); if (!line || /^\(/.test(line)) return;
+    const ss = line.split(/(?<=[.!?])\s+/).map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean); if (!ss.every(cleanPhrase) || (pos && NEG.test(line))) return;
+    ss.forEach(s => { if (out.length >= n || s.length < 16 || s.length > max) return; out.push(/[.!?…]$/.test(s) ? s : s + '.'); }); });
+  return out;
+}
+const lcFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
+function eventBits(s) { // un événement social, raconté sans les prénoms
+  return String(s).split(/\s*[·|;]\s*/).filter(Boolean).map(seg => {
+    const par = (seg.match(/\(([^)]*)\)/) || [])[1] || '', base = seg.replace(/\([^)]*\)/g, '').trim(); const det = par && cleanPhrase(par) && !/ringside|\bgym\b/i.test(par) ? par.replace(/\s*\+\s*/g, ' et ') : '';
+    if (/muay|boxe|ringside|sparring/i.test(seg)) return {k: 'muay', t: 'un entraînement de Muay Thai' + (det ? ' (' + lcFirst(det) + ')' : '')};
+    if (/timeleft/i.test(seg)) return {k: 'table', t: 'un dîner Timeleft ' + (/célibataires/i.test(seg) ? 'entre célibataires' : 'entre inconnus')};
+    if (/\bdate\b|rencard|rendez-vous/i.test(seg)) return {k: 'deux', t: 'une soirée à deux' + (det ? ' (' + lcFirst(det) + ')' : '')};
+    const NM = "[A-ZÀ-Ý][\\wà-ÿ'-]+"; let t = base.replace(new RegExp(`\\b(avec|chez)\\s+${NM}((\\s*,\\s*|\\s+et\\s+)${NM})*`, 'g'), (m0, p) => p + (/,|\set\s/.test(m0) ? ' des amis' : ' un ami')).replace(new RegExp(`^(Voir|Retrouver|Appeler)\\s+${NM}`, 'i'), 'des retrouvailles avec un proche');
+    const k = /balade|parc|marche|rando/i.test(seg) ? 'balade' : /dîner|déjeuner|brunch|café|apéro|resto/i.test(seg) ? 'table' : 'fete';
+    if (!cleanPhrase(t)) t = k === 'table' ? 'un repas entre amis' : 'un moment entre amis'; else t = lcFirst(t);
+    if (!/^(un|une|des|le|la|les|du|l')\b/.test(t)) { const w0 = t.split(/\s/)[0]; t = /^(balade|soirée|fête|sortie|randonnée|promenade|visite|expo|séance|partie)$/.test(w0) ? 'une ' + t : /^(café|dîner|déjeuner|brunch|apéro|verre|concert|resto|restaurant|show|match|cours|pique-nique|bowling|karaoké)$/.test(w0) ? 'un ' + t : 'une sortie : ' + t; } return {k, t};
+  });
+}
+const deA = t => /^(un|une)\b/.test(t) ? "d'" + t : /^le\b/.test(t) ? t.replace(/^le\b/, 'du') : /^les\b/.test(t) ? t.replace(/^les\b/, 'des') : /^des\b/.test(t) ? 'de ' + t.slice(4) : 'de ' + t;
+const joinFr = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' et ' + a[a.length - 1];
+function dayStats(d) { const anx = num(d.anx); return {joie: num(d.happy), energie: num(d.energy), calme: anx == null ? null : clamp(10 - anx * 2, 0, 10), stable: num(d.stab), sleep: sleepOf(d), steps: num(d.steps), social: num(d.social)}; }
+const TRAITS = [ // test, adjectif (il, elle), surnom (il, elle)
+  [s => s.joie >= 8.5, 'rayonnant', 'rayonnante', 'le Rayonnant', 'la Rayonnante'], [s => s.joie >= 7 && s.joie < 8.5, 'joyeux', 'joyeuse', 'le Joyeux', 'la Joyeuse'],
+  [s => s.joie != null && s.joie <= 4.5, 'mélancolique', 'mélancolique', 'le Mélancolique', 'la Mélancolique'], [s => s.energie >= 8, 'infatigable', 'infatigable', "l'Infatigable", "l'Infatigable"],
+  [s => s.energie != null && s.energie <= 4.5, 'rêveur', 'rêveuse', 'le Rêveur', 'la Rêveuse'], [s => s.calme >= 9, 'serein', 'sereine', 'le Serein', 'la Sereine'],
+  [s => s.calme != null && s.calme <= 4, 'un peu nerveux', 'un peu nerveuse', 'le Fébrile', 'la Fébrile'], [s => s.stable >= 8, 'solide comme un roc', 'solide comme un roc', 'le Roc', 'la Roche'],
+  [s => s.stable != null && s.stable <= 4, 'imprévisible', 'imprévisible', "l'Imprévisible", "l'Imprévisible"], [s => s.sleep >= 90, 'toujours bien reposé', 'toujours bien reposée', 'le Frais', 'la Fraîche'],
+  [s => s.sleep != null && s.sleep < 70, 'un brin endormi', 'un brin endormie', 'le Somnolent', 'la Somnolente'], [s => s.steps >= 12000, 'grand marcheur', 'grande marcheuse', 'le Marcheur', 'la Marcheuse'],
+  [s => s.social >= 7, 'bavard', 'bavarde', 'le Bavard', 'la Bavarde']];
+const MOODS = {excited: ['enthousiaste', 'enthousiaste'], hopeful: ["plein d'espoir", "pleine d'espoir"], proud: ['fier', 'fière'], lazy: ['flâneur', 'flâneuse'], tired: ['un peu fatigué', 'un peu fatiguée'], 'mixed feelings': ['nuancé', 'nuancée'],
+  grateful: ['reconnaissant', 'reconnaissante'], calm: ['calme', 'calme'], happy: ['heureux', 'heureuse'], focused: ['concentré', 'concentrée'], motivated: ['motivé', 'motivée'], curious: ['curieux', 'curieuse'], playful: ['espiègle', 'espiègle'], relaxed: ['détendu', 'détendue']};
+const KIND_EPI = {muay: ['le Combattant', 'la Combattante'], table: ['des Grandes Tablées', 'des Grandes Tablées'], deux: ['le Discret', 'la Discrète'], balade: ['le Promeneur', 'la Promeneuse'], fete: ['le Fêtard', 'la Fêtarde'], worker: ["l'Acharné", "l'Acharnée"], fisher: ['le Patient', 'la Patiente']};
+const WXW = {clear: 'faisait grand soleil', cloudy: 'y avait quelques nuages', overcast: 'faisait gris', rain: 'pleuvait', fog: 'y avait du brouillard', snow: 'neigeait', storm: "y avait de l'orage"};
+const tasksOn = date => ((S.productivity || {}).days || []).find(x => x.date === date);
+function residentAsk(kind) { // ce qu'il te demande aujourd'hui : toujours tourné vers tes objectifs du moment
+  const K = S.kpi_live || {}, L = Math.round(leadsAt(M.today)), LT = (K.leads || {}).target || 500, nx = (K.webinars || {}).next, mt = M.muayTarget || 3, sw = CM ? CM.whiteSwans : 0;
+  const Q = {muay: `Alors, ce Muay Thai ? Cette semaine j'ai compté ${M.muayDone || 0} ${plural(M.muayDone || 0, 'séance', 'séances')} sur ${mt}.`,
+    table: "Le prochain grand dîner, c'est quand ? Je te garde une chaise.", deux: 'Je garde un bon souvenir de cette soirée-là. Le reste ne regarde que toi.',
+    balade: M.steps7 ? `On refait un tour du parc ? Cette semaine tu marches ${fmtNum(M.steps7, 0)} pas par jour en moyenne.` : 'On refait un tour du parc ?', fete: "Quand est-ce qu'on remet ça ? Le village adore les fêtes.",
+    worker: M.sprint && M.sprint.length ? `Le sprint webinaire en est à ${M.sprintDone} ${plural(M.sprintDone, 'étape', 'étapes')} sur ${M.sprint.length}${nx ? ', pour le ' + fmtDay(nx) : ''}. On tient le rythme ?` : `${M.doneWeek || 0} tâches cette semaine. On tient le rythme ?`,
+    fisher: `Tu as bien dormi ? Sur l'étang je compte ${sw} ${plural(sw, 'cygne blanc', 'cygnes blancs')} cette semaine.`, joy: `On en est à ${fmtNum(L)} leads sur ${fmtNum(LT)}. Je compte les poules tous les matins !`};
+  return Q[kind] || Q.joy;
+}
+let RES = {}, RES_NAMES = new Set(), RES_EPI = new Set();
+function makeResident(d, role, sheet) { // role : social, worker, fisher, joy
+  if (RES[d.date] && RES[d.date].role === role) return RES[d.date];
+  const sx = SEX[sheet] || 'm', st = dayStats(d), h = hashStr(d.date + role), pool = FIRST[sx]; let name = pool[h % pool.length];
+  for (let i = 1; RES_NAMES.has(name) && i < pool.length; i++) name = pool[(h + i) % pool.length]; RES_NAMES.add(name);
+  const ev = role === 'social' && d.socialev ? eventBits(d.socialev) : []; const kind = ev.length ? ev[0].k : role;
+  const traits = TRAITS.filter(t => t[0](st)); const moods = (Array.isArray(d.moods) ? d.moods : d.moods ? String(d.moods).split(/\s*,\s*/) : []).map(x => String(x).toLowerCase().trim()).filter(x => MOODS[x]).map(x => gx(sx, ...MOODS[x]));
+  const adj = [...traits.map(t => gx(sx, t[1], t[2])), ...moods].filter((v, i, a) => a.indexOf(v) === i).slice(0, 3);
+  const cands = [...(KIND_EPI[kind] ? [gx(sx, ...KIND_EPI[kind])] : []), ...traits.map(t => gx(sx, t[3], t[4])), gx(sx, 'le Tranquille', 'la Tranquille')]; const epi = cands.find(e => !RES_EPI.has(e)) || cands[0]; RES_EPI.add(epi);
+  const tk = tasksOn(d.date);
+  const origin = ev.length ? 'le jour ' + ev.map(e => deA(e.t)).join(', puis ') : role === 'worker' ? (tk ? `le jour où tu as bouclé ${tk.n} tâches` : num(d.workh) ? `un jour où tu as travaillé ${fmtNum(+d.workh, 1)} h` : 'un jour de grand chantier')
+    : role === 'fisher' ? (st.sleep != null ? `au matin d'une nuit à ${fmtNum(st.sleep, 0)} %, quand l'eau était d'huile` : "un matin où l'eau était d'huile") : role === 'joy' ? (st.joie != null ? `un jour où ta joie est montée à ${fmtNum(st.joie, 1)}/10` : 'un jour tranquille')
+    : st.social != null ? `un jour où tu as vu du monde (vie sociale ${fmtNum(st.social, 0)}/10)` : 'un jour comme les autres, et c\'est très bien';
+  const wh = d.where ? String(d.where) : ''; const wx = ((S.weather || {}).history || []).find(x => x.date === d.date);
+  let place = ''; if (/gap/i.test(wh) && !/berlin/i.test(wh)) place = ' J\'ai vu le jour à Gap, avant le grand départ pour Berlin.'; else if (/berlin/i.test(wh) && /gap/i.test(wh)) place = ' Le jour même du voyage vers Berlin.'; else if (wx && (!wh || /berlin/i.test(wh))) place = ` Il ${WXW[weatherKind(wx.weather_code)] || 'faisait doux'} à Berlin (${Math.round(wx.temperature_2m_max)} °C).`;
+  const lines = [`Je suis ${gx(sx, 'né', 'née')} le ${fmtDay(d.date).replace(/ 1 /, ' 1er ')}, ${origin}.${place}`];
+  lines.push(adj.length ? `Depuis, je suis ${joinFr(adj)}.` : "Ce jour-là tu n'avais rien noté, alors j'ai gardé un caractère discret.");
+  const mem = cleanBits(d.wins)[0] || cleanBits(d.grateful)[0] || cleanBits(d.feel)[0]; const mit = !mem && cleanBits(d.mit, 1, 130)[0]; const wr = !mem && !mit && (S.weeks || []).find(w => w.start === weekStart(d.date)); const foc = wr && cleanBits(wr.focus)[0];
+  if (mem) lines.push(`Ce jour-là, tu as noté : « ${mem} »`); else if (mit) lines.push(`Ta grande tâche ce jour-là : « ${mit} »`); else if (foc) lines.push(`Ton cap cette semaine-là : « ${foc} »`);
+  lines.push(residentAsk(kind));
+  const r = {date: d.date, role, kind, sx, sheet, name, epi, adj, st, lines}; if (!RES[d.date]) RES[d.date] = r; return r;
+}
+function statBars(st) {
+  const row = (lab, v, max, col) => v == null ? '' : `<div class="st"><span>${lab}</span><i><em style="width:${clamp(v / max * 100, 0, 100).toFixed(0)}%;background:${col}"></em></i><b>${fmtNum(v, max > 10 || v % 1 === 0 ? 0 : 1)}${max > 10 ? ' %' : ''}</b></div>`;
+  return `<div class="stats">${row('JOIE', st.joie, 10, '#f2c14e')}${row('ÉNERGIE', st.energie, 10, '#e07b39')}${row('CALME', st.calme, 10, '#6cb4f0')}${row('STABLE', st.stable, 10, '#7bc67b')}${row('SOMMEIL', st.sleep, 100, '#b48ef0')}</div>`;
+}
+const resTitle = r => `${r.name} ${r.epi}`;
+const resHTML = r => `<div class="born">${gx(r.sx, 'Né', 'Née')} le ${esc(fmtShort(r.date))} · ce jour-là</div>${statBars(r.st)}${r.lines.map(l => `<p>${esc(l)}</p>`).join('')}`;
+function assignResidents(date) { // chaque personnage du village reçoit son jour de naissance
+  RES = {}; RES_NAMES = new Set(); RES_EPI = new Set(); NAMEC = null; const used = new Set(); const days = S.daily.filter(d => d.date && d.date >= QSTART && d.date <= date).sort((a, b) => a.date < b.date ? -1 : 1);
+  const human = a => ['npc', 'idle', 'loop', 'worker', 'fish'].includes(a.kind) && IMG[a.sheet];
+  const take = (list, role, a) => { const d = list.find(x => !used.has(x.date)) || list[0]; if (!d) return; used.add(d.date); a.res = makeResident(d, role, a.sheet); };
+  const by = f => [...days].sort((a, b) => (f(b) ?? -1) - (f(a) ?? -1));
+  const socialScore = d => (d.socialev ? 100 : 0) + (num(d.social) || 0) * 3 + (d.wins ? 5 : 0) + (num(d.happy) || 0);
+  MOS.forEach(mo => { const md = days.filter(d => d.date >= mo.start && d.date <= mo.end); const list = [...md.filter(d => d.socialev), ...md.filter(d => !d.socialev).sort((a, b) => socialScore(b) - socialScore(a))];
+    actors.filter(a => a.mo === mo && a.kind === 'npc' && human(a)).forEach(a => take(list, 'social', a));
+    const wk = [...md].sort((a, b) => ((tasksOn(b.date) || {}).n || num(b.workh) || 0) - ((tasksOn(a.date) || {}).n || num(a.workh) || 0)); actors.filter(a => a.mo === mo && a.kind === 'worker' && human(a)).forEach(a => take(wk, 'worker', a)); });
+  const recent = days.filter(d => d.socialev && d.date > addDays(date, -30)).reverse(); const sleepy = by(sleepOf), joyful = by(d => num(d.happy));
+  actors.filter(a => human(a) && !a.res).forEach(a => { if (a.kind === 'fish') take(sleepy, 'fisher', a); else if (a.kind === 'idle' && recent.some(d => !used.has(d.date))) take(recent, 'social', a); else take(joyful, 'joy', a); });
+}
+function residentsOfWeek(h) { // les gens nés pendant la semaine de la maison : ses événements sociaux
+  return h.days.map(date => RES[date] && RES[date].role === 'social' ? RES[date] : makeResident(S.daily.find(d => d.date === date) || {date}, 'social', NPC_SHEETS[hashStr(date) % NPC_SHEETS.length]));
+}
+/* ---- l'intérieur des maisons ----
+   Une pièce dessinée à la taille de la maison : une petite maison n'a qu'un lit, une table et un coffre, une auberge
+   a son comptoir, ses tables et du monde. Chaque objet raconte un bout de la semaine : le lit tes nuits, le feu ton
+   énergie, les plantes tes jours de joie, le calendrier les hauts et les bas, la table tes grandes tâches, le coffre
+   le vœu de la semaine, la bibliothèque la leçon, la lampe la question. Les gens dedans sont nés cette semaine-là. */
+const ROOMS = [{w: 9, h: 7, wall: 48, floor: [0, 0]}, {w: 11, h: 8, wall: 16, floor: [32, 0]}, {w: 13, h: 8, wall: 16, floor: [64, 0]}, {w: 15, h: 9, wall: 80, floor: [96, 0]}, {w: 19, h: 10, wall: 48, floor: [0, 32]}];
+const RB = 6; let room = null;
+function weekData(h) {
+  const ref = viewDate(), from = h.q.start, to = h.q.end < ref ? h.q.end : ref; const days = S.daily.filter(d => d.date >= from && d.date <= to).sort((a, b) => a.date < b.date ? -1 : 1);
+  const wr = (S.weeks || []).find(w => w.start === from) || {}, revs = (S.reviews || []).filter(r => r.date >= from && r.date <= to);
+  const pick = (...srcs) => { for (const s of srcs) { const b = cleanBits(s, 1, 170)[0]; if (b) return b; } return null; }, pickPos = (...srcs) => { for (const s of srcs) { const b = cleanBits(s, 1, 170, true)[0]; if (b) return b; } return null; };
+  const ss = days.map(d => [d.date, sleepOf(d)]).filter(x => x[1] != null), mental = days.map(d => [d.date, mentalOf(d)]).filter(x => x[1] != null);
+  return {from, to, days, n: days.length, wish: pick(wr.focus, wr.domino, ...revs.map(r => r.domino)), lesson: pick(wr.whynot, ...revs.map(r => r.lesson), wr.progress), resist: pick(wr.resistance, ...revs.map(r => r.resistance)),
+    win: pickPos(wr.wins, ...days.map(d => d.wins), ...revs.map(r => r.wins)), mits: days.map(d => ({date: d.date, t: cleanBits(d.mit, 1, 130)[0], done: d.mitdone === true || d.mitdone === 'true'})).filter(x => x.t),
+    joie: avg(days.map(d => num(d.happy))), joyDays: days.filter(d => num(d.happy) >= 7).length, energie: avg(days.map(d => num(d.energy))), calme: avg(days.map(d => dayStats(d).calme)),
+    sleep: avg(ss.map(x => x[1])), nights: ss, mental, work: sum(days.map(d => num(d.workh))), gap: days.filter(d => /gap/i.test(d.where || '') && !/berlin/i.test(d.where || '')).length > days.length / 2,
+    wx: ((S.weather || {}).history || []).filter(x => x.date >= from && x.date <= to)};
+}
+function furnish(h, wd, res) { // la liste des objets de la pièce, du plus simple au plus garni selon la taille
+  const tier = h.tier, G = ROOMS[tier], W = G.w * T, H = G.h * T, items = [], P = (n, a, b) => n + ' ' + plural(n, a, b);
+  const add = (k, im, src, x, y, title, text, extra) => { const o = Object.assign({k, x, y, w: src[2], h: src[3], title, text, draw: () => blit(IMG[im], src[0], src[1], src[2], src[3], x, y)}, extra || {}); items.push(o); return o; };
+  const quote = (s, none) => s ? `« ${s} »` : none;
+  // ce que dit chaque objet
+  const best = wd.nights.slice().sort((a, b) => b[1] - a[1])[0];
+  const TX = {
+    bed: ['🛏️ Le lit : tes nuits', wd.sleep == null ? 'Aucune nuit notée cette semaine-là.' : `Sommeil moyen de ${fmtNum(wd.sleep, 0)} % sur ${P(wd.nights.length, 'nuit notée', 'nuits notées')}. Draps bleus au-dessus de 85 %, verts au-dessus de 75 %, rouges en dessous.${best ? ` Meilleure nuit : ${fmtDay(best[0])} (${fmtNum(best[1], 0)} %).` : ''}`],
+    window: ['🪟 La fenêtre : la météo', wd.gap ? 'Tu étais encore à Gap cette semaine-là : la fenêtre donne sur les montagnes.' : wd.wx.length ? `${P(wd.wx.filter(x => x.weather_code <= 2).length, 'jour de soleil', 'jours de soleil')} sur ${wd.wx.length} à Berlin, ${fmtNum(avg(wd.wx.map(x => x.temperature_2m_max)), 0)} °C en moyenne l'après-midi.` : 'Pas de relevé météo pour cette semaine.'],
+    calendar: ['📅 Le calendrier : les hauts et les bas', ''],
+    clock: ['⏰ L\'horloge : ton temps de travail', wd.work ? `${fmtNum(wd.work, 1)} h de travail notées cette semaine${wd.from >= '2026-09-28' ? ', pour un cadre de 20 h depuis le 1er octobre' : ''}.` : "Pas d'heures de travail notées cette semaine-là."],
+    frame: ['🖼️ Le tableau : la victoire de la semaine', quote(wd.win, "Pas de victoire écrite cette semaine-là. Le cadre attend la prochaine.")],
+    chest: ['🧰 Le coffre : le vœu de la semaine', wd.wish ? `Ce que tu voulais pour cette semaine : « ${wd.wish} »` : 'Pas de cap écrit cette semaine-là. Le coffre reste fermé.'],
+    shelf: ['📚 La bibliothèque : la leçon', wd.lesson ? `Ce que la semaine t'a appris : « ${wd.lesson} »` : "Pas de leçon écrite cette semaine-là. Une étagère vide, c'est aussi de la place."],
+    fire: ['🔥 Le feu : ton énergie', wd.energie == null ? "Pas de note d'énergie cette semaine." : `Énergie moyenne de ${fmtNum(wd.energie, 1)}/10. Le feu brûle à partir de 6/10${wd.energie >= 6 ? '.' : ' : cette semaine, il couve.'}`],
+    lamp: ['💡 La lampe : la question de la semaine', wd.resist ? `Ce qui a résisté : « ${wd.resist} » Et si c'était la question à te poser ?` : "Pas de résistance notée cette semaine. Quelle était la vraie question ?"],
+    plants: ['🪴 Les plantes : tes jours de joie', `${P(wd.joyDays, 'jour', 'jours')} à 7/10 ou plus cette semaine, une plante pour chacun (au plus ${[2, 3, 4, 6, 8][tier]} dans une ${h.T.name}). Joie moyenne : ${wd.joie != null ? fmtNum(wd.joie, 1) + '/10' : 'pas notée'}.`],
+    table: ['🍽️ La table : tes grandes tâches', ''],
+    carpet: ['🧶 Le tapis : ton calme', wd.calme == null ? "Pas de note d'anxiété cette semaine." : `Calme moyen de ${fmtNum(wd.calme, 1)}/10 (l'inverse de l'anxiété). Bleu quand tout est paisible, jaune entre les deux, rose quand ça s'agite.`],
+    sofa: ['🛋️ Le canapé', res.length ? `De quoi recevoir : ${P(res.length, 'habitant est né', 'habitants sont nés')} cette semaine.` : 'Personne n\'est venu cette semaine-là. Il attend la prochaine soirée.'],
+    counter: ['🍺 Le comptoir', `${P(h.days.length, 'événement social', 'événements sociaux')} cette semaine : la maison est devenue une auberge.`],
+    keeper: ['🧑‍🍳 Le tavernier', 'Il tient le comptoir et se souvient de tout le monde. Il ne répète rien.'],
+    barrel: ['🛢️ Les tonneaux', 'Les réserves de l\'auberge. Rien à mesurer, juste pour l\'ambiance.']};
+  const calHTML = () => { if (!wd.mental.length) return 'Aucune note de la semaine.'; const hi = wd.mental.reduce((a, b) => b[1] > a[1] ? b : a), lo = wd.mental.reduce((a, b) => b[1] < a[1] ? b : a);
+    return `<div class="cal">${wd.mental.map(([d, v]) => `<span title="${esc(fmtDay(d))}"><i style="height:${Math.round(v * 100)}%;background:${v >= .7 ? '#7bc67b' : v >= .55 ? '#f2c14e' : '#e0605a'}"></i><small>${esc(fmtDay(d, {weekday: 'short', day: undefined, month: undefined}).replace('.', ''))}</small></span>`).join('')}</div><p>Ta santé mentale jour par jour (joie, stabilité, calme, énergie). Le plus haut : ${esc(fmtDay(hi[0]))} (${fmtNum(hi[1] * 100, 0)} %). Le plus bas : ${esc(fmtDay(lo[0]))} (${fmtNum(lo[1] * 100, 0)} %).</p>`; };
+  const tabHTML = () => wd.mits.length ? `<ul class="mitl">${wd.mits.slice(0, 5).map(m => `<li class="${m.done ? 'ok' : ''}"><small>${esc(fmtShort(m.date))}</small> ${esc(m.t)}</li>`).join('')}</ul>` : '<p>Aucune grande tâche notée cette semaine-là.</p>';
+  const obj = (k, im, src, x, y, extra) => add(k, im, src, x, y, TX[k][0], TX[k][1], extra);
+  // le lit et le mur du fond
+  const bedRow = wd.sleep == null ? 0 : wd.sleep >= 85 ? 1 : wd.sleep >= 75 ? 2 : 5; let left = 6;
+  if (tier < 4) { const dbl = tier >= 2; const b = dbl ? [3, bedRow * 32 + 1, 25, 31] : [33, bedRow * 32 + 1, 14, 31]; obj('bed', 'i_beds', b, 6, 42); left = 6 + b[2] + 6; }
+  const winRow = V.day >= .6 ? [71, 21] : V.day <= .35 ? [39, 19] : [7, 21], win = (wide) => ({k: 'window', src: wide ? [49, winRow[0], 30, winRow[1]] : [1, winRow[0], 14, winRow[1]], y: 13});
+  const lit = wd.energie != null && wd.energie >= 6;
+  const fireDraw = (x, y, stove) => t => { blit(IMG.i_fire, stove ? (lit ? 64 : 80) : 0, 0, stove ? 16 : 32, 48, x, y); if (lit && !stove) for (let i = 0; i < 5; i++) { const fh = 3 + Math.round(3 * Math.abs(Math.sin(t * 7 + i * 1.7))); octx.fillStyle = i % 2 ? '#ffd35a' : '#ff8a2a'; octx.fillRect(x + 9 + i * 3, y + 43 - fh, 3, fh); } };
+  const SEQ = [ // de gauche à droite, contre le mur du fond
+    [win(false), {k: 'calendar'}, {k: 'clock'}, ...(wd.win ? [{k: 'frame'}] : [])],
+    [win(false), {k: 'calendar'}, {k: 'fire', stove: true}, {k: 'clock'}, {k: 'shelf', src: [1, 1, 14, 30]}, win(false)],
+    [win(false), {k: 'calendar'}, {k: 'fire'}, {k: 'frame'}, {k: 'clock'}, {k: 'shelf', src: [17, 1, 30, 30]}, win(false)],
+    [win(true), {k: 'shelf', src: [17, 1, 30, 30]}, {k: 'calendar'}, {k: 'fire'}, {k: 'frame'}, {k: 'clock', tall: true}, {k: 'shelf', src: [65, 33, 30, 30], half: true}, win(false)],
+    [win(false), {k: 'barrel'}, {k: 'shelf', src: [17, 33, 30, 30]}, win(true), {k: 'fire'}, {k: 'frame'}, {k: 'calendar'}, {k: 'clock'}, win(true)]][tier];
+  const size = s => s.src ? s.src[2] : {calendar: 14, clock: s.tall ? 14 : 12, frame: 18, fire: s.stove ? 16 : 32, barrel: 32}[s.k];
+  const right = W - 8, tot = sum(SEQ.map(size)), gap = Math.max(2, (right - left - tot) / (SEQ.length + 1)); let cx = left + gap;
+  SEQ.forEach(s => { const w = size(s), x = Math.round(cx); cx += w + gap;
+    if (s.k === 'window') obj('window', 'i_windows', s.src, x, s.y);
+    else if (s.k === 'calendar') add('calendar', null, [0, 0, 14, 16], x, 12, TX.calendar[0], '', {html: calHTML, draw: () => { octx.fillStyle = '#3b2314'; octx.fillRect(x + 6, 10, 2, 3); octx.fillStyle = '#f3e3b5'; octx.fillRect(x, 13, 14, 15); octx.fillStyle = '#c0453a'; octx.fillRect(x, 13, 14, 4); wd.mental.slice(0, 7).forEach(([, v], i) => { octx.fillStyle = v >= .7 ? '#4e9c6a' : v >= .55 ? '#d8a531' : '#c0453a'; octx.fillRect(x + 1 + (i % 4) * 3, 19 + Math.floor(i / 4) * 4, 2, 3); }); }});
+    else if (s.k === 'clock') obj('clock', 'i_clocks', s.tall ? [1, 1, 14, 30] : [34, 2, 12, 13], x, s.tall ? 26 : 12);
+    else if (s.k === 'frame') add('frame', null, [0, 0, 18, 14], x, 14, TX.frame[0], TX.frame[1], {draw: () => { octx.fillStyle = '#6b3d1f'; octx.fillRect(x, 14, 18, 14); octx.fillStyle = '#9fd3f0'; octx.fillRect(x + 2, 16, 14, 10); octx.fillStyle = '#f2c14e'; octx.fillRect(x + 11, 17, 3, 3); octx.fillStyle = '#4e9c6a'; octx.fillRect(x + 2, 22, 14, 4); octx.fillStyle = '#3c7a50'; octx.fillRect(x + 4, 20, 5, 2); octx.fillRect(x + 3, 21, 7, 1); }});
+    else if (s.k === 'fire') add('fire', null, [0, 0, s.stove ? 16 : 32, 48], x, 8, TX.fire[0], TX.fire[1], {draw: fireDraw(x, 8, s.stove), light: lit ? [x + (s.stove ? 8 : 16), 46] : null});
+    else if (s.k === 'shelf') obj('shelf', 'i_shelves', s.src, x, 56 - s.src[3]);
+    else if (s.k === 'barrel') add('barrel', 'i_decor', [80, 0, 16, 32], x, 24, TX.barrel[0], TX.barrel[1], {draw: () => { blit(IMG.i_decor, 80, 0, 16, 32, x, 24); blit(IMG.i_decor, 80, 0, 16, 32, x + 16, 24); }, w: 32});
+  });
+  // le sol
+  const cy = 48 + (H - 48) / 2, calmRow = wd.calme == null ? 0 : wd.calme >= 8 ? 80 : wd.calme >= 6 ? 320 : 240;
+  if (tier === 1) obj('carpet', 'i_carpets', [64, calmRow + 54, 32, 20], Math.round(W / 2 - 16), Math.round(cy - 2), {flat: true});
+  if (tier === 2 || tier === 3) obj('carpet', 'i_carpets', [1, calmRow + 1, 46, 46], Math.round(W / 2 - 23), Math.round(cy - 20), {flat: true});
+  obj('chest', 'i_chest', [0, 0, 16, 16], W - 24, 58);
+  const tables = tier === 4 ? [[150, 70], [222, 70], [186, 112]] : [[Math.round(W / 2 - 17), Math.round(cy - 18)]];
+  tables.forEach(([tx, ty]) => { add('table', 'i_tables', [72, tier === 4 ? 600 : tier === 3 ? 216 : 24, 34, 33], tx, ty, TX.table[0], '', {html: tabHTML});
+    add('table', 'i_chairs', [1, 8, 12, 23], tx - 11, ty + 4, TX.table[0], '', {html: tabHTML}); if (tier > 0) add('table', 'i_chairs', [51, 8, 12, 23], tx + 33, ty + 4, TX.table[0], '', {html: tabHTML}); });
+  if (tier >= 2 && tier < 4) { obj('sofa', 'i_chairs', [81, 140, 29, 19], Math.round(W / 2 - 78), H - 26); if (tier === 3) obj('sofa', 'i_chairs', [17, 140, 14, 19], Math.round(W / 2 - 46), H - 26); }
+  if (tier >= 1 && tier < 4) obj('lamp', 'i_lamps', [3, 4, 11, 27], W - 15, 74, {light: [W - 10, 78]});
+  if (tier === 4) { for (let i = 0; i < 3; i++) obj('counter', 'i_furn', [0, 30, 32, 18], 16 + i * 32, 82); obj('lamp', 'i_lamps', [3, 4, 11, 27], 4, H - 44, {light: [9, H - 40]}); }
+  const SLOTS = tier === 4 ? [[W - 20, 66], [W - 36, H - 4], [8, 70], [4, H - 4], [W - 56, H - 4], [100, H - 4], [W - 20, 108], [26, H - 4]] : [[W - 36, H - 4], [4, H - 4], [left - 2, 86], [W / 2 + 54, H - 4], [W / 2 + 50, 76], [W - 60, H - 4], [W / 2 - 64, 76], [W - 80, H - 4]];
+  const PL = [[1, 5, 14, 27], [18, 3, 13, 29], [32, 2, 16, 30], [49, 3, 13, 29], [64, 0, 16, 32], [82, 3, 12, 29], [98, 3, 12, 29], [112, 1, 16, 31], [141, 2, 21, 30]];
+  for (let i = 0; i < Math.min(wd.joyDays, [2, 3, 4, 6, 8][tier]); i++) { const p = PL[(i * 4 + h.q.week) % PL.length], [px, pb] = SLOTS[i]; const py = (wd.joie >= 8 ? 32 * ((i + 1) % 4) : 0); obj('plants', 'i_plants', [p[0], p[1] + py, p[2], p[3]], Math.round(px), Math.round(Math.min(H - 2, pb) - p[3])); }
+  // les habitants nés cette semaine, et le tavernier à l'auberge
+  const people = res.map((r, i) => { const n = res.length; const [tx, ty] = tables[0], k = i % 6, x = tier === 4 ? [132, 205, 278, 176, 240, 110][k] + Math.floor(i / 6) * 12 : [tx + 17, tx - 26, tx + 60, tx - 40, tx + 74, tx + 40][k]; const y = tier === 4 ? [110, 106, 110, 152, 152, 150][k] : Math.min(H - 4, [ty + 46, ty + 40, ty + 40, ty + 14, ty + 14, ty + 58][k]);
+    return {k: 'pnj', res: r, x: x - 8, y: y - 26, w: 16, h: 28, fx: x, fy: y, title: resTitle(r), html: () => resHTML(r), draw: t => drawSheet(r.sheet, 0, Math.floor(t * 3 + i * 1.3) % 6, x, y, i % 2 === 1)}; });
+  if (tier === 4) people.push({k: 'keeper', x: 56, y: 54, w: 16, h: 28, fx: 64, fy: 80, title: TX.keeper[0], text: TX.keeper[1], draw: t => drawSheet('npc_bartender_bruno', 0, Math.floor(t * 3) % 6, 64, 80, false)});
+  return {W, H, items, people};
+}
+function openRoom(h, mo) {
+  const wd = weekData(h), res = residentsOfWeek(h), F = furnish(h, wd, res); const el = $('room'); if (!el) return;
+  room = Object.assign(F, {vd: viewDate(), h, mo, wd, res, sel: null, hov: null, cv: $('roomcv'), G: ROOMS[h.tier]}); room.cv.width = F.W + RB * 2; room.cv.height = F.H + RB * 2 + 4; room.ctx = room.cv.getContext('2d');
+  selected = null; hover = null; renderLegend(); el.classList.remove('hidden'); sizeRoom(); roomText(); requestAnimationFrame(roomLoop);
+}
+function closeRoom() { room = null; const el = $('room'); if (el) el.classList.add('hidden'); }
+function sizeRoom() { if (!room) return; const hero = $('hero'), side = hero.clientWidth > 760 ? 304 : 0; const aw = hero.clientWidth - 34 - side, ah = hero.clientHeight - (side ? 34 : 260);
+  const s = Math.max(1, Math.min(6, Math.floor(Math.min(aw / room.cv.width, ah / room.cv.height)))); room.cv.style.width = room.cv.width * s + 'px'; room.cv.style.height = room.cv.height * s + 'px'; }
+function roomText() {
+  if (!room) return; const {h, wd, res} = room, s = room.sel; const T0 = h.T.name.charAt(0).toUpperCase() + h.T.name.slice(1);
+  const head = `<b class="rt">🏠 ${esc(T0)} · semaine ${esc(h.q.label.replace('S', ''))}</b><div class="rsub">du ${esc(fmtDay(h.q.start))} au ${esc(fmtDay(h.q.end))} · ${h.days.length} ${plural(h.days.length, 'événement social', 'événements sociaux')} · ${res.length} ${plural(res.length, 'habitant', 'habitants')}</div>`;
+  const body = s ? `<div class="rsel"><b>${esc(s.title)}</b>${s.html ? s.html() : `<p>${esc(s.text)}</p>`}</div>` : `<div class="rsel"><p>${res.length ? `Bienvenue chez ${res.length > 1 ? 'eux' : res[0].sx === 'f' ? 'elle' : 'lui'}. ` : "Personne n'est né ici : pas d'événement social cette semaine-là, la maison est restée petite. "}Clique sur un objet ou un habitant, chacun raconte un bout de la semaine.</p></div>`;
+  const seen = new Set(), chips = [...room.people, ...room.items].filter(o => { const id = o.k === 'pnj' ? 'p' + o.res.name : o.k; if (seen.has(id)) return false; seen.add(id); return true; });
+  $('room-txt').innerHTML = head + body + `<div class="rchips">${chips.map((o, i) => `<button data-i="${i}" class="${o === s || (s && o.k === s.k && o.k !== 'pnj') ? 'on' : ''}">${esc(o.k === 'pnj' ? '👤 ' + o.res.name : o.title.split(' : ')[0])}</button>`).join('')}</div>`;
+  $('room-txt').querySelectorAll('.rchips button').forEach(b => b.addEventListener('click', () => { room.sel = chips[+b.dataset.i]; roomText(); }));
+}
+function roomHit(e) { if (!room) return null; const rc = room.cv.getBoundingClientRect(), x = (e.clientX - rc.left) / rc.width * room.cv.width - RB, y = (e.clientY - rc.top) / rc.height * room.cv.height - RB;
+  let best = null, bestA = Infinity; [...room.people, ...room.items].forEach(o => { if (x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h) { const a = o.w * o.h * (o.flat ? 4 : 1) * (o.k === 'pnj' ? .5 : 1); if (a < bestA) { best = o; bestA = a; } } }); return best; }
+function roomLoop(now) {
+  if (!room) return; const R = room, c = R.ctx, t = (now - t0) / 1000, G = R.G, W = R.W, H = R.H; const sv = octx; octx = c; c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
+  c.fillStyle = '#2a1a12'; c.fillRect(0, 0, R.cv.width, R.cv.height); c.translate(RB, RB);
+  for (let y = 48; y < H; y += 32) for (let x = 0; x < W; x += 32) blit(IMG.i_floor, G.floor[0], G.floor[1], Math.min(32, W - x), Math.min(32, H - y), x, y);
+  for (let x = 0; x < W; x += 16) blit(IMG.i_walls, G.wall, 48, 16, 48, x, 0);
+  c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(0, 48, W, 3);
+  c.fillStyle = '#4a2a1a'; c.fillRect(W / 2 - 14, H, 28, 4); c.fillStyle = '#c0453a'; c.fillRect(W / 2 - 12, H - 3, 24, 5); // la porte d'entrée et son paillasson
+  const all = [...R.items, ...R.people].sort((a, b) => (a.flat ? -1 : 0) - (b.flat ? -1 : 0) || ((a.fy || a.y + a.h) - (b.fy || b.y + b.h))); all.forEach(o => o.draw(t));
+  if (V.day < .55) { c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = 'rgba(70,70,130,.55)'; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'lighter';
+    R.items.filter(o => o.light).forEach(o => { const [lx, ly] = o.light, r = 46 + Math.sin(t * 6) * 2; const g = c.createRadialGradient(lx, ly, 2, lx, ly, r); g.addColorStop(0, 'rgba(255,190,100,.42)'); g.addColorStop(1, 'rgba(255,190,100,0)'); c.fillStyle = g; c.fillRect(lx - r, ly - r, r * 2, r * 2); }); c.restore(); }
+  [R.hov, R.sel].forEach((o, i) => { if (!o) return; c.strokeStyle = i ? '#f2c14e' : 'rgba(255,255,255,.85)'; c.lineWidth = 1; c.strokeRect(o.x - .5, o.y - .5, o.w + 1, o.h + 1); });
+  octx = sv; requestAnimationFrame(roomLoop);
+}
 /* ---- légendes ---- */
 const plural = (n, a, b) => n > 1 ? b : a;
 const LEGEND = {
@@ -1192,7 +1442,7 @@ const LEGEND_C = {
   fete: c => ['🎉 Les guirlandes : c\'est la fête', `Trois événements sociaux ou plus sur les 30 derniers jours (${c.socialList.length} en ce moment) : le village sort les guirlandes.`],
   centre: () => ['🏘️ Le centre-ville', 'Ce qui compte le trimestre entier : mairie, banque, taverne, marché, étang, moulin, grange, poulailler, serre et veillées. Clique pour y aller.'],
 };
-function legendFor(o) { if (!o) return null; if (o.c) { const f = LEGEND_C[o.key]; return f ? f(CM, o) : null; } const f = LEGEND[o.key]; if (!f) return null; const m = o.mo && o.mo.m; if (!m && !['quartier', 'sign'].includes(o.key)) return null; return f(m || {}, o); }
+function legendFor(o) { if (!o) return null; if (o.key === 'pnj') return [resTitle(o.a.res), '', resHTML(o.a.res)]; if (o.c) { const f = LEGEND_C[o.key]; return f ? f(CM, o) : null; } const f = LEGEND[o.key]; if (!f) return null; const m = o.mo && o.mo.m; if (!m && !['quartier', 'sign'].includes(o.key)) return null; return f(m || {}, o); }
 let mouseAt = {x: 0, y: 0}, clickAt = {x: 0, y: 0};
 function placeInfo() { // la bulle se pose à côté de l'élément cliqué, du côté où il y a de la place
   const info = $('info'); if (!selected || !info || info.classList.contains('hidden')) return; const hero = $('hero'), W = hero.clientWidth, H = hero.clientHeight, ew = info.offsetWidth, eh = info.offsetHeight, o = selected;
@@ -1203,15 +1453,15 @@ function placeInfo() { // la bulle se pose à côté de l'élément cliqué, du 
 function renderLegend() {
   const tip = $('tip'), info = $('info'); if (!tip || !info) return; const d = viewDate(); const when = d === M.today ? '' : `<br><span class="tag">vu au ${esc(fmtDay(d))}</span>`;
   const H = hover && hover !== selected ? legendFor(hover) : null;
-  if (H) { tip.textContent = H[0]; tip.classList.remove('hidden'); const hero = $('hero'); tip.style.left = Math.round(Math.min(mouseAt.x + 14, hero.clientWidth - tip.offsetWidth - 6)) + 'px'; tip.style.top = Math.round(Math.max(6, mouseAt.y - 30)) + 'px'; } else tip.classList.add('hidden');
+  if (H) { tip.textContent = H[0] + (hover.key === 'house' && !hover.hs.annex && !hover.hs.future ? ' · clic pour entrer' : hover.key === 'pnj' ? ' · ' + gx(hover.a.res.sx, 'né', 'née') + ' le ' + fmtShort(hover.a.res.date) : ''); tip.classList.remove('hidden'); const hero = $('hero'); tip.style.left = Math.round(Math.min(mouseAt.x + 14, hero.clientWidth - tip.offsetWidth - 6)) + 'px'; tip.style.top = Math.round(Math.max(6, mouseAt.y - 30)) + 'px'; } else tip.classList.add('hidden');
   const L = selected ? legendFor(selected) : null; if (!L) { info.classList.add('hidden'); return; }
-  info.innerHTML = `<button class="x" aria-label="Fermer">×</button><b>${esc(L[0])}</b>${esc(L[1])}${when}`; info.classList.remove('hidden'); placeInfo();
+  info.innerHTML = `<button class="x" aria-label="Fermer">×</button><b>${esc(L[0])}</b>${L[2] || esc(L[1])}${when}`; info.classList.remove('hidden'); placeInfo();
   info.querySelector('.x').addEventListener('click', () => { selected = null; renderLegend(); });
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (lapse) stopLapse(); else if (selected) { selected = null; renderLegend(); } } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (room) closeRoom(); else if (lapse) stopLapse(); else if (selected) { selected = null; renderLegend(); } } });
 /* ---- time-lapse : le village se construit jour après jour, en plein écran ---- */
 let lapse = null;
-function startLapse() {
+function startLapse() { closeRoom();
   if (lapse) return; const hero = $('hero'); selected = null; hover = null; renderLegend(); hero.classList.add('full'); try { if (hero.requestFullscreen) hero.requestFullscreen().catch(() => {}); } catch (e) {}
   const cap = document.createElement('div'); cap.className = 'lapse-cap'; hero.appendChild(cap); const stop = document.createElement('button'); stop.className = 'lapse-stop'; stop.textContent = '■ Stop'; stop.addEventListener('click', stopLapse); hero.appendChild(stop);
   lapse = {d: QSTART, cap, stop, mode: VIEW.mode}; VIEW.mode = 'all'; cam.init = false;
@@ -1241,6 +1491,7 @@ function toWorld(e) { const rc = cv.getBoundingClientRect(); return {x: cam.x + 
 const zoomedOut = () => cam.s < .7;
 function hitArea(p) { const mo = MOS.find(mo => { const b = mo.L.box; return p.x >= pxc(b.x0) && p.x < pxc(b.x1) && p.y >= pyc(b.y0) && p.y < pyc(b.y1); }); if (mo) return {key: 'quartier', mo, big: true}; const b = CENTER_BOX; if (b && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) return {key: 'centre', c: true, big: true}; return null; }
 function hit(e) { const p = toWorld(e); if (zoomedOut()) return hitArea(p);
+  const who = actors.filter(a => a.res && Math.abs(a.x - p.x) < 9 && p.y > a.y - 28 && p.y < a.y + 3).sort((a, b) => b.y - a.y)[0]; if (who) return {key: 'pnj', a: who, x: who.x - 8, y: who.y - 27, w: 16, h: 29};
   const hen = actors.find(a => a.kind === 'chicken' && a.mo && Math.abs(a.x - p.x) < 10 && p.y > a.y - 20 && p.y < a.y + 4); if (hen) return {key: 'poules', mo: hen.mo, x: hen.x - 9, y: hen.y - 18, w: 18, h: 20};
   let best = null, bestA = Infinity; for (const o of objects) { if (o.big) continue; if (p.x >= o.x - 1 && p.x <= o.x + o.w + 1 && p.y >= o.y - 1 && p.y <= o.y + o.h + 1) { const a = o.w * o.h; if (a < bestA) { best = o; bestA = a; } } } return best; }
 const goMonth = mo => { VIEW.mode = 'month'; selected = null; animateCam(camBox(monthFrame(mo))); renderTimeline(); renderLegend(); };
@@ -1249,7 +1500,7 @@ window.addEventListener('mousemove', e => { if (dragging) { const dx = (e.client
 window.addEventListener('mouseup', () => { dragging = null; });
 cv.addEventListener('mousemove', e => { if (dragging) return; const rc = cv.getBoundingClientRect(); mouseAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; hover = hit(e); cv.style.cursor = hover ? 'pointer' : 'grab'; renderLegend(); });
 cv.addEventListener('mouseleave', () => { hover = null; renderLegend(); });
-cv.addEventListener('click', e => { if (moved) { moved = false; return; } { const rc = cv.getBoundingClientRect(); clickAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; } const o = hit(e); if (o && o.key === 'quartier' && zoomedOut()) { if (o.mo.built) goMonth(o.mo); return; } if (o && o.key === 'centre') { VIEW.mode = 'center'; animateCam(camCenter()); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
+cv.addEventListener('click', e => { if (moved) { moved = false; return; } { const rc = cv.getBoundingClientRect(); clickAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; } const o = hit(e); if (o && o.key === 'quartier' && zoomedOut()) { if (o.mo.built) goMonth(o.mo); return; } if (o && o.key === 'house' && !o.hs.annex && !o.hs.future) { openRoom(o.hs, o.mo); return; } if (o && o.key === 'pnj' && selected && selected.a === o.a) { selected = null; renderLegend(); return; } if (o && o.key === 'centre') { VIEW.mode = 'center'; animateCam(camCenter()); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
 cv.addEventListener('dblclick', e => { const a = hitArea(toWorld(e)); if (!a) return; if (a.mo) goMonth(a.mo); else { VIEW.mode = 'center'; animateCam(camCenter()); renderTimeline(); } });
 // la molette fait défiler la page ; Ctrl + molette (ou le pincement du pavé tactile) zoome
 cv.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const rc = cv.getBoundingClientRect(); zoomBy(Math.pow(1.0015, -e.deltaY * (e.ctrlKey && Math.abs(e.deltaY) < 20 ? 6 : 1)), e.clientX - rc.left, e.clientY - rc.top); }, {passive: false});
@@ -1260,7 +1511,7 @@ cv.addEventListener('touchstart', e => { if (e.touches.length === 2) { const i =
 cv.addEventListener('touchmove', e => { if (!touch || e.touches.length !== 2) return; e.preventDefault(); const i = tinfo(e), c0 = touch.cam; const s = clamp(c0.s * i.d / touch.i.d, fitScale, zoomScale * 2.5); const wx = c0.x + touch.i.x / c0.s, wy = c0.y + touch.i.y / c0.s; Object.assign(cam, clampCam({x: wx - i.x / s, y: wy - i.y / s, s})); }, {passive: false});
 cv.addEventListener('touchend', e => { if (e.touches.length < 2) touch = null; });
 /* ---------- live refresh (connecteurs du lecteur) ---------- */
-const DAILY_COLS = {'c-7N0cyxEVGg': 'date', 'c-tAKEYlcGDn': 'happy', 'c-Od1vxNtX6T': 'anx', 'c-SMeU0olwRC': 'energy', 'c-pW1vO6kRX6': 'sleepq', 'c-kWTDwQNdNf': 'stab', 'c-V60e2oSETX': 'prod', 'c-_sD9DJt71G': 'social', 'c-Odae1HQlUR': 'love', 'c-Kf1O5x9z3j': 'workh', 'c-JsuqbIIW7K': 'lifestyle', 'c-4iFinWTuGO': 'steps', 'c-pua7ZJvXf7': 'sleeph', 'c-0RW9tPoYvW': 'workout', 'c-rQEAz7GNN2': 'where', 'c-f2ng9VRp3c': 'drinks', 'c-BxepVjVc_n': 'coffee', 'c-gg9GjPSZ0s': 'socialev', 'c-3uXIVe48eE': 'applesleep', 'c-PllOHwlhqi': 'friendstalk', 'c-WFYbGCMo_h': 'hrv', 'c-1fE2ZjA9-_': 'rhr', 'c-ikg_tCavhk': 'weight', 'c-ZO6bpLIlaH': 'foodq', 'c-GMIluVkvkY': 'protein', 'c-SZRcU0_foY': 'proteint', 'c-8SBOaCj69l': 'nonvegan', 'c-KZ2qLvlFkY': 'kcalin', 'c-zwVTB7Z1hI': 'kcalout', 'c-RBOb64ZLyq': 'mit', 'c-GUR59bJBoS': 'fasting'};
+const DAILY_COLS = {'c-7N0cyxEVGg': 'date', 'c-tAKEYlcGDn': 'happy', 'c-Od1vxNtX6T': 'anx', 'c-SMeU0olwRC': 'energy', 'c-pW1vO6kRX6': 'sleepq', 'c-kWTDwQNdNf': 'stab', 'c-V60e2oSETX': 'prod', 'c-_sD9DJt71G': 'social', 'c-Odae1HQlUR': 'love', 'c-Kf1O5x9z3j': 'workh', 'c-JsuqbIIW7K': 'lifestyle', 'c-4iFinWTuGO': 'steps', 'c-pua7ZJvXf7': 'sleeph', 'c-0RW9tPoYvW': 'workout', 'c-rQEAz7GNN2': 'where', 'c-f2ng9VRp3c': 'drinks', 'c-BxepVjVc_n': 'coffee', 'c-gg9GjPSZ0s': 'socialev', 'c-3uXIVe48eE': 'applesleep', 'c-PllOHwlhqi': 'friendstalk', 'c-WFYbGCMo_h': 'hrv', 'c-1fE2ZjA9-_': 'rhr', 'c-ikg_tCavhk': 'weight', 'c-ZO6bpLIlaH': 'foodq', 'c-GMIluVkvkY': 'protein', 'c-SZRcU0_foY': 'proteint', 'c-8SBOaCj69l': 'nonvegan', 'c-KZ2qLvlFkY': 'kcalin', 'c-zwVTB7Z1hI': 'kcalout', 'c-RBOb64ZLyq': 'mit', 'c-GUR59bJBoS': 'fasting', 'c-7C-OmoGii8': 'wins', 'c-IcUadgD3Pv': 'grateful', 'c-A_xAgasvkg': 'feel', 'c-tJk_bVulpZ': 'moods'};
 function codaVal(v) { if (v == null) return null; if (typeof v !== 'object') return v === '' ? null : v; if (Array.isArray(v)) return v.map(codaVal).filter(x => x != null); if (v.type === 'dt') return v.input; if (v.type === 'dur') return Math.round((v.seconds || 0) / 36) / 100; if ('scalar' in v) return v.scalar; if (v.type === 'slate') return (v.root && v.root.children || []).map(ch => (ch.children || []).map(c => c.text || '').join('')).join('\n'); if ('name' in v) return v.name; return null; }
 function rowsFrom(payload, cols) { const rows = payload && payload.result && payload.result.rows ? payload.result.rows : (payload && payload.rows) || []; return rows.map(r => { const o = {}; for (const [k, name] of Object.entries(cols)) if (r.values && r.values[k]) o[name] = codaVal(r.values[k].value); if (Array.isArray(o.workout)) o.workout = o.workout.join(', '); if (o.date) o.date = String(o.date).slice(0, 10); return o; }); }
 const LIVE = {}; let mcpRef = null;
@@ -1295,7 +1546,12 @@ $('theme').addEventListener('click', () => { const cur = document.documentElemen
 /* ---------- boot ---------- */
 renderAll(); requestAnimationFrame(animate);
 setInterval(() => { renderHUD(); }, 15000);
-let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(buildScene, 200); });
+let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { buildScene(); sizeRoom(); }, 200); });
+(function roomEvents() { const rc = $('roomcv'); if (!rc) return;
+  rc.addEventListener('mousemove', e => { if (!room) return; const o = roomHit(e); if (o !== room.hov) { room.hov = o; rc.style.cursor = o ? 'pointer' : 'default'; } });
+  rc.addEventListener('mouseleave', () => { if (room) room.hov = null; });
+  rc.addEventListener('click', e => { if (!room) return; const o = roomHit(e); room.sel = o && o === room.sel ? null : o; roomText(); });
+  $('room-x').addEventListener('click', closeRoom); $('room').addEventListener('click', e => { if (e.target.id === 'room') closeRoom(); }); })();
 setInterval(() => { const d = todayISO(); if (d !== M.today) renderAll(); else buildScene(); }, 10 * 60000); // lumière du jour, météo
 startLive();
 </script>
