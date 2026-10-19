@@ -21,7 +21,8 @@ jobs:
       - name: Fetch Open-Meteo (Berlin)
         run: python3 dashboard/tools/fetch_weather.py dashboard/data/weather.json
       - name: Fetch YouTube (flux Atom de la chaîne)
-        run: python3 dashboard/tools/fetch_youtube.py dashboard/data/youtube.json 2026-09-01
+        # le flux YouTube a parfois des ratés : on garde alors le fichier d'avant, la météo passe quand même
+        run: python3 dashboard/tools/fetch_youtube.py dashboard/data/youtube.json 2026-09-01 || echo "YouTube indisponible, fichier précédent conservé"
       - name: Commit
         run: |
           git config user.name "dashboard-weather-bot"
