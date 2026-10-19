@@ -36,7 +36,7 @@ trimestre jour par jour en plein écran (Échap ou Stop pour sortir). Un clic ou
 l'élément ; le survol donne juste son nom. La molette
 fait défiler la page ; Ctrl + molette, le pincement ou les boutons + et − zooment.
 
-Le village vit à l'heure de Berlin et avec sa météo. Au coucher du soleil, la moitié des gens rentre
+Le village vit à l'heure de Berlin et avec sa météo : le relevé s'il a moins de 90 minutes, sinon la prévision heure par heure embarquée (7 jours), et un relevé en direct d'Open-Meteo toutes les 3 heures quand le navigateur le permet. Tout le monde se lève à 7 h. Au coucher du soleil, la moitié des gens rentre
 et les fermiers quittent les champs ; à 20 h les poules se regroupent et s'endorment au pied des maisons ;
 à partir de 21 h il ne reste qu'un promeneur avec sa lanterne, les bêtes dorment en tas. Sous la pluie,
 la moitié des gens reste chez soi et les autres sortent le parapluie, la terrasse de la taverne se vide,
