@@ -519,7 +519,7 @@ const pxc = c => (c + OX) * T, pyc = r => (r + OY) * T, KEY = (c, r) => (c + OX)
 let streamW = null, props = [], blocked = new Set(), objects = [], selected = null, hover = null, t0 = performance.now(), actors = [], drops = [], cloudShadows = [], lights = [], QS = [], V = null, CM = null, lake = null, dragging = null, moved = false, CENTER_BOX = null;
 const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const MONTHS3 = ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOU', 'SEP', 'OCT', 'NOV', 'DEC'];
-const FONT = {A:'111101111101101',B:'110101110101110',C:'111100100100111',D:'110101101101110',E:'111100110100111',F:'111100110100100',G:'111100101101111',H:'101101111101101',I:'111010010010111',J:'001001001101111',K:'101101110101101',L:'100100100100111',M:'101111111101101',N:'110101101101101',O:'111101101101111',P:'111101111100100',Q:'111101101111001',R:'111101110101101',S:'111100111001111',T:'111010010010010',U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',Y:'101101010010010',Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111',' ':'000000000000000','-':'000000111000000','.':'000000000000010','/':'001001010100100'};
+const FONT = {'!':'010010010000010',':':'000010000010000',A:'111101111101101',B:'110101110101110',C:'111100100100111',D:'110101101101110',E:'111100110100111',F:'111100110100100',G:'111100101101111',H:'101101111101101',I:'111010010010111',J:'001001001101111',K:'101101110101101',L:'100100100100111',M:'101111111101101',N:'110101101101101',O:'111101101101111',P:'111101111100100',Q:'111101101111001',R:'111101110101101',S:'111100111001111',T:'111010010010010',U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',Y:'101101010010010',Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001001001001','8':'111101111101111','9':'111101111001111',' ':'000000000000000','-':'000000111000000','.':'000000000000010','/':'001001010100100'};
 function pxText(txt, x, y, color) { octx.fillStyle = color; let cx = x; for (const ch of txt.toUpperCase()) { const g = FONT[ch] || FONT[' ']; for (let i = 0; i < 15; i++) if (g[i] === '1') octx.fillRect(cx + (i % 3), y + Math.floor(i / 3), 1, 1); cx += 4; } return cx - x - 1; }
 function drawSign(x, y, line1, line2) { // panneau de bois 34 x 22 sur deux poteaux, texte pixel
   const w = 34, h = 22; octx.fillStyle = '#3b2314'; octx.fillRect(x + 6, y + h, 3, 9); octx.fillRect(x + w - 9, y + h, 3, 9);
@@ -602,11 +602,12 @@ function monthLayout(dir) { // tout en tuiles relatives au centre de l'étang
     L.sign = [XR(-20, -19)[0], -6]; L.lamps = [[XR(-17, -17)[0], -3], [XR(-20, -20)[0], 14], [XR(-31, -31)[0], 13], [XR(-48, -48)[0], 13]]; L.farW = dir === 'W' ? -92 : dir === 'E' ? 71 : null; // l'ouest file vers la rivière, l'est jusqu'à la plage
     L.trails = [[XR(-26, -25)[0], 13, 14]]; L.stream = XR(-43, -43)[0]; L.bEnd = XR(-50, -50)[0];
     L.box = {x0: dir === 'W' ? -62 : 21, x1: dir === 'W' ? -21 : 62, y0: -27, y1: 29};
+    L.food = dir === 'W' ? [-60, -4] : [56, -4]; L.camp = dir === 'W' ? [-71, 4] : [56, 4]; L.foodSpur = dir === 'W' ? -58 : 57; // le coin pour manger et le camp d'entraînement, dans les prés
   } else { // au sud : des rues de part et d'autre de l'avenue
     L.rows = {A: {R: 36, st: [38, 39], tall: true}, B: {R: 58, st: [60, 61]}, C: {R: 72, st: [74, 75]}}; L.rowOrder = ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C'];
     L.fac = {pen: [-21, 41], pond: [3, 41], fields: [3, 46], park: [12, 41], bench: [17, 47]};
     L.beds = [[-31, 41], [-40, 41], [-31, 47], [-40, 47]]; L.bedPath = [[-41, -23], 45, 46]; L.orchard = [24, 28, 32].flatMap(c => [[c, 47], [c, 52]]); L.square = null; L.hive = [21, 47];
-    L.sign = [1, 27]; L.lamps = [[-3, 36], [2, 40]]; L.trails = []; L.stream = null; L.farW = null;
+    L.food = [-40, 52]; L.camp = [24, 52]; L.sign = [1, 27]; L.lamps = [[-3, 36], [2, 40]]; L.trails = []; L.stream = null; L.farW = null;
     L.box = {x0: -40, x1: 40, y0: 27, y1: 77};
   }
   return L;
@@ -642,6 +643,7 @@ function monthRoads(mo, add) {
       L.trails.forEach(([c, r0, r1]) => { for (let r = r0; r <= r1; r++) { add(c, r); add(c + 1, r); } }); }
     if (inRow('C').length) { lane(-12, 1); span(W ? L.lane[0] : L.lane[1], outer(inRow('C')), c => { add(c, -12); add(c, -11); }); } }
   mo.houses.forEach(h => { for (let r = h.R - 1; r < h.st; r++) { add(h.pc, r); add(h.pc + 1, r); } });
+  if (L.dir !== 'S') { for (let r = L.food[1] + 1; r <= -1; r++) { add(L.foodSpur, r); add(L.foodSpur + 1, r); } for (let r = 2; r < L.camp[1]; r++) { add(L.camp[0] + 3, r); add(L.camp[0] + 4, r); } }
 }
 
 /* ---- modèles de données ---- */
@@ -715,6 +717,7 @@ function monthModel(mo, ref) {
   m.pct2pap = avg([m.q.sales.value / m.q.sales.target, m.q.leads.value / m.q.leads.target, m.q.videos.value / m.q.videos.target, m.q.webinars.value / m.q.webinars.target]) || 0;
   const mk = mo.start < ref.slice(0, 7) + '-01' ? ref.slice(0, 7) : addDays(mo.start, 3).slice(0, 7); const solvMonth = sum((S.money.recent || []).filter(t => t.date && t.date.slice(0, 7) === mk && t.date <= ref && t.amount > 0 && t.sphere === 'SOLV' && t.internal !== 'oui').map(t => t.amount));
   const months = Object.keys(S.money.monthly || {}).sort(); const prevKey = months.filter(k => k < mk).slice(-1)[0]; m.pctSolv = clamp(solvMonth / Math.max(1, prevKey ? S.money.monthly[prevKey].solv_in : 3000), 0, 1);
+  m.sport = sportOf(mo.start, ref); m.walks90 = m.sport.walk.filter(w => (w.min || 0) >= 90).length; m.walkF = walkFactor(m.walks90); m.food = foodOf(mo.start, ref);
   m.butterflies = m.happy == null ? 0 : m.happy >= 8 ? 3 : m.happy >= 7 ? 2 : m.happy >= 6 ? 1 : 0; m.flowers = clamp(Math.round((m.happy || 0) / 10 * 20), 0, 20);
   return m;
 }
@@ -835,6 +838,7 @@ function drawMonth(mo, g) {
   // la ruche au bord du parc, les abeilles
   const hvx = P(L.hive[0]), hvy = Q(L.hive[1]); prop(hvx, hvy + 44, () => blit(IMG.beenest, 0, 0, 32, 48, hvx, hvy)); res.block(hvx + 6, hvy + 32, 20, 12);
   for (let i = 0; i < 3; i++) res.actors.push({kind: 'bee', mo, cx: hvx + 16, cy: hvy + 10, x: 0, y: 0, t: r() * 10, rx: 14 + r() * 20, ry: 8 + r() * 10});
+  if (mo.built && m) { drawFood(res, mo, prop, obj, g); drawCamp(res, mo, prop, obj); }
   return res;
 }
 
@@ -911,6 +915,7 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
   // arbres d'ornement et petites douceurs
   [[-300, -260, 'fruit'], [-150, -306, 'birch'], [300, -240, 'birch'], [-312, 120, 'fruit'], [292, 120, 'fruit']].forEach(([a, b, k]) => propTree(res, X(a), Y(b), k));
   [[-268, 140, 6], [250, 142, 4], [-150, 228, 0], [196, 228, 3], [-34, 236, 7], [-330, -150, 8]].forEach(([a, b, k]) => { const c = CUTE[k % CUTE.length], x = X(a), y = Y(b); prop(x, y, y + 14, () => odecor(c[0], c[1], x, y, c[2], c[3])); });
+  drawMonuments(res, X, Y, prop, cm.date);
   return res;
 }
 
@@ -997,7 +1002,7 @@ function stoneBridge(g) { // un pont de pierre : dalles, parapets, piles qui tre
 }
 function settleActors() { // aucune bête ne doit apparaître sur une case bloquée : on la déplace dans son enclos, sinon on la retire
   const bad = (x, y) => isBlocked(x, y) || isBlocked(x, y - 6);
-  actors = actors.filter(a => { if (a.swim || ['duck', 'swan', 'bfly', 'bee', 'npc', 'loop', 'idle', 'fish', 'worker'].includes(a.kind)) return true;
+  actors = actors.filter(a => { if (a.swim || ['duck', 'swan', 'bfly', 'bee', 'npc', 'loop', 'idle', 'fish', 'worker', 'soldier', 'guest'].includes(a.kind)) return true;
     if (a.still) { if (!bad(a.x, a.y)) return true; for (const dx of [16, -16, 32, -32, 48, -48]) if (!bad(a.x + dx, a.y)) { a.x += dx; return true; } return false; }
     if (!bad(a.x, a.y)) return true; const b = a.box; if (!b) return false;
     for (let k = 0; k < 60; k++) { const x = b.x0 + Math.random() * (b.x1 - b.x0), y = b.y0 + Math.random() * (b.y1 - b.y0); if (!bad(x, y)) { a.x = x; a.y = y; return true; } } return false; });
@@ -1033,7 +1038,7 @@ function buildScene() {
   for (let r = 10; r <= 24; r++) { add(-1, r); add(0, r); } for (let c = -19; c <= 19; c++) { add(c, 23); add(c, 24); }
   [[-6, -5], [10, 11], [17, 18], [3, 4]].forEach(([a, b]) => { add(a, 22); add(b, 22); });
   [[-13, -12], [-1, 0], [11, 12], [-7, -6]].forEach(([a, b]) => { add(a, -10); add(b, -10); }); // seuils de la banque, de la mairie, de la taverne, du puits // seuils de la serre, de la grange, du poulailler, du moulin
-  MOS.forEach(mo => monthRoads(mo, add));
+  MOS.forEach(mo => monthRoads(mo, add)); for (let r = -27; r <= -1; r++) { add(-63, r); add(-62, r); } // le sentier de la montagne
   // un peu de fantaisie : des renflements le long des routes, là où rien n'est construit
   const noBump = new Set(); const nb = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) noBump.add(KEY(c, r)); };
   nb(-21, -23, 21, -10); nb(-13, 10, 12, 14); nb(-20, 14, 20, 22); nb(-20, 25, 20, 30); nb(-10, -5, 9, 4);
@@ -1078,7 +1083,7 @@ function buildScene() {
   // des herbes folles qui ondulent un peu partout
   const fg = rnd(53); for (let i = 0; i < cols * rows * .012; i++) { const c = Math.floor(fg() * cols), rr = Math.floor(fg() * rows), k = c + ',' + rr; if (road.has(k) || lcells.has(k) || allWater.has(k) || c * T > shoreX(rr * T) - 64) continue; const x = c * T, y = rr * T, ph = Math.floor(fg() * 8), im = ['fgrass', 'fg1', 'fg5', 'fg9', 'fg12', 'fg14', 'gra1', 'gra2', 'gra1'][Math.floor(fg() * 9)]; props.push({x, base: y + 2, draw: t => blit(IMG[im], ((Math.floor(t * 2.5) + ph) % 8) * 16, 0, 16, 16, x, y)}); }
   merge(drawCenter(CM, V)); CENTER_BOX = {x: pxc(-21), y: pyc(-22), w: 42 * T, h: 51 * T};
-  MOS.forEach(mo => merge(drawMonth(mo, V), {mo}));
+  MOS.forEach(mo => merge(drawMonth(mo, V), {mo})); drawMountain(date);
   road.forEach(k => blocked.delete(k));
   // forêt : tout ce qui n'est ni construit, ni réservé aux équipements, ni au bord d'une route
   const reserved = new Set(); const reserve = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) reserved.add((c + OX) + ',' + (r + OY)); };
@@ -1087,6 +1092,7 @@ function buildScene() {
     const f = L.fac; reserve(f.pen[0] - 2, f.pen[1] - 3, f.pen[0] + 19, f.pen[1] + 6); reserve(f.pond[0] - 2, f.pond[1] - 3, f.pond[0] + 9, f.pond[1] + 4); reserve(f.fields[0] - 2, f.fields[1] - 4, f.fields[0] + 14, f.fields[1] + 3); reserve(f.park[0] - 2, f.park[1] - 4, f.park[0] + 12, f.park[1] + 5); reserve(f.bench[0] - 1, f.bench[1] - 2, f.bench[0] + 2, f.bench[1] + 2);
     L.beds.forEach(([c, r]) => reserve(c - 1, r - 3, c + 8, r + 4)); L.orchard.forEach(([c, r]) => reserve(c - 1, r - 1, c + 2, r + 4)); if (L.square) reserve(L.square[0] - 1, L.square[1] - 3, L.square[0] + 4, L.square[1] + 7); reserve(L.hive[0] - 1, L.hive[1] - 2, L.hive[0] + 2, L.hive[1] + 3); });
   reserve(24, -40, 46, -28); // la prairie des chevaux
+  reserve(-74, -45, -53, -26); MOS.forEach(mo => { if (!mo.built) return; const [fc, fr] = mo.L.food, [cc, cr] = mo.L.camp; reserve(fc - 2, fr - 8, fc + 16, fr + 2); reserve(cc - 2, cr - 3, cc + 16, cr + 8); }); // la montagne, les coins pour manger, les camps
   allWater.forEach(k => { const [c, r] = k.split(',').map(Number); for (let dc = -3; dc <= 2; dc++) for (let dr = -4; dr <= 1; dr++) reserved.add((c + dc) + ',' + (r + dr)); });
   for (let r = 0; r < rows; r++) { const c0 = Math.floor((shoreX(r * T) - 90) / T); for (let c = c0; c < cols; c++) reserved.add(c + ',' + r); }
   road.forEach(k => { const [c, r] = k.split(',').map(Number); for (let dc = -3; dc <= 2; dc++) for (let dr = -4; dr <= 2; dr++) reserved.add((c + dc) + ',' + (r + dr)); });
@@ -1094,6 +1100,7 @@ function buildScene() {
     const k = fr(); const [ik, sx, w, h] = TREES[FOREST[Math.min(FOREST.length - 1, Math.floor(k * FOREST.length))]]; const x = cc * T + (64 - w) / 2, y = rr * T + 80 - h; if (ok(IMG[ik])) props.push({base: y + h - 4, x, draw: () => blit(IMG[ik], sx, 0, w, h, x, y)});
     if (fr() < .25) { const cu = CUTE[[1, 2, 3, 6, 7, 8][Math.floor(fr() * 6)]]; const ux = cc * T + 40, uy = rr * T + 70; props.push({base: uy + 12, x: ux, draw: () => odecor(cu[0], cu[1], ux, uy, cu[2], cu[3])}); } }
   settleActors(); restForTime(); assignResidents(date);
+  actors.forEach(a => { if (!a.res) return; const mo = monthOf(a.res.date); if (!mo || !mo.m) return; a.res.walk = {f: mo.m.walkF, n: mo.m.walks90, month: mo.label}; if (mo.m.walkF > 1 && ['npc', 'loop', 'guest'].includes(a.kind)) { a.walkF = mo.m.walkF; if (a.speed) a.speed *= a.walkF; } }); // les grandes marches du mois font marcher plus vite ceux qui y sont nés
   // météo
   const r = rnd(3); for (let i = 0; i < clamp(Math.round((V.wx.cloud || 0) / 15), 0, 16); i++) cloudShadows.push({x: r() * worldW, y: r() * worldH, w: 140 + r() * 180, h: 70 + r() * 70, s: .01 + r() * .015});
   if (V.kind === 'rain' || V.kind === 'storm') for (let i = 0; i < 160; i++) drops.push({x: r(), y: r(), v: .006 + r() * .004}); if (V.kind === 'snow') for (let i = 0; i < 90; i++) drops.push({x: r(), y: r(), v: .001 + r() * .001, snow: true});
@@ -1155,6 +1162,7 @@ function restForTime() {
   actors = actors.filter(a => {
     if (a.kind === 'bfly' || a.kind === 'bee') return ph === 'day' && !rain;
     if (a.kind === 'wild' && a.sheet === 'mouse') return ph !== 'night' && !rain;
+    if (a.kind === 'soldier') return ph !== 'night' && !rain;
     if (!HUMANS.has(a.kind)) return true;
     if (ph === 'night') { if (a.kind === 'loop' && !owl) { owl++; a.lantern = true; return true; } return false; } // un seul noctambule, avec sa lanterne
     if (a.staff === 'stall') return true; // la marchande reste sous l'auvent de son étal
@@ -1179,7 +1187,7 @@ function drawGear(a, t) { // le parapluie sous la pluie, la lanterne la nuit
 }
 /* ---- la terrasse de la taverne : on arrive, on s'assoit un moment, on repart ---- */
 function stepGuest(a, dt) {
-  const go = (tx, ty) => { const dx = tx - a.x, dy = ty - a.y; if (Math.abs(dx) > 1) { a.vx = Math.sign(dx); a.vy = 0; a.x += a.vx * Math.min(Math.abs(dx), .32 * dt); return false; } if (Math.abs(dy) > 1) { a.vx = 0; a.vy = Math.sign(dy); a.y += a.vy * Math.min(Math.abs(dy), .32 * dt); return false; } a.x = tx; a.y = ty; return true; };
+  const go = (tx, ty) => { const dx = tx - a.x, dy = ty - a.y; const sp = .32 * (a.walkF || 1) * dt; if (Math.abs(dx) > 1) { a.vx = Math.sign(dx); a.vy = 0; a.x += a.vx * Math.min(Math.abs(dx), sp); return false; } if (Math.abs(dy) > 1) { a.vx = 0; a.vy = Math.sign(dy); a.y += a.vy * Math.min(Math.abs(dy), sp); return false; } a.x = tx; a.y = ty; return true; };
   a.timer -= dt / 60;
   if (a.state === 'away') { if (a.timer > 0) return; const free = a.seats.filter(s => !s.taken); if (!free.length) { a.timer = 3; return; } a.seat = free[Math.floor(Math.random() * free.length)]; a.seat.taken = true; const e = a.exits[Math.floor(Math.random() * a.exits.length)]; a.x = e[0]; a.y = e[1]; a.state = 'in'; a.hidden = false; return; }
   if (a.state === 'in') { if (go(a.seat.x, a.seat.y)) { a.state = 'sit'; a.sit = true; a.dir = a.seat.dir; a.timer = 18 + Math.random() * 30; } return; }
@@ -1207,7 +1215,7 @@ function lapseGrow(prev, d) { // ce qui est nouveau depuis la veille : routes r�
   lapse.reveal = {img: lapsePrev, dx: (OX - prev.OX) * T, dy: (OY - prev.OY) * T, cells: fresh.map(k => { const [c, r] = xy(k); return {x: pxc(c), y: pyc(r), at: now + 60 + dist.get(k) / maxD * dur * .72}; })};
   const seen = {}; actors.forEach(a => { const k = actorKey(a); seen[k] = (seen[k] || 0) + 1; if (seen[k] > (prev.counts[k] || 0)) a.appear = now + 80 + Math.random() * dur * .8; });
   Object.assign(cam, clampCam({x: prev.cam.x + lapse.reveal.dx, y: prev.cam.y + lapse.reveal.dy, s: prev.cam.s})); camAnim = null;
-  const pts = fresh.map(xy); MOS.forEach(m => m.built && m.houses.filter(h => !h.annex && h.q.start === d).forEach(h => { pts.push([h.x0, h.R - 8], [h.x1, h.R]); }));
+  const pts = fresh.map(xy); MOS.forEach(m => m.built && m.houses.filter(h => !h.annex && h.q.start === d).forEach(h => { pts.push([h.x0, h.R - 8], [h.x1, h.R]); })); MONS.filter(mn => mn.date === d).forEach(mn => pts.push([mn.c - 6, mn.r - 4], [mn.c + 6, mn.r + 3]));
   if (pts.length) { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
     const w = Math.max(60, Math.max(...xs) - Math.min(...xs) + 24), h = Math.max(36, Math.max(...ys) - Math.min(...ys) + 16); animateCam(camBox({x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2}), 900); lapse.idle = 0; }
   else if (++lapse.idle === 6) animateCam(camFit(), 1400);
@@ -1236,7 +1244,8 @@ function stepActors(dt, t) {
     if (a.kind === 'npc') { if (a.axis === 'h') { a.x += a.dir * a.speed * dt; if (a.x < a.x0) { a.x = a.x0; a.dir = 1; } if (a.x > a.x1) { a.x = a.x1; a.dir = -1; } } else { a.y += a.dir * a.speed * dt; if (a.y < a.y0) { a.y = a.y0; a.dir = 1; } if (a.y > a.y1) { a.y = a.y1; a.dir = -1; } } return; }
     if (a.kind === 'idle' || a.kind === 'fish') return;
     if (a.kind === 'horse') { stepHorse(a, dt); return; }
-    if (a.kind === 'loop') { a.p = (a.p + a.speed * dt) % 1; const P = a.path; const seg = [0, 1, 2, 3].map(i => Math.hypot(P[(i + 1) % 4][0] - P[i][0], P[(i + 1) % 4][1] - P[i][1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i]) { d -= seg[i]; i++; } const A = P[i], B = P[(i + 1) % 4], k = d / seg[i]; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k; return; }
+    if (a.kind === 'soldier' && a.mode !== 'march') return;
+    if (a.kind === 'loop' || a.kind === 'soldier') { a.p = (a.p + a.speed * dt) % 1; const P = a.path; const seg = [0, 1, 2, 3].map(i => Math.hypot(P[(i + 1) % 4][0] - P[i][0], P[(i + 1) % 4][1] - P[i][1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i]) { d -= seg[i]; i++; } const A = P[i], B = P[(i + 1) % 4], k = d / seg[i]; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k; return; }
     if (a.kind === 'bee') { a.t += dt / 60; a.x = a.cx + Math.sin(a.t * 2.1) * a.rx + Math.sin(a.t * 5.3) * 3; a.y = a.cy + Math.sin(a.t * 2.9) * a.ry; return; }
     if (a.kind === 'wild' && a.still) return;
     if (a.kind === 'bfly') { a.t += dt / 60; a.x = a.cx + Math.sin(a.t * .9) * a.rx + Math.sin(a.t * 2.3) * 6; a.y = a.cy + Math.sin(a.t * 1.4) * a.ry - Math.abs(Math.sin(a.t * 3)) * 4; return; }
@@ -1253,7 +1262,7 @@ function stepActors(dt, t) {
     if (a.state === 'walk') { a.x += a.dir * a.speed * dt; a.y += Math.sin(a.t * 2) * .03 * dt; if (a.x < a.box.x0) { a.x = a.box.x0; a.dir = 1; } if (a.x > a.box.x1) { a.x = a.box.x1; a.dir = -1; } a.y = clamp(a.y, a.box.y0, a.box.y1); }
   });
 }
-const DRAW = {chicken: drawFarm, cow: drawFarm, pig: drawFarm, sheep: drawFarm, guest: drawGuest, horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
+const DRAW = {soldier: drawSoldier, chicken: drawFarm, cow: drawFarm, pig: drawFarm, sheep: drawFarm, guest: drawGuest, horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
 let lastT = 0;
 function animate(now) {
   if (!assetsReady || !QS.length) { requestAnimationFrame(animate); return; }
@@ -1290,6 +1299,137 @@ function animate(now) {
 }
 
 
+/* ---- ce que le corps raconte : l'assiette, le sport, la montagne ; et les monuments des caps franchis ----
+   Chaque quartier a son coin pour manger (une boulangerie en septembre, une guinguette en octobre, un primeur en
+   novembre), d'autant plus garni que la qualité de l'alimentation du mois est bonne. Chaque séance de Muay Thai
+   fait naître un petit soldat dans le camp d'entraînement du quartier ; les grandes marches du mois font marcher
+   plus vite les gens nés ce mois-là (deux fois plus vite à quinze marches de 90 minutes). Au nord-ouest, une petite
+   montagne et son sentier : un cairn par marche. Sur la place, une statue pour chaque cap franchi. */
+function parseWorkouts(d) { // les séances du jour, d'après le Daily Form : Muay Thai et marches, avec leur durée
+  const out = []; String(d.workout || '').split(/,|;|\+|\bet\b/).forEach(p => { const m = p.match(/(\d+)\s*['’]/), min = m ? +m[1] : null;
+    if (/muay|boxe|sparring|ringside/i.test(p)) out.push({k: 'muay', min, label: p.trim()}); else if (/walk|marche|rando|hike|balade/i.test(p)) out.push({k: 'walk', min, label: p.trim()}); });
+  if (!out.some(o => o.k === 'muay') && /muay|boxe|ringside/i.test(String(d.socialev || ''))) out.push({k: 'muay', min: null, label: /sparring/i.test(d.socialev) ? 'Muay Thai, sparring' : 'Muay Thai en salle'});
+  return out;
+}
+function sportOf(from, to) { const o = {muay: [], walk: []}; S.daily.filter(d => d.date >= from && d.date <= to).sort((a, b) => a.date < b.date ? -1 : 1).forEach(d => parseWorkouts(d).forEach(w => o[w.k].push(Object.assign({date: d.date}, w)))); return o; }
+const walkFactor = n90 => 1 + Math.min(1, n90 / 15);
+function foodOf(from, to) {
+  const ds = S.daily.filter(d => d.date >= from && d.date <= to && num(d.foodq) != null), q = ds.length ? avg(ds.map(d => +d.foodq)) : null;
+  return {n: ds.length, avg: q, good: ds.filter(d => +d.foodq >= 7).length, lv: q == null ? 0 : q < 4 ? 0 : q < 5.5 ? 1 : q < 6.5 ? 2 : q < 7.5 ? 3 : 4, protein: avg(ds.map(d => num(d.protein)))};
+}
+const FOODS = [
+  {name: 'la boulangerie', title: '🥖 La boulangerie', sign: 'BOULANGERIE', stall: 0, what: 'pains sur le comptoir, tables en terrasse, pots de fleurs'},
+  {name: 'la guinguette', title: '🍽️ La guinguette', sign: 'GUINGUETTE', stall: 3, what: 'tables sous les lampions, grillades, fleurs'},
+  {name: 'le primeur', title: '🍎 Le primeur', sign: 'PRIMEUR', stall: 1, what: 'cagettes de fruits, tables, fleurs'}];
+const LOAF = [2, 54, 10, 8], CRATES = [[1, 138, 15, 22], [17, 140, 15, 20], [33, 138, 15, 22], [49, 140, 15, 20], [65, 140, 15, 20]], POTS = [[49, 3, 13, 29], [64, 0, 16, 32], [82, 3, 12, 29], [112, 1, 16, 31], [98, 3, 12, 29]];
+function drawFood(res, mo, prop, obj, g) { // le coin pour manger du quartier
+  const L = mo.L, m = mo.m, fd = m.food, th = FOODS[mo.mi % 3], [c0, R] = L.food, x0 = pxc(c0), base = pyc(R) + T, lv = fd.lv, open = fd.n > 0; const seats = [], night = g.day < .6;
+  const table = (x, y) => { prop(x, y + 20, () => blit(IMG.i_tables, 72, 856 - (mo.mi % 2) * 256, 34, 33, x, y)); res.block(x + 2, y + 16, 30, 14);
+    [[x - 14, 1, 1], [x + 36, 51, -1]].forEach(([cx, sx, dir]) => { prop(cx, y + 22, () => blit(IMG.i_chairs, sx, 8, 12, 23, cx, y + 4)); seats.push({x: cx + (dir > 0 ? 5 : 7), y: y + 26, dir}); }); };
+  const pot = (x, y, i) => { const p = POTS[(i + mo.mi) % POTS.length]; prop(x, y + p[3], () => blit(IMG.i_plants, p[0], p[1] + 32 * ((i + mo.mi) % 4), p[2], p[3], x, y)); };
+  let tables = [], cook = null;
+  if (mo.mi % 3 === 0) { // la boulangerie : une petite maison, son comptoir, ses pains
+    const hx = x0, hy = base - 84, H = HOUSE[4]; prop(hx, base - 4, t => { blit(IMG.hs4R, 0, 0, 112, 96, hx, hy); drawPlate(hx + 14, hy + 50, open ? th.sign : 'FERME'); if (lv >= 1) blit(IMG.smoke, ((Math.floor(t * 5) + 2) % 5) * 32, 0, 32, 32, hx + H.chim[0] - 7, hy + H.chim[1] - 27); });
+    res.block(hx + 2, hy + 30, 108, 50); if (night && open) H.win.forEach(([wx, wy]) => res.lights.push({x: hx + wx, y: hy + wy, r: 14, c: '255,214,120'}));
+    const sx = x0 + 118, sy = base - 46; cook = [sx + 24, sy + 30]; prop(sx, sy + 44, () => { blit(IMG.stalls, th.stall * 48, 0, 48, 48, sx, sy); for (let i = 0; i < Math.min(10, open ? 2 + lv * 2 : 0); i++) blit(IMG.i_small, LOAF[0], LOAF[1], LOAF[2], LOAF[3], sx + 5 + (i % 5) * 8, sy + 24 + Math.floor(i / 5) * 5); });
+    res.block(sx + 2, sy + 30, 44, 16); tables = [[x0 + 186, base - 92], [x0 + 186, base - 54], [x0 + 186, base - 16]].slice(0, Math.min(3, lv));
+  } else if (mo.mi % 3 === 1) { // la guinguette : une cuisine sous auvent, un grill, des tables sous les lampions
+    const sx = x0, sy = base - 50; cook = [sx + 24, sy + 30]; prop(sx, sy + 44, () => blit(IMG.stalls, th.stall * 48, 0, 48, 48, sx, sy)); res.block(sx + 2, sy + 30, 44, 16);
+    if (open) { const gx = sx + 54, gy = base - 34; prop(gx, gy + 30, t => blit(IMG.campfire, ((Math.floor(t * 9)) % 8) * 16, 0, 16, 32, gx, gy)); if (night) res.lights.push({x: gx + 8, y: gy + 18, r: 26, c: '255,170,80'}); }
+    tables = [[x0 + 100, base - 92], [x0 + 166, base - 92], [x0 + 100, base - 50], [x0 + 166, base - 50], [x0 + 133, base - 10]].slice(0, open ? Math.min(5, lv + 1) : 0);
+    if (lv >= 2) { const py = base - 118; [x0 + 82, x0 + 214].forEach(px => prop(px, py + 40, () => { octx.fillStyle = '#5c361b'; octx.fillRect(px, py, 3, 40); }));
+      for (let i = 0; i < 4; i++) { const bx = x0 + 86 + i * 32; prop(bx, py + 60, t => blit(IMG.bunting, ((Math.floor(t * 6) + i) % 8) * 32, 0, 32, 32, bx, py - 8)); if (night) res.lights.push({x: bx + 16, y: py + 4, r: 16, c: '255,206,110'}); } }
+    const px = x0 + 2, py2 = base - 84; prop(px, base - 50, () => { octx.fillStyle = '#3b2314'; octx.fillRect(px + 20, py2 + 10, 3, 24); drawPlate(px, py2, open ? th.sign : 'FERME'); });
+  } else { // le primeur : un étal et ses cagettes
+    const sx = x0, sy = base - 50; cook = [sx + 24, sy + 30]; prop(sx, sy + 44, () => blit(IMG.stalls, th.stall * 48, 0, 48, 48, sx, sy)); res.block(sx + 2, sy + 30, 44, 16);
+    for (let i = 0; i < (open ? Math.min(10, lv * 2 + 1) : 0); i++) { const c = CRATES[i % CRATES.length], cx = sx + 56 + (i % 5) * 17, cy = base - 30 - Math.floor(i / 5) * 24; prop(cx, cy + c[3], () => blit(IMG.i_decor, c[0], c[1], c[2], c[3], cx, cy)); }
+    tables = [[x0 + 150, base - 92], [x0 + 150, base - 54]].slice(0, Math.min(2, lv));
+    const px = x0 + 2, py2 = base - 84; prop(px, base - 50, () => { octx.fillStyle = '#3b2314'; octx.fillRect(px + 14, py2 + 10, 3, 24); drawPlate(px, py2, open ? th.sign : 'FERME'); });
+  }
+  tables.forEach(([x, y]) => table(x, y));
+  for (let i = 0; i < (open ? lv * 2 : 0); i++) { const [px, py] = [[x0 - 14, base - 30], [x0 + 104, base - 30], [x0 + 228, base - 30], [x0 + 104, base - 96], [x0 - 14, base - 70], [x0 + 228, base - 96], [x0 + 60, base - 2], [x0 + 150, base - 2]][i]; pot(px, py, i); }
+  if (open && cook) res.actors.push({kind: 'idle', staff: 'stall', mo, sheet: 'npc_chef_chloe', x: cook[0], y: cook[1], t: mo.mi});
+  const exits = [[x0 + 40, pyc(R + 3) + 8], [x0 + 170, pyc(R + 3) + 8]], n = Math.min(seats.length, fd.good, 6), rr = rnd(900 + mo.mi);
+  for (let i = 0; i < n; i++) { const sit = i < Math.ceil(n / 2), st = sit ? seats[(i * 3) % seats.length] : null; if (st && st.taken) continue; if (st) st.taken = true;
+    res.actors.push({kind: 'guest', mo, sheet: NPC_SHEETS[(i + mo.mi * 2 + 1) % NPC_SHEETS.length], seats, exits, seat: st, state: sit ? 'sit' : 'away', sit, hidden: !sit, dir: st ? st.dir : 1, x: st ? st.x : exits[0][0], y: st ? st.y : exits[0][1], vx: 0, vy: 0, timer: sit ? 8 + rr() * 25 : 3 + i * 6 + rr() * 6, t: rr() * 6}); }
+  obj(x0 - 14, base - 110, 260, 116, 'food');
+}
+function drawCamp(res, mo, prop, obj) { // le camp d'entraînement : un ring de cordes, une tente, un petit soldat par séance de Muay Thai
+  const [c0, r0] = mo.L.camp, x = pxc(c0), y = pyc(r0), w = 7 * T, h = 5 * T, sess = mo.m.sport.muay, sheet = ['sold_b', 'sold_r', 'sold_g'][mo.mi % 3];
+  octx.fillStyle = 'rgba(40,30,20,.25)'; octx.fillRect(x + 2, y + 4, w, h); octx.fillStyle = '#e8dcc0'; octx.fillRect(x, y, w, h); octx.fillStyle = '#d6c7a4'; octx.fillRect(x + 3, y + 3, w - 6, h - 6); octx.fillStyle = ['#4a8fd9', '#d94a4a', '#e8c547'][mo.mi % 3]; octx.fillRect(x + 3, y + 3, w - 6, h - 6); octx.fillStyle = '#efe6cf'; octx.fillRect(x + 8, y + 8, w - 16, h - 16); octx.fillStyle = '#e2d6b8'; for (let k = 12; k < w - 8; k += 12) octx.fillRect(x + k, y + 8, 1, h - 16); res.block(x, y, w, h); props = props.filter(p => !(p.x >= x - 8 && p.x < x + w && p.base >= y && p.base <= y + h + 8)); // la toile du ring, son tablier aux couleurs du mois ; pas d'herbes folles dessus
+  const ropes = (yy, front) => { ['#d94a4a', '#f3edda', '#4a8fd9'].forEach((c, i) => { octx.fillStyle = c; octx.fillRect(x, yy - 6 - i * 4, w, 1); }); };
+  const post = px => { octx.fillStyle = '#3b2314'; octx.fillRect(px, y - 20, 3, 22); octx.fillStyle = '#c0453a'; octx.fillRect(px - 1, y - 21, 5, 3); };
+  prop(x, y + 2, () => { post(x - 1); post(x + w - 2); ropes(y, false); octx.fillStyle = 'rgba(243,237,218,.7)'; [x, x + w - 1].forEach(px => octx.fillRect(px, y - 18, 1, h + 16)); });
+  prop(x, y + h + 4, () => { octx.fillStyle = '#3b2314'; [x - 1, x + w - 2].forEach(px => octx.fillRect(px, y + h - 20, 3, 22)); ropes(y + h, true); });
+  const tx = pxc(c0 + 8), ty = y - 30; prop(tx, ty + 82, () => blit(IMG.tent, 0, 0, 80, 96, tx, ty)); res.block(tx + 14, ty + 50, 52, 32);
+  const dummy = (dx, dy) => prop(dx, dy + 30, () => { octx.fillStyle = '#5c361b'; octx.fillRect(dx + 6, dy + 10, 3, 22); octx.fillStyle = '#c8a24a'; octx.fillRect(dx + 2, dy + 2, 11, 14); octx.fillStyle = '#9a7a30'; octx.fillRect(dx + 2, dy + 8, 11, 2); octx.fillRect(dx, dy + 12, 15, 2); });
+  dummy(pxc(c0 + 14), y + 6);
+  sess.forEach((s, i) => { const a = {kind: 'soldier', mo, sheet, sess: s, t: i * .7, dir: 1};
+    if (i < 2) Object.assign(a, {mode: 'spar', x: x + w / 2 + (i ? 11 : -11), y: y + h / 2 + 10, dir: i ? -1 : 1});
+    else if (i < 8) Object.assign(a, {mode: 'drill', x: x + 10 + (i - 2) * 18, y: y + h + 26});
+    else { const k = i - 8; Object.assign(a, {mode: 'march', p: k / Math.max(1, sess.length - 8), speed: .00016, path: [[x - 14, y - 12], [x + w + 12, y - 12], [x + w + 12, y + h + 44], [x - 14, y + h + 44]]}); }
+    res.actors.push(a); });
+  obj(x - 4, y - 24, w + 100, h + 54, 'camp');
+}
+function drawSoldier(a, t) { const f = Math.floor(t * 6 + a.t * 3);
+  if (a.mode === 'spar') drawSheet(a.sheet, 9 + Math.floor(t / 2.5 + a.t) % 2, f % 4, a.x, a.y, a.dir < 0); // de profil, face à face else if (a.mode === 'drill') drawSheet(a.sheet, Math.floor(t / 3 + a.t) % 2 ? 6 : 0, f % 4, a.x, a.y, false);
+  else { const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f % 6, a.x, a.y, dx < 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f % 6, a.x, a.y, false); } }
+/* la montagne du nord-ouest : trois plateaux de falaise, une entrée de mine, un sentier jalonné de cairns (un par marche) */
+const MOUNT = [[-72, -37, 18, 7, 2], [-69, -41, 12, 5, 2], [-66, -44, 6, 3, 1]];
+function drawTier(c0, r0, w, gh, sf) { const rows = [0]; for (let j = 1; j < gh - 1; j++) rows.push(16); rows.push(32); for (let j = 0; j < sf; j++) rows.push(j ? 64 : 48); rows.push(80); // bord du haut, prairie, lisière, falaise, pied
+  rows.forEach((sy, j) => { for (let i = 0; i < w; i++) blit(IMG.cliff, i === 0 ? 16 : i === w - 1 ? 48 : 32, sy, 16, 16, pxc(c0 + i), pyc(r0 + j)); }); }
+function drawMountain(date) {
+  if (!ok(IMG.cliff)) return; const sink = {props, objects, block: (x, y, w, h) => { for (let yy = Math.floor(y / T); yy < Math.ceil((y + h) / T); yy++) for (let xx = Math.floor(x / T); xx < Math.ceil((x + w) / T); xx++) blocked.add(xx + ',' + yy); }}; MOUNT.forEach(t => drawTier(...t));
+  for (let c = -72; c <= -55; c++) for (let r = -44; r <= -28; r++) { const inT = MOUNT.some(([c0, r0, w, gh, sf]) => c >= c0 && c < c0 + w && r >= r0 && r <= r0 + gh + sf); if (inT) blocked.add(KEY(c, r)); }
+  const cx = pxc(-64), cy = pyc(-27) - 46; if (ok(IMG.cave)) blit(IMG.cave, 0, 0, 48, 48, cx, cy);
+  [[-71, -33, 'spruce_s'], [-58, -33, 's_spruce'], [-56, -32, 's_oak'], [-68, -38, 's_spruce'], [-60, -38, 's_oak'], [-65, -42, 'spruce_s']].forEach(([c, r, k]) => { const h = (TREES[k] || TREES.small)[3]; propTree(sink, pxc(c), pyc(r) + 20 - h, k); });
+  const fx = pxc(-62) + 6, fy = pyc(-44) - 4; props.push({x: fx, base: fy + 20, draw: t => { octx.fillStyle = '#3b2314'; octx.fillRect(fx, fy, 2, 20); octx.fillStyle = '#f2c14e'; const wv = Math.round(Math.sin(t * 4)); octx.fillRect(fx + 2, fy + 1, 8, 5); octx.fillRect(fx + 10, fy + 2 + wv, 3, 4); }});
+  const walks = sportOf(QSTART, date).walk; walks.forEach((wk, i) => { const side = i % 2 ? 1 : -1, x = pxc(side > 0 ? -61 : -65) + (side > 0 ? 6 : 4), y = pyc(-3 - Math.floor(i / 2) * 3) + (i % 2) * 6; const big = (wk.min || 0) >= 90;
+    props.push({x, base: y + 10, draw: () => { octx.fillStyle = 'rgba(0,0,0,.2)'; octx.fillRect(x - 1, y + 9, 12, 2); [[0, 6, 10, 4, '#8d93a0'], [1, 3, 8, 4, '#a3a9b5'], [2, 0, 6, 4, '#b9bec8']].slice(0, big ? 3 : 2).forEach(([dx, dy, w, h, c]) => { octx.fillStyle = '#3a3f4b'; octx.fillRect(x + dx - 1, y + dy, w + 2, h); octx.fillStyle = c; octx.fillRect(x + dx, y + dy, w, h - 1); }); }});
+    objects.push({x: x - 2, y: y - 2, w: 14, h: 14, key: 'cairn', c: true, wk, i}); });
+  objects.push({x: pxc(-72), y: pyc(-45), w: 18 * T, h: 18 * T, key: 'montagne', c: true, walks: walks.length});
+}
+/* les monuments : une statue (ou une stèle) pour chaque cap franchi, et une banderole pour les derniers */
+function milestones(date) {
+  const K = S.kpi_live || {}, out = [], add = (d, o) => { if (d && d <= date) out.push(Object.assign({date: d}, o)); };
+  const ber = S.daily.filter(d => d.date >= QSTART && /berlin/i.test(d.where || '')).map(d => d.date).sort()[0]; add(ber, {label: 'BERLIN !', title: '🧳 La statue du Grand Départ', text: 'Le jour où tu as posé tes valises à Berlin.', pose: ['npc_miner_mike', 4, 2]});
+  const webs = ((K.webinars || {}).items || []).map(w => w[0]).sort(); [[1, '1ER WEBINAIRE', '🎤 Le premier webinaire', 'Ton premier webinaire du trimestre, tenu.'], [3, 'WEBINAIRES 3/3', '🎤 Trois webinaires', "L'objectif des trois webinaires est atteint."]].forEach(([k, l, ti, tx]) => add(webs[k - 1], {label: l, title: ti, text: tx, pose: ['npc_bartender_katy', 0, 1]}));
+  const sales = ((K.sales_2pap || {}).items || []).map(s => s[0]).sort(); [[1, '1RE VENTE', '🤝 La première vente', 'La première vente 2PaP du trimestre.'], [3, '3 VENTES', '🤝 Trois ventes', 'Trois ventes 2PaP, la moitié du chemin.'], [6, 'VENTES 6/6', '🏆 Six ventes', "L'objectif des six ventes est atteint."]].forEach(([k, l, ti, tx]) => add(sales[k - 1], {label: l, title: ti, text: tx, pose: ['npc_chef_chloe', 0, 2]}));
+  [100, 200, 300, 400, 500].forEach(v => { let d = null; for (let i = 0; i <= daysBetween(QSTART, date) && !d; i++) { const di = addDays(QSTART, i); if (leadsAt(di) >= v) d = di; } add(d, {label: v + ' LEADS', title: `🪨 La stèle des ${v} leads`, text: `Le cap des ${v} leads franchi${v === 500 ? " : l'objectif du trimestre !" : '.'}`, stele: true}); });
+  const vids = videosAt(date).map(v => (v.published || '').slice(0, 10)).filter(Boolean).sort(); [[1, '1RE VIDEO', '🎬 La première vidéo', 'La première vidéo du trimestre en ligne.'], [6, '6 VIDEOS', '🎬 Six vidéos', 'Six vidéos publiées, la moitié de l’objectif.'], [12, 'VIDEOS 12/12', '🎬 Douze vidéos', "L'objectif des douze vidéos est atteint."]].forEach(([k, l, ti, tx]) => add(vids[k - 1], {label: l, title: ti, text: tx, pose: ['npc_fisherman_fin', 0, 3]}));
+  const sp = sportOf(QSTART, date); const spar = sp.muay.find(s => /sparring/i.test(s.label)) || S.daily.filter(d => /sparring/i.test(String(d.socialev || ''))).map(d => ({date: d.date}))[0];
+  add(spar && spar.date, {label: '1ER SPARRING', title: '🥊 Le premier sparring', text: 'Ton tout premier sparring de Muay Thai.', pose: ['sold_b', 7, 2]});
+  const byWeek = {}; sp.muay.forEach(s => { const w = weekStart(s.date); (byWeek[w] = byWeek[w] || []).push(s.date); }); const tgt = +((K.muay_thai || {}).target_week) || 3; const full = Object.values(byWeek).filter(l => new Set(l).size >= tgt).map(l => [...new Set(l)].sort()[tgt - 1]).sort()[0];
+  add(full, {label: `SEMAINE ${tgt}/${tgt}`, title: '🥋 La semaine parfaite', text: `Une semaine avec tes ${tgt} séances de Muay Thai.`, pose: ['sold_g', 6, 1]});
+  [[10, '10 SEANCES'], [25, '25 SEANCES']].forEach(([k, l]) => add(sp.muay[k - 1] && sp.muay[k - 1].date, {label: l, title: `🥋 ${k} séances de Muay Thai`, text: `${k} séances de Muay Thai depuis le 1er septembre.`, pose: ['sold_r', 0, 0]}));
+  [[10, '10 MARCHES']].forEach(([k, l]) => add(sp.walk[k - 1] && sp.walk[k - 1].date, {label: l, title: `🥾 ${k} grandes marches`, text: `${k} marches depuis le 1er septembre.`, pose: ['npc_lumberjack_jack', 4, 1]}));
+  return out.sort((a, b) => a.date < b.date ? -1 : 1);
+}
+const stoneCache = {};
+function stoneFrame(sheet, row, f, flip) { // une pose de personnage, taillée dans la pierre
+  const key = [sheet, row, f, flip].join('|'); if (stoneCache[key]) return stoneCache[key]; const im = IMG[sheet]; if (!ok(im)) return null;
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); if (flip) { x.translate(64, 0); x.scale(-1, 1); } x.drawImage(im, f * 64, row * 64, 64, 64, 0, 0, 64, 64);
+  const d = x.getImageData(0, 0, 64, 64), p = d.data; for (let i = 0; i < p.length; i += 4) { if (!p[i + 3]) continue; const l = .3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]; if (l < 55) { p[i] = 52; p[i + 1] = 56; p[i + 2] = 68; } else { const v = 112 + l * .5; p[i] = v; p[i + 1] = v + 4; p[i + 2] = v + 12; } }
+  x.putImageData(d, 0, 0); return (stoneCache[key] = c);
+}
+let MONS = [];
+function drawMonuments(res, X, Y, prop, date) {
+  const ms = milestones(date), STAT = [[-232, -20], [210, 8], [-232, 24], [210, 52], [-232, -64], [-232, 68]], STELE = [[-100, 430], [-78, 430], [-56, 430], [-34, 430], [-12, 430]]; MONS = [];
+  // les statues sur la place (les six plus récentes), les stèles des leads au pied du moulin, près du foin et du poulailler
+  const placed = [...ms.filter(m => !m.stele).slice(-6).map((m, i) => [m, STAT[i]]), ...ms.filter(m => m.stele).slice(0, 5).map((m, i) => [m, STELE[i]])];
+  placed.forEach(([m, slot], i) => { const x = X(slot[0]), y = Y(slot[1]); MONS.push({date: m.date, c: Math.round(slot[0] / T), r: Math.round(slot[1] / T)});
+    prop(x - 12, y, y + 2, () => { // le socle
+      octx.fillStyle = 'rgba(0,0,0,.22)'; octx.fillRect(x - 12, y - 1, 26, 3); octx.fillStyle = '#3a3f4b'; octx.fillRect(x - 12, y - 13, 24, 13); octx.fillStyle = '#8d93a0'; octx.fillRect(x - 11, y - 8, 22, 7); octx.fillStyle = '#b9bec8'; octx.fillRect(x - 11, y - 12, 22, 4); octx.fillStyle = '#f2c14e'; octx.fillRect(x - 5, y - 6, 10, 3);
+      if (m.stele) { octx.fillStyle = '#3a3f4b'; octx.fillRect(x - 6, y - 40, 12, 28); octx.fillStyle = '#a3a9b5'; octx.fillRect(x - 5, y - 39, 10, 27); octx.fillStyle = '#c4c9d2'; octx.fillRect(x - 5, y - 39, 3, 27); octx.fillStyle = '#f2c14e'; octx.fillRect(x - 3, y - 44, 6, 5); octx.fillRect(x - 1, y - 46, 2, 2); }
+      else { const sc = stoneFrame(m.pose[0], m.pose[1], m.pose[2], i % 2 === 1); if (sc) octx.drawImage(sc, x - 32, y - 12 - 42); } });
+    res.block(x - 12, y - 10, 24, 10); res.objects.push({x: x - 13, y: y - 48, w: 26, h: 48, key: 'monument', c: true, mon: m}); });
+  if (!ms.length) return;
+  const last = ms.slice(-3).reverse(), bx0 = X(-50), bx1 = X(34), by = Y(166); // la banderole de l'entrée sud : les trois derniers caps, à tour de rôle
+  prop(bx0, by, by + 34, t => { const m = last[Math.floor(t / 5) % last.length], txt = m.label, w = txt.length * 4 + 8, cx = Math.round((bx0 + bx1) / 2 - w / 2);
+    octx.fillStyle = '#3b2314'; [bx0, bx1].forEach(px => octx.fillRect(px, by, 3, 34)); octx.fillStyle = '#f3edda'; octx.fillRect(bx0 + 3, by + 3, cx - bx0 - 3, 1); octx.fillRect(cx + w, by + 3, bx1 - cx - w, 1);
+    const wave = Math.round(Math.sin(t * 2) * 1); octx.fillStyle = '#8a2a2a'; octx.fillRect(cx - 1, by + 1 + wave, w + 2, 13); octx.fillStyle = '#c0453a'; octx.fillRect(cx, by + 2 + wave, w, 11); octx.fillStyle = '#f2c14e'; octx.fillRect(cx, by + 2 + wave, w, 1); pxText(txt, cx + 4, by + 5 + wave, '#fff2cc'); });
+  res.objects.push({x: bx0, y: by - 2, w: bx1 - bx0 + 3, h: 36, key: 'banniere', c: true, list: last});
+}
 /* ---- les habitants : chacun est né un jour qui comptait ----
    Les gens des quartiers naissent des événements sociaux du mois, les fermiers des grosses journées de tâches,
    les pêcheurs des nuits les plus calmes, les promeneurs des jours les plus joyeux. Leur caractère vient des notes
@@ -1391,7 +1531,7 @@ function statBars(st) {
   return `<div class="stats">${row('JOIE', st.joie, 10, '#f2c14e')}${row('ÉNERGIE', st.energie, 10, '#e07b39')}${row('CALME', st.calme, 10, '#6cb4f0')}${row('STABLE', st.stable, 10, '#7bc67b')}${row('SOMMEIL', st.sleep, 100, '#b48ef0')}</div>`;
 }
 const resTitle = r => `${r.name} ${r.epi}`;
-const resHTML = r => `<div class="born">${gx(r.sx, 'Né', 'Née')} le ${esc(fmtShort(r.date))} · ce jour-là</div>${statBars(r.st)}${r.lines.map(l => `<p>${esc(l)}</p>`).join('')}`;
+const resHTML = r => `<div class="born">${gx(r.sx, 'Né', 'Née')} le ${esc(fmtShort(r.date))} · ce jour-là</div>${statBars(r.st)}${r.lines.map(l => `<p>${esc(l)}</p>`).join('')}${r.walk && r.walk.f > 1 ? `<p>Je marche ${esc(fmtNum(r.walk.f, 1))} fois plus vite que les autres : ${r.walk.n} ${plural(r.walk.n, 'grande marche', 'grandes marches')} de 90 minutes ou plus en ${esc(r.walk.month)}.</p>` : ''}`;
 function assignResidents(date) { // chaque personnage du village reçoit son jour de naissance
   RES = {}; RES_NAMES = new Set(); RES_EPI = new Set(); NAMEC = null; const used = new Set(); const days = S.daily.filter(d => d.date && d.date >= QSTART && d.date <= date).sort((a, b) => a.date < b.date ? -1 : 1);
   const human = a => HUMANS.has(a.kind) && IMG[a.sheet];
@@ -1528,20 +1668,24 @@ function roomLoop(now) {
 }
 /* ---- légendes ---- */
 const plural = (n, a, b) => n > 1 ? b : a;
+const deM = l => /^[aeiouyéè]/i.test(l) ? "d'" + l : 'de ' + l; // « d'octobre », « de septembre »
 const LEGEND = {
   house: (m, o) => { const h = o.hs; const n = h.days.length; if (h.annex) return [`🛖 Cabane de la semaine ${h.q.label} (lundi ${fmtShort(h.q.start)})`, `Une dépendance pousse à côté de la maison quand la semaine compte deux événements sociaux ou plus (${n} cette semaine-là).`]; return [`🏠 ${h.T.name.charAt(0).toUpperCase() + h.T.name.slice(1)} · semaine ${h.q.label} (lundi ${fmtShort(h.q.start)})`, `${n} ${plural(n, 'événement social', 'événements sociaux')} cette semaine-là${n ? ' (' + h.days.map(fmtShort).join(', ') + ')' : ''}. Une maison par semaine, qui grandit avec ta vie sociale : petite maison sans événement, maison à étage avec un, grande maison avec deux, très grande maison avec trois, auberge à partir de quatre. La plaque devant la porte donne le lundi de la semaine ; le petit drapeau jaune marque la semaine en cours.`]; },
   lot: () => ['🪧 Terrain à bâtir', 'La prochaine maison de la semaine se construira ici, au prochain événement social.'],
-  park: m => [`🌸 Le parc de ${m.mo.label} : ton bonheur`, `${m.flowers} fleurs sur 20 : bonheur moyen de ${fmtNum(m.happy, 1)}/10 sur le mois (du ${fmtShort(m.from)} au ${fmtShort(m.to)}). Des papillons à partir de 6/10.`],
+  park: m => [`🌸 Le parc ${deM(m.mo.label)} : ton bonheur`, `${m.flowers} fleurs sur 20 : bonheur moyen de ${fmtNum(m.happy, 1)}/10 sur le mois (du ${fmtShort(m.from)} au ${fmtShort(m.to)}). Des papillons à partir de 6/10.`],
   f_2pap: m => ['🌾 Champs 2PaP : le trimestre', `Avancement des quatre quêtes au ${fmtShort(m.to)} : ventes ${m.q.sales.value}/${m.q.sales.target}, leads ${fmtNum(m.q.leads.value)}/${fmtNum(m.q.leads.target)}, vidéos ${m.q.videos.value}/${m.q.videos.target}, webinaires ${m.q.webinars.value}/${m.q.webinars.target}. Les plants grandissent avec.${m.workers ? ' ' + m.workers + ' ' + plural(m.workers, 'fermier', 'fermiers') + ' au travail (tâches Todoist du mois).' : ''}`],
   f_solv: m => ['🌻 Champs SOLV : les encaissements du mois', `Rempli à ${fmtNum(m.pctSolv * 100, 0)} % : les encaissements SOLV du mois comparés au mois précédent. Plein quand le mois égale le précédent.`],
-  pond: m => [`💧 La mare de ${m.mo.label} : ton sommeil`, `${m.sleepScore != null ? 'Score moyen ' + fmtNum(m.sleepScore, 0) + ' %' : 'Score non renseigné'} du ${fmtShort(m.from)} au ${fmtShort(m.to)}, ${m.goodNights} ${plural(m.goodNights, 'nuit', 'nuits')} à 80 % ou plus. Sous 70 % c'est une flaque de boue, puis la mare grandit par paliers jusqu'à 97 %. Un canard à partir de 80 %, deux après quinze bonnes nuits.`],
-  pen: m => [`🐑🐖🐄 L'enclos de ${m.mo.label}`, `${m.sheep} ${plural(m.sheep, 'mouton', 'moutons')} : un par millier d'euros encaissé dans le mois · ${m.pigs} ${plural(m.pigs, 'cochon', 'cochons')} : les ventes 2PaP du mois · ${m.payers} ${plural(m.payers, 'vache', 'vaches')} : les clients qui ont payé ce mois-ci. Sous la pluie, les bêtes se serrent sous l'abri ; la nuit, elles dorment en tas.`],
-  poules: m => [`🐔 Les poules de ${m.mo.label} : tes leads`, `${fmtNum(m.leads)} nouveaux leads du ${fmtShort(m.from)} au ${fmtShort(m.to)}, une poule pour dix (${m.chickens}). Elles se promènent partout sauf dans l'enclos. Le trimestre en est à ${fmtNum(CM.leads)}/${fmtNum(CM.leadsTarget)}.`],
-  bed: (m, o) => { const b = o.bed; return [`🌱 Le potager de ${m.mo.label} : ${b.mt.name}`, `Un plant de ${b.mt.icon} par jour, de plus en plus grand selon ${b.mt.what} ce jour-là (pousse sous 4,5, petit plant, plant, plant mûr à 8 et plus). ${b.n} ${plural(b.n, 'jour noté', 'jours notés')}, moyenne ${fmtNum(b.avg, 1)}/10. Les cases vides sont des jours sans note.`]; },
+  pond: m => [`💧 La mare ${deM(m.mo.label)} : ton sommeil`, `${m.sleepScore != null ? 'Score moyen ' + fmtNum(m.sleepScore, 0) + ' %' : 'Score non renseigné'} du ${fmtShort(m.from)} au ${fmtShort(m.to)}, ${m.goodNights} ${plural(m.goodNights, 'nuit', 'nuits')} à 80 % ou plus. Sous 70 % c'est une flaque de boue, puis la mare grandit par paliers jusqu'à 97 %. Un canard à partir de 80 %, deux après quinze bonnes nuits.`],
+  pen: m => [`🐑🐖🐄 L'enclos ${deM(m.mo.label)}`, `${m.sheep} ${plural(m.sheep, 'mouton', 'moutons')} : un par millier d'euros encaissé dans le mois · ${m.pigs} ${plural(m.pigs, 'cochon', 'cochons')} : les ventes 2PaP du mois · ${m.payers} ${plural(m.payers, 'vache', 'vaches')} : les clients qui ont payé ce mois-ci. Sous la pluie, les bêtes se serrent sous l'abri ; la nuit, elles dorment en tas.`],
+  poules: m => [`🐔 Les poules ${deM(m.mo.label)} : tes leads`, `${fmtNum(m.leads)} nouveaux leads du ${fmtShort(m.from)} au ${fmtShort(m.to)}, une poule pour dix (${m.chickens}). Elles se promènent partout sauf dans l'enclos. Le trimestre en est à ${fmtNum(CM.leads)}/${fmtNum(CM.leadsTarget)}.`],
+  bed: (m, o) => { const b = o.bed; return [`🌱 Le potager ${deM(m.mo.label)} : ${b.mt.name}`, `Un plant de ${b.mt.icon} par jour, de plus en plus grand selon ${b.mt.what} ce jour-là (pousse sous 4,5, petit plant, plant, plant mûr à 8 et plus). ${b.n} ${plural(b.n, 'jour noté', 'jours notés')}, moyenne ${fmtNum(b.avg, 1)}/10. Les cases vides sont des jours sans note.`]; },
   orchard: (m, o) => { const w = o.week; return [`🍎 Le verger : semaine ${w.q.label} (lundi ${fmtShort(w.q.start)})`, `Un arbre fruitier par semaine, qui grandit avec ta santé mentale de la semaine (bonheur, stabilité, anxiété, énergie) : ${w.mental != null ? fmtNum(w.mental * 100, 0) + ' %' : 'pas de note'}. Il porte des fruits à partir de 74 %.`]; },
-  square: m => [`⛲ La petite place de ${m.mo.label}`, `Le coin où l'on se retrouve dans le quartier. Rien à mesurer, juste pour le plaisir.`],
-  sign: (m, o) => { const mo = o.mo; return [`🪧 Le quartier de ${mo.label}`, `Semaines ${mo.weeks[0].label} à ${mo.weeks[mo.weeks.length - 1].label}, du ${fmtDay(mo.start)} au ${fmtDay(mo.end)}.${mo.m ? ` ${mo.m.nHouses} ${plural(mo.m.nHouses, 'maison', 'maisons')}, ${mo.m.socialList.length} ${plural(mo.m.socialList.length, 'événement social', 'événements sociaux')}, ${fmtNum(mo.m.leads)} leads.` : ' Pas encore construit.'}`]; },
-  quartier: (m, o) => { const mo = o.mo; return [`🏘️ Quartier de ${mo.label}`, mo.built ? 'Clique pour y aller.' : `Pas encore construit : les premières maisons apparaîtront le ${fmtDay(mo.start)}.`]; },
+  food: m => { const fd = m.food, th = FOODS[m.mo.mi % 3]; return [`${th.title} ${deM(m.mo.label)} : ton assiette`, fd.n ? `Qualité moyenne de ton alimentation : ${fmtNum(fd.avg, 1)}/10 sur ${fd.n} ${plural(fd.n, 'jour noté', 'jours notés')}, dont ${fd.good} ${plural(fd.good, 'bon jour', 'bons jours')} à 7/10 ou plus${fd.protein ? `, ${fmtNum(fd.protein, 0)} g de protéines par jour en moyenne` : ''}. Niveau ${fd.lv}/4 : plus tu manges bien, plus le coin s'anime (${th.what}). Les clients attablés, ce sont tes bons jours.` : `Pas encore de note d'alimentation ce mois-ci : ${th.name} reste fermée.`]; },
+  camp: m => { const n = m.sport.muay.length; return [`🥋 Le camp d'entraînement ${deM(m.mo.label)}`, `${n} ${plural(n, 'séance', 'séances')} de Muay Thai ce mois-ci : un petit soldat par séance. Les deux premiers s'affrontent sur le ring, les suivants répètent leurs gestes, les autres font le tour du camp au pas. ${m.walks90} ${plural(m.walks90, 'marche', 'marches')} de 90 minutes ou plus : les gens nés en ${m.mo.label} marchent ${fmtNum(m.walkF, 1)} fois plus vite (deux fois plus vite à quinze marches).`]; },
+  soldier: (m, o) => [`💂 Un petit soldat ${deM(m.mo.label)}`, `Né de ta séance du ${fmtDay(o.a.sess.date)} : ${o.a.sess.label || 'Muay Thai'}. Il dort dans la tente la nuit et quand il pleut.`],
+  square: m => [`⛲ La petite place ${deM(m.mo.label)}`, `Le coin où l'on se retrouve dans le quartier. Rien à mesurer, juste pour le plaisir.`],
+  sign: (m, o) => { const mo = o.mo; return [`🪧 Le quartier ${deM(mo.label)}`, `Semaines ${mo.weeks[0].label} à ${mo.weeks[mo.weeks.length - 1].label}, du ${fmtDay(mo.start)} au ${fmtDay(mo.end)}.${mo.m ? ` ${mo.m.nHouses} ${plural(mo.m.nHouses, 'maison', 'maisons')}, ${mo.m.socialList.length} ${plural(mo.m.socialList.length, 'événement social', 'événements sociaux')}, ${fmtNum(mo.m.leads)} leads.` : ' Pas encore construit.'}`]; },
+  quartier: (m, o) => { const mo = o.mo; return [`🏘️ Quartier ${deM(mo.label)}`, mo.built ? 'Clique pour y aller.' : `Pas encore construit : les premières maisons apparaîtront le ${fmtDay(mo.start)}.`]; },
 };
 const LEGEND_C = {
   mairie: c => { const st = c.cap.steps || []; const done = st.filter(s => s[1] === 'ok').length; return ['🏛️ La mairie : Cap Berlin', `${done} démarches sur ${st.length} bouclées, ${st.filter(s => s[1] === 'wait').length} attendent quelqu'un d'autre. Chaque drapeau sur la place est une démarche : vert fait, jaune en attente, gris pas commencé.`]; },
@@ -1550,6 +1694,10 @@ const LEGEND_C = {
   taverne: c => ['🍺 La taverne : ta vie sociale du mois', `${c.socialList.length} ${plural(c.socialList.length, 'événement social', 'événements sociaux')} sur les 30 derniers jours, ${c.guests} ${plural(c.guests, 'client', 'clients')} sur la terrasse. ${c.socialList.slice(-3).map(s => fmtShort(s[0]) + ' : ' + s[1].slice(0, 40)).join(' · ')}`],
   marche: c => ['🛒 Le marché : les ventes 2PaP du trimestre', `${c.sales.length} ${plural(c.sales.length, 'étal ouvert', 'étals ouverts')} sur ${c.salesTarget} : une vente, un étal qui se déballe avec Chloé. Les autres restent bâchés en attendant. ${c.sales.map(s => s[1]).join(' · ')}`],
   fontaine: c => ['⛲ La fontaine : ton humeur de la semaine', c.happy7 == null ? 'Pas de note de bonheur cette semaine.' : `Bonheur moyen ${fmtNum(c.happy7, 1)}/10 sur 7 jours. Elle coule à partir de 5/10.`],
+  montagne: (c, o) => ['⛰️ La montagne du nord-ouest', `Rien à mesurer là-haut, juste le plaisir d'une petite montagne et de sa vieille mine. Le sentier qui y monte compte tes marches : ${o.walks} ${plural(o.walks, 'cairn', 'cairns')} depuis le 1er septembre, un par marche, les plus hauts pour 90 minutes et plus.`],
+  cairn: (c, o) => ['🪨 Un cairn du sentier', `Ta marche du ${fmtDay(o.wk.date)}${o.wk.min ? ` : ${o.wk.min} minutes` : ''}.`],
+  monument: (c, o) => [o.mon.title, `${o.mon.text} ${o.mon.stele ? 'Stèle posée' : 'Statue érigée'} le ${fmtDay(o.mon.date)}. Une statue sur la place pour chaque cap franchi (les six plus récents), une stèle au pied du moulin pour chaque centaine de leads.`],
+  banniere: (c, o) => ['🎉 La banderole des derniers caps', o.list.map(m => `${fmtShort(m.date)} : ${m.title.replace(/^\S+\s/, '')}`).join(' · ')],
   puits: () => ['🪣 Le puits', 'Le cœur du village, entre la banque et la mairie.'],
   lac: c => ['🦢 L\'étang : tes nuits', `${c.goodNights} ${plural(c.goodNights, 'nuit', 'nuits')} à 80 % ou plus sur les 7 derniers jours : un canard par bonne nuit. Un cygne blanc par nuit à 90 % ou plus (${c.whiteSwans}, trois au plus)${c.blackSwan ? ", et un cygne noir : il y a eu une mauvaise nuit (sous 70 %) cette semaine" : ''}. Moyenne ${c.sleep7 != null ? fmtNum(c.sleep7, 0) + ' %' : 'inconnue'}. Fin pêche sur la berge, un capybara barbote.`],
   moulin: c => ['🌬️ Le moulin : ton rythme Todoist', `${c.tasks7} tâches terminées sur 7 jours. Les ailes tournent à pleine vitesse à 10 tâches par jour, s'arrêtent à zéro.`],
@@ -1609,6 +1757,7 @@ function toWorld(e) { const rc = cv.getBoundingClientRect(); return {x: cam.x + 
 const zoomedOut = () => cam.s < .7;
 function hitArea(p) { const mo = MOS.find(mo => { const b = mo.L.box; return p.x >= pxc(b.x0) && p.x < pxc(b.x1) && p.y >= pyc(b.y0) && p.y < pyc(b.y1); }); if (mo) return {key: 'quartier', mo, big: true}; const b = CENTER_BOX; if (b && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) return {key: 'centre', c: true, big: true}; return null; }
 function hit(e) { const p = toWorld(e); if (zoomedOut()) return hitArea(p);
+  const sol = actors.find(a => a.kind === 'soldier' && Math.abs(a.x - p.x) < 9 && p.y > a.y - 24 && p.y < a.y + 3); if (sol) return {key: 'soldier', a: sol, mo: sol.mo, x: sol.x - 8, y: sol.y - 24, w: 16, h: 26};
   const who = actors.filter(a => a.res && !a.hidden && !(a.appear && performance.now() < a.appear) && Math.abs(a.x - p.x) < 9 && p.y > a.y - 28 && p.y < a.y + 3).sort((a, b) => b.y - a.y)[0]; if (who) return {key: 'pnj', a: who, x: who.x - 8, y: who.y - 27, w: 16, h: 29};
   const hen = actors.find(a => a.kind === 'chicken' && a.mo && Math.abs(a.x - p.x) < 10 && p.y > a.y - 20 && p.y < a.y + 4); if (hen) return {key: 'poules', mo: hen.mo, x: hen.x - 9, y: hen.y - 18, w: 18, h: 20};
   let best = null, bestA = Infinity; for (const o of objects) { if (o.big) continue; if (p.x >= o.x - 1 && p.x <= o.x + o.w + 1 && p.y >= o.y - 1 && p.y <= o.y + o.h + 1) { const a = o.w * o.h; if (a < bestA) { best = o; bestA = a; } } } return best; }

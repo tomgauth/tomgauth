@@ -77,6 +77,18 @@ Chaque quartier mensuel :
 | Verger : un arbre fruitier par semaine | santé mentale de la semaine ; fruits à partir de 74 % |
 | Habitants | un par événement social du mois (au moins un, né du jour le plus social) |
 
+Le corps et les caps franchis :
+
+| Élément | Ce qu'il représente |
+| --- | --- |
+| Boulangerie (septembre), guinguette (octobre), primeur (novembre) | qualité moyenne de l'alimentation du mois : niveau 0 à 4, plus de pains, de tables, de fleurs et de lampions quand tu manges mieux ; les clients attablés sont les bons jours (7/10 et plus) |
+| Camp d'entraînement du quartier : ring, tente, petits soldats | un soldat par séance de Muay Thai du mois (bleus en septembre, rouges en octobre, dorés en novembre) ; deux s'affrontent sur le ring, six répètent leurs gestes, les autres font le tour au pas ; ils dorment sous la tente la nuit et sous la pluie |
+| Vitesse des gens nés dans le mois | grandes marches (90 minutes et plus) du mois : jusqu'à deux fois plus vite à quinze marches |
+| Montagne du nord-ouest et son sentier | un cairn par marche depuis le 1er septembre, plus haut pour 90 minutes et plus |
+| Statues autour de l'étang | un cap franchi (départ pour Berlin, premier webinaire, première vente, première vidéo, premier sparring, semaine parfaite de Muay Thai, dix séances…), les six plus récents |
+| Stèles au pied du moulin | chaque centaine de leads |
+| Banderole de l'entrée sud | les trois derniers caps, à tour de rôle |
+
 Les habitants et les intérieurs :
 
 Chaque personnage est né un jour qui comptait : les gens des quartiers d'un événement social du mois, les
