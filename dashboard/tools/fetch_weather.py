@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Récupère la météo de Berlin (Open-Meteo, gratuit, sans clé) et écrit un JSON
-compact : conditions actuelles, prévisions 7 jours, historique 150 jours.
+compact : conditions actuelles, prévision heure par heure et jour par jour sur 7 jours,
+historique 150 jours.
 Tourne dans GitHub Actions (le container de dev n'a pas accès à Open-Meteo).
 """
 import json, os, sys, urllib.request, datetime as dt
@@ -31,6 +32,7 @@ fc = get(
     f"?latitude={LAT}&longitude={LON}"
     "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,cloud_cover,precipitation"
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,daylight_duration,sunshine_duration,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max"
+    "&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,cloud_cover,precipitation"
     "&timezone=Europe%2FBerlin&forecast_days=7&past_days=2"
 )
 hist = get(
@@ -55,6 +57,7 @@ result = {
     "place": "Berlin",
     "lat": LAT, "lon": LON,
     "current": fc.get("current"),
+    "hourly": fc.get("hourly"),  # la page y prend l'heure en cours quand le relevé a vieilli
     "daily": rows(fc),
     "history": sorted(history.values(), key=lambda r: r["date"]),
 }

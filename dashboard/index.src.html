@@ -323,7 +323,7 @@ function deriveModel() {
   // MIT
   const withMit = daily.filter(d => d.mit).slice(-1)[0]; M.mit = withMit ? {date: withMit.date, text: withMit.mit} : null;
   // weather
-  const W = S.weather; M.wxNow = W && W.current ? W.current : null; M.wxDaily = W && W.daily ? W.daily : null;
+  const W = S.weather; M.wxNow = wxAtNow(); M.wxDaily = W && W.daily ? W.daily : null;
   // week row
   M.weekRow = (S.weeks || []).find(w => w.start === M.wkStart) || null; M.prevWeekRow = (S.weeks || []).find(w => w.start === addDays(M.wkStart, -7)) || null;
   M.lastReview = (S.reviews || []).slice(-1)[0] || null;
@@ -488,12 +488,12 @@ function renderAgenda() {
   const b = berlinNow(); const sun = sunTimes(M.today, b.offset); const f = h => h == null ? '–' : pad(Math.floor(h)) + ':' + pad(Math.floor((h % 1) * 60));
   $('p-agenda').innerHTML = `<h2>🗓 À venir <span class="sub">7 prochains jours · Berlin</span></h2>
     ${fc}
-    <p class="note" style="margin:0 0 4px">Lever ${f(sun.rise)} · coucher ${f(sun.set)} · ${fmtNum(sun.set - sun.rise, 1)} h de jour. ${M.wxNow ? `Météo relevée le ${esc(M.wxNow.time.replace('T', ' à '))}.` : 'Météo indisponible.'}</p>
+    <p class="note" style="margin:0 0 4px">Lever ${f(sun.rise)} · coucher ${f(sun.set)} · ${fmtNum(sun.set - sun.rise, 1)} h de jour. ${M.wxNow ? `Météo : ${esc(M.wxNow.source)} du ${esc(M.wxNow.time.replace('T', ' à '))}.` : 'Météo indisponible.'}</p>
     <ul class="ag">${list || '<li class="muted">Rien de prévu sur 7 jours.</li>'}</ul>`;
 }
 function renderHUD() {
   const b = berlinNow(); $('clock').textContent = pad(Math.floor(b.h)) + ':' + pad(Math.floor((b.h % 1) * 60)); $('date').textContent = fmtDay(M.today);
-  if (M.wxNow) { const w = wx(M.wxNow.weather_code); $('wx').innerHTML = `${w[0]} ${Math.round(M.wxNow.temperature_2m)}°<small>${esc(w[1])} · ressenti ${Math.round(M.wxNow.apparent_temperature)}° · vent ${Math.round(M.wxNow.wind_speed_10m)} km/h</small>`; } else $('wx').innerHTML = '☁ –<small>météo indisponible</small>';
+  M.wxNow = wxAtNow(); if (M.wxNow) { const w = wx(M.wxNow.weather_code); $('wx').innerHTML = `${w[0]} ${Math.round(M.wxNow.temperature_2m)}°<small>${esc(w[1])} · ressenti ${Math.round(M.wxNow.apparent_temperature)}° · vent ${Math.round(M.wxNow.wind_speed_10m)} km/h</small>`; } else $('wx').innerHTML = '☁ –<small>météo indisponible</small>';
   showSync();
 }
 function renderAll() { deriveModel(); renderHUD(); renderQuestbar(); renderGoals(); renderQuarter(); renderMood(); renderMoney(); renderFood(); $('gen').textContent = S.generated_at ? new Date(S.generated_at).toLocaleString('fr-FR', {timeZone: TZ, dateStyle: 'short', timeStyle: 'short'}) : '–'; buildScene(); }
@@ -672,13 +672,21 @@ function centerModel(date) { // ce que le centre-ville cumule sur le trimestre, 
   const ss7 = d7.map(sleepOf).filter(x => x != null); c.sleep7 = ss7.length ? avg(ss7) : null; c.whiteSwans = clamp(ss7.filter(x => x >= 90).length, 0, 3); c.blackSwan = ss7.some(x => x < 70);
   return c;
 }
+function wxAtNow() { // la météo de l'heure : le relevé s'il a moins de 90 min, sinon la prévision heure par heure, sinon le jour
+  const W = S.weather; if (!W) return null; const now = berlinNow(), stamp = now.date + 'T' + pad(Math.floor(now.h)) + ':' + pad(Math.floor((now.h % 1) * 60)), hourKey = now.date + 'T' + pad(Math.floor(now.h)) + ':00';
+  const c = W.current; if (c && c.time && Math.abs(Date.parse(stamp + 'Z') - Date.parse(c.time + 'Z')) <= 90 * 60000) return Object.assign({source: 'relevé'}, c);
+  const H = W.hourly, i = H && H.time ? H.time.indexOf(hourKey) : -1;
+  if (i >= 0) { const o = {source: 'prévision', time: hourKey}; Object.keys(H).forEach(k => { if (k !== 'time') o[k] = H[k][i]; }); if (o.apparent_temperature == null) o.apparent_temperature = o.temperature_2m; return o; }
+  const d = (W.daily || []).find(x => x.date === now.date); if (d) return {source: 'prévision du jour', time: now.date, weather_code: d.weather_code, temperature_2m: (d.temperature_2m_max + d.temperature_2m_min) / 2, apparent_temperature: (d.temperature_2m_max + d.temperature_2m_min) / 2, wind_speed_10m: d.wind_speed_10m_max || 0, cloud_cover: d.weather_code >= 3 ? 80 : d.weather_code * 25};
+  return c ? Object.assign({source: 'relevé'}, c) : null;
+}
 function globalModel(date) { // météo et lumière du jour regardé
   const g = {}; const isToday = date === M.today; const W = S.weather;
-  if (isToday && W && W.current) g.wx = {code: W.current.weather_code, cloud: W.current.cloud_cover}; else { const h = W && W.history ? W.history.find(x => x.date === date) : null; g.wx = h ? {code: h.weather_code, cloud: h.weather_code >= 3 ? 80 : h.weather_code * 25} : {code: null, cloud: 30}; }
+  const nowWx = isToday ? wxAtNow() : null; if (nowWx) g.wx = {code: nowWx.weather_code, cloud: nowWx.cloud_cover == null ? (nowWx.weather_code >= 3 ? 80 : nowWx.weather_code * 25) : nowWx.cloud_cover}; else { const h = W && W.history ? W.history.find(x => x.date === date) : null; g.wx = h ? {code: h.weather_code, cloud: h.weather_code >= 3 ? 80 : h.weather_code * 25} : {code: null, cloud: 30}; }
   if (typeof window.FORCE_WX === 'number') g.wx = {code: window.FORCE_WX, cloud: window.FORCE_WX >= 3 ? 80 : 20}; // pour les essais
   const now = berlinNow(), sun = sunTimes(date, now.offset); g.day = isToday ? dayness(now.h, sun) : 1; g.kind = weatherKind(g.wx.code);
   g.hour = isToday ? now.h : 12; g.rain = g.kind === 'rain' || g.kind === 'storm'; const rise = sun.rise == null ? 7 : sun.rise, set = sun.set == null ? 18 : sun.set;
-  g.phase = g.hour >= 21 || g.hour < rise - .5 ? 'night' : g.hour >= set - .25 ? 'evening' : 'day'; return g;
+  g.phase = g.hour >= 21 || g.hour < 7 ? 'night' : g.hour >= set - .25 ? 'evening' : 'day'; return g; // tout le monde debout à 7 h, couché à 21 h
 }
 
 const leadPoints = () => { const K = S.kpi_live || {}; return (K.leads && K.leads.points) || [[QSTART, 0], [(K.leads || {}).as_of || M.today, (K.leads || {}).value || 0]]; };
@@ -932,7 +940,7 @@ function drawWaters(t, vw, vh) {
 }
 const HORSES = ['horse', 'horse2', 'horse3', 'horse4', 'horse5'];
 function wildlife(o) { // les bêtes qui n'ont rien à mesurer : elles sont là pour la vie
-  const rw = rnd(23); const night = V.day < .45;
+  const rw = rnd(23); const night = V.phase === 'night';
   const frog = (x, y, i) => actors.push({kind: 'wild', sheet: 'frog', x, y, row: i % 2 ? 2 : 1, frames: i % 2 ? 10 : 8, fps: 4, still: true, dir: i % 2 ? -1 : 1, t: rw() * 9, bank: true});
   const goose = (box, i) => actors.push({kind: 'wild', sheet: 'goose', x: box.x0 + rw() * (box.x1 - box.x0), y: box.y0 + rw() * (box.y1 - box.y0), row: night ? 6 : 2, frames: night ? 8 : 12, walkRow: 1, fps: night ? 3 : 5, still: night, free: !night, box, dir: i % 2 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: rw() * 9, speed: .05});
   const capy = (x, y) => actors.push({kind: 'wild', sheet: 'capy', x, y, row: 0, frames: 25, fps: 6, still: true, dir: rw() < .5 ? 1 : -1, t: rw() * 9, swim: true});
@@ -1662,6 +1670,12 @@ let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setT
   rc.addEventListener('mouseleave', () => { if (room) room.hov = null; });
   rc.addEventListener('click', e => { if (!room) return; const o = roomHit(e); room.sel = o && o === room.sel ? null : o; roomText(); });
   $('room-x').addEventListener('click', closeRoom); $('room').addEventListener('click', e => { if (e.target.id === 'room') closeRoom(); }); })();
+async function liveWeather() { // Open-Meteo en direct ; si la page ne peut pas l'appeler, la prévision embarquée prend le relais
+  if (!S.weather) return; try { const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 15000);
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.405&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,cloud_cover,precipitation&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,cloud_cover,precipitation&timezone=Europe%2FBerlin&forecast_days=3', {signal: ctl.signal}); clearTimeout(to);
+    if (!r.ok) return; const j = await r.json(); if (!j || !j.current) return; S.weather.current = j.current; if (j.hourly) S.weather.hourly = j.hourly;
+    renderHUD(); if (!lapse) buildScene(); } catch (e) { /* bloqué ou hors ligne : on garde la prévision */ } }
+setTimeout(liveWeather, 5000); setInterval(liveWeather, 3 * 3600e3);
 setInterval(() => { const d = todayISO(); if (d !== M.today) renderAll(); else buildScene(); }, 10 * 60000); // lumière du jour, météo
 startLive();
 </script>
