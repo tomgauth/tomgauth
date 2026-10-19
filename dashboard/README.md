@@ -24,7 +24,7 @@ locales ou dans l'artifact Claude.
 ## Le village
 
 Sprites : packs Cute Fantasy Free et Premium (Kenmi), non versionnés (licence sans redistribution).
-Un bourg serré. Au milieu, le centre-ville compte le trimestre entier ; autour, un quartier par mois
+Une île : une côte qui ondule, une plage tout autour, la mer animée à perte de vue. Au milieu, le centre-ville compte le trimestre entier ; autour, un quartier par mois
 (septembre à l'ouest, octobre à l'est, novembre au sud). Dans un quartier, les maisons de toutes les
 semaines du mois se rangent par ordre de construction, les premières au plus près de la place ;
 chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. La forêt recouvre ce
@@ -35,6 +35,16 @@ et les routes quelques renflements. Vues : « Ce mois-ci », « Centre-ville »,
 trimestre jour par jour en plein écran (Échap ou Stop pour sortir). Un clic ouvre une bulle à côté de
 l'élément ; le survol donne juste son nom. La molette
 fait défiler la page ; Ctrl + molette, le pincement ou les boutons + et − zooment.
+
+Tout se construit sous tes yeux. Une maison prend deux jours : le plan et la palissade le lundi, les murs le
+mardi, la maison finie le mercredi (et un jour de travaux à chaque nouvel événement de la semaine) ; son allée
+arrive avec le plan, la rue s'allonge de maison en maison. Les équipements d'un quartier arrivent au fil du mois
+(enclos le 3e jour, mare le 4e, champs le 6e, parc le 8e, place le 10e, ruche le 12e ; la boulangerie et le camp
+ouvrent trois jours après la première note d'alimentation ou la première séance), le centre-ville au fil des
+premières semaines (mairie, banque, taverne, lampadaires, fontaine, marché, moulin, grange, poulailler, serre,
+veillées), les statues le jour de chaque cap. Les jours d'événement social ou de cap franchi, un feu d'artifice
+éclate au-dessus de la maison ou de la place. La lumière a quatre temps : matin doré, journée, soir orangé, nuit
+bleue, sans ombres de nuages.
 
 Le village vit à l'heure de Berlin et avec sa météo : le relevé s'il a moins de 90 minutes, sinon la prévision heure par heure embarquée (7 jours), et un relevé en direct d'Open-Meteo toutes les 3 heures quand le navigateur le permet. Tout le monde se lève à 7 h. Au coucher du soleil, la moitié des gens rentre
 et les fermiers quittent les champs ; à 20 h les poules se regroupent et s'endorment au pied des maisons ;
