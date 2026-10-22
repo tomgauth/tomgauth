@@ -207,7 +207,7 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); font-siz
 <div class="topbar slim">
   <div class="tb-left"><div class="clock px" id="clock">--:--</div><div class="date" id="date"></div></div>
   <div class="questbar" id="questbar"></div>
-  <div class="tb-right"><div class="wx px" id="wx">…</div><button class="upd" id="upd" title="Recharge les données Coda, Todoist et Agenda, puis la dernière version de l'app">⟳ Mettre à jour</button><div class="sync" id="sync"></div></div>
+  <div class="tb-right"><div class="wx px" id="wx">…</div><button class="upd" id="upd" title="Recharge les données Coda, Todoist et Agenda, puis la dernière version de l'app">⟳ Mettre à jour</button><button class="upd" id="lang" title="English / Français">EN</button><div class="sync" id="sync"></div></div>
 </div>
 <div class="stage">
   <div class="mid">
@@ -274,8 +274,124 @@ const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(
 const isoDow = iso => { const d = new Date(iso + 'T00:00:00Z').getUTCDay(); return d === 0 ? 7 : d; };
 const weekStart = iso => addDays(iso, 1 - isoDow(iso));
 const isoWeek = iso => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 4 - isoDow(iso)); const y0 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); return Math.ceil(((d - y0) / 864e5 + 1) / 7); };
-const fmtDay = (iso, opts) => new Date(iso + 'T12:00:00Z').toLocaleDateString('fr-FR', Object.assign({timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long'}, opts || {}));
-const fmtShort = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('fr-FR', {timeZone: 'UTC', day: 'numeric', month: 'short'});
+/* ---- English / Français : l'interface se traduit à la volée, le village garde ses enseignes ----
+   Un bouton dans la barre du haut. Les dates passent en anglais natif ; le reste des textes (panneaux, légendes,
+   fiches des habitants, Gazette) est traduit par règles sur les nœuds de texte, au fil des rendus. */
+const LANG = window.FORCE_LANG || (() => { try { return localStorage.getItem('dash-lang') === 'en' ? 'en' : 'fr'; } catch (e) { return 'fr'; } })();
+const EN_RULES = [
+  // barre, panneaux, boutons
+  ['⟳ Mettre à jour', '⟳ Update'], ['Recharge les données Coda, Todoist et Agenda, puis la dernière version de l\'app', 'Reloads Coda, Todoist and Calendar data, then the latest version of the app'], ['Rafraîchir les données', 'Refresh data'], ['Thème', 'Theme'],
+  ['Le journal de la semaine regardée', 'The paper for the week in view'], ['Revoir le village se construire jour après jour', 'Watch the village build itself day by day'], ['Aujourd\'hui', 'Today'], ['Zoomer', 'Zoom in'], ['Dézoomer', 'Zoom out'],
+  ['⚔ Trimestre', '⚔ Quarter'], ['🎯 Cette semaine', '🎯 This week'], ['🛡 Semaine', '🛡 Week'], ['💚 Bien-être', '💚 Wellbeing'], ['🏦 Trésorerie', '🏦 Cash'], ['🥗 Alimentation', '🥗 Food'], ['🗓 À venir', '🗓 Coming up'],
+  ['7 derniers jours vs 7 précédents', 'last 7 days vs previous 7'], ['7 derniers jours', 'last 7 days'], ['7 prochains jours', 'next 7 days'], [/\bjours? restants\b/g, 'days left'], [/\bjour (\d+)\/(\d+)/g, 'day $1/$2'],
+  ['Le trait blanc sur chaque barre, c\'est le rythme attendu au jour d\'aujourd\'hui.', 'The white tick on each bar is the expected pace as of today.'], [/(\d+) étapes? attendent quelqu'un d'autre/g, '$1 steps wait on someone else'], [/(\d+) pas commencées?/g, '$1 not started'], ['Clique pour le détail', 'Click for details'],
+  ['Ouvrir le dossier Cap Berlin', 'Open the Cap Berlin file'], ['North Star du trimestre : 500 leads, 3 webinaires, 6 ventes 2PaP d\'ici le 30 novembre. Contrainte : 20 h de travail par semaine.', 'North Star of the quarter: 500 leads, 3 webinars, 6 2PaP sales by 30 November. Constraint: 20 h of work a week.'],
+  ['Pas encore d\'objectifs du lundi dans le Daily Form', 'No Monday goals in the Daily Form yet'], [/(\d+) à faire\b/g, '$1 to do'], [/Pas encore de ligne Weekly dans Coda pour la semaine (\d+)\./g, 'No Weekly row in Coda for week $1 yet.'], ['Objectif business tranché lundi', 'Business goal set on Monday'],
+  [/(\d+) journées? encore planifiées? dans l'agenda/g, '$1 days still planned in the calendar'], ['Cap Berlin, à faire cette semaine', 'Cap Berlin, to do this week'], [/Semaine (\d+) : ce que la review a retenu/g, 'Week $1: what the review kept'],
+  ['Sprint webinaire', 'Webinar sprint'], ['Une étape est cochée quand plus aucune tâche Todoist ouverte ne la mentionne', 'A step is ticked once no open Todoist task mentions it'], ['Série en cours', 'Current streak'], [/(\d+) semaines\b/g, '$1 weeks'],
+  ['Tâches terminées', 'Tasks done'], ['Série', 'Streak'], [/record (\d+)\) · karma/g, 'record $1) · karma'], ['Quêtes ouvertes', 'Open quests'], ['Agenda du jour', 'Today\'s agenda'], [/(\d+) événements? notés?/g, '$1 events noted'],
+  ['Points : note de bonheur du Daily Form. Ligne verte : moyenne mobile sur 7 jours.', 'Dots: happiness score from the Daily Form. Green line: 7-day moving average.'],
+  ['Mois d\'avance', 'Months of runway'], ['Budget perso du mois', 'Personal budget this month'], ['Encaissé ce mois', 'Collected this month'], ['un mouton par millier', 'one sheep per thousand'], ['Sorties pro', 'Business outflows'], ['part des entrées du mois', 'share of this month\'s inflows'], ['Enveloppe perso du mois', 'Personal envelope this month'],
+  [/Le trait blanc est où tu devrais en être au (\d+) du mois/g, 'The white tick is where you should be on day $1 of the month'], ['Barres par mois, sans échelle', 'Bars per month, no scale'], ['sorties perso', 'personal outflows'], ['sorties pro', 'business outflows'], ['entrées', 'inflows'],
+  ['saisir dans Coda', 'enter in Coda'], ['⟳ relire', '⟳ reload'], ['⟳ lecture…', '⟳ reading…'], ['Protéines par jour', 'Protein per day'], ['trait rouge : cible', 'red line: target'], [/(\d+)% de la cible (\d+) g/g, '$1% of the $2 g target'], ['Énergie', 'Energy'], [/mangées?/g, 'eaten'], ['brûlée', 'burned'],
+  [/Lever (\S+) · coucher (\S+) · (\S+) h de jour\./g, 'Sunrise $1 · sunset $2 · $3 h of daylight.'], ['Météo indisponible', 'Weather unavailable'], ['Ventes 2PaP', '2PaP sales'], ['Webinaires', 'Webinars'], ['Vidéos', 'Videos'], [/(\+\d+) ce mois ·/g, '$1 this month ·'],
+  ['Snapshot :', 'Snapshot:'], ['vu au', 'as of'], ['clic pour entrer', 'click to enter'], ['clic pour lire', 'click to read'], ['Clique pour y aller', 'Click to go there'], ['■ Stop', '■ Stop'],
+  // légendes : titres
+  ['🏛️ La mairie : Cap Berlin', '🏛️ The town hall: Cap Berlin'], ['🏦 La banque : ton avance', '🏦 The bank: your runway'], ['🍺 La taverne : ta vie sociale du mois', '🍺 The tavern: your social life this month'], ['🛒 Le marché : les ventes 2PaP du trimestre', '🛒 The market: 2PaP sales this quarter'],
+  ['⛲ La fontaine : ton humeur de la semaine', '⛲ The fountain: your mood this week'], ['⛰️ La montagne du nord-ouest', '⛰️ The north-west mountain'], ['🪨 Un cairn du sentier', '🪨 A cairn on the trail'], ['🎉 La banderole des derniers caps', '🎉 The banner of the latest milestones'],
+  ['☕ Le café : tes cafés du trimestre', '☕ The café: your coffees this quarter'], ['💗 Le parterre en cœur', '💗 The heart flower bed'], ['🟣 Les ombres des bois', '🟣 The shadows of the woods'], ['🪓 Le bûcheron', '🪓 The lumberjack'], ['⛏️ Le mineur', '⛏️ The miner'], ['🪣 Le puits', '🪣 The well'],
+  ['🦢 L\'étang : tes nuits', '🦢 The pond: your nights'], ['🌬️ Le moulin : ton rythme Todoist', '🌬️ The mill: your Todoist pace'], ['🌾 La grange : les leads du trimestre', '🌾 The barn: leads this quarter'], ['🐔 Le poulailler : tes leads', '🐔 The henhouse: your leads'], ['🌱 La serre : les vidéos YouTube', '🌱 The greenhouse: YouTube videos'],
+  ['🔥 Les veillées : les webinaires', '🔥 The bonfires: webinars'], ['🎉 Les guirlandes : c\'est la fête', '🎉 The garlands: party time'], ['🏘️ Le centre-ville', '🏘️ The town centre'], ['📰 Le crieur de la Gazette', '📰 The Gazette crier'],
+  [/🌸 Le parc (d'octobre|de septembre|de novembre) : ton bonheur/g, '🌸 The park $1: your happiness'], ['🌾 Champs 2PaP : le trimestre', '🌾 2PaP fields: the quarter'], ['🌻 Champs SOLV : les encaissements du mois', '🌻 SOLV fields: this month\'s takings'], [/💧 La mare (d'octobre|de septembre|de novembre) : ton sommeil/g, '💧 The pond $1: your sleep'],
+  [/🐑🐖🐄 L'enclos/g, '🐑🐖🐄 The pen'], [/🐔 Les poules (d'octobre|de septembre|de novembre) : tes leads/g, '🐔 The hens $1: your leads'], [/🌱 Le potager (d'octobre|de septembre|de novembre) :/g, '🌱 The vegetable garden $1:'], ['🍎 Le verger : semaine', '🍎 The orchard: week'],
+  [/(🥐|🍖|🥕|🥗|🍞|🍲) (La boulangerie|La guinguette|Le primeur) (d'octobre|de septembre|de novembre) : ton assiette/g, (m, a, b, c) => `${a} ${({'La boulangerie': 'The bakery', 'La guinguette': 'The guinguette', 'Le primeur': 'The greengrocer'})[b]} ${c}: your plate`],
+  [/🥋 Le camp d'entraînement/g, '🥋 The training camp'], ['💂 Un petit soldat', '💂 A little soldier'], ['⛲ La petite place', '⛲ The little square'], ['🪧 Le quartier', '🪧 The district'], ['🏘️ Quartier', '🏘️ District'], ['🪧 Terrain à bâtir', '🪧 Building plot'],
+  ['🛖 Cabane de la semaine', '🛖 Cabin of week'], ['🏠 Petite maison', '🏠 Small house'], ['🏠 Maison à étage', '🏠 Two-storey house'], ['🏠 Grande maison', '🏠 Large house'], ['🏠 Très grande maison', '🏠 Very large house'], ['🏠 Auberge', '🏠 Inn'], [/· semaine (S\d+) \(lundi/g, '· week $1 (Monday'], [/\(lundi (\d)/g, '(Monday $1'],
+  // légendes : corps (les plus courants)
+  [/(\d+) démarches sur (\d+) bouclées, (\d+) attendent quelqu'un d'autre\. Chaque drapeau sur la place est une démarche : vert fait, jaune en attente, gris pas commencé\./g, '$1 of $2 steps done, $3 wait on someone else. Each flag on the square is a step: green done, yellow pending, grey not started.'],
+  [/(\d+) mois d'avance sur ton budget perso : un coffre d'or par mois, à côté de la banque\. Aucun montant affiché\./g, '$1 months of runway on your personal budget: one gold chest per month, next to the bank. No amount shown.'],
+  [/(\d+) (?:événements? sociaux|événement social) sur les 30 derniers jours, (\d+) (?:clients?|personnes?) sur la terrasse\./g, '$1 social events in the last 30 days, $2 guests on the terrace.'],
+  [/(\d+) ventes? sur (\d+) : une vente, un étal qui se déballe avec Chloé\. Les autres restent bâchés en attendant\./g, '$1 sales of $2: one sale, one stall unpacked with Chloé. The others stay covered meanwhile.'],
+  ['Pas de note de bonheur cette semaine', 'No happiness score this week'], [/Bonheur moyen ([\d,.]+)\/10 sur 7 jours\. Elle coule à partir de 5\/10\./g, 'Average happiness $1/10 over 7 days. It flows from 5/10.'],
+  [/Rien à mesurer là-haut, juste le plaisir d'une petite montagne et de sa vieille mine\. Le sentier qui y monte compte tes marches : (\d+) (?:marches?|grandes? marches?) depuis le 1er septembre, un par marche, les plus hauts pour 90 minutes et plus\./g, 'Nothing to measure up there, just the pleasure of a small mountain and its old mine. The trail counts your walks: $1 since 1 September, one cairn per walk, the tallest for 90 minutes or more.'],
+  [/Ta marche du (.+?)(?:, (\d+) minutes)?\./g, (m, d, n) => n ? `Your walk of ${d}, ${n} minutes.` : `Your walk of ${d}.`],
+  [/(\d+) cafés? depuis le 1er septembre(?:, ([\d,.]+) par jour sur (\d+) jours?)?\. Une tasse sur le comptoir pour dix cafés\./g, (m, n, a, d) => `${n} coffees since 1 September${a ? `, ${a} a day over ${d} days` : ''}. One cup on the counter per ten coffees.`],
+  [/Il fleurit de trois fleurs à chaque soirée à deux : (\d+) ce trimestre(?:, (\d+) ces sept derniers jours)?\. Le reste ne regarde que toi\./g, (m, n, r) => `Three flowers bloom for each evening for two: ${n} this quarter${r ? `, ${r} in the last seven days` : ''}. The rest is your business.`],
+  ['Il coupe du bois à la lisière. Rien à mesurer, c\'est le travail du village.', 'He cuts wood at the edge of the forest. Nothing to measure, that is village work.'], ['Il pique la roche à l\'entrée de la vieille mine. Personne ne sait ce qu\'il cherche.', 'He picks at the rock by the old mine. Nobody knows what he is after.'],
+  ['Le cœur du village, entre la banque et la mairie.', 'The heart of the village, between the bank and the town hall.'], [/(\d+) tâches terminées sur 7 jours\. Les ailes tournent à pleine vitesse à 10 tâches par jour, s'arrêtent à zéro\./g, '$1 tasks done over 7 days. The sails spin at full speed at 10 tasks a day and stop at zero.'],
+  [/(\d+) leads sur (\d+) : une botte de foin pour 50 leads\. Chaque quartier a ses poules, une pour dix leads du mois\./g, '$1 leads of $2: one hay bale per 50 leads. Each district has its hens, one per ten leads of the month.'],
+  [/(\d+) vidéos? sur (\d+) : un tonneau fleuri par vidéo\./g, '$1 videos of $2: one flowered barrel per video.'], [/(\d+) webinaires? sur (\d+), un par webinaire tenu\./g, '$1 webinars of $2, one per webinar held.'],
+  ['Ce qui compte le trimestre entier : mairie, banque, taverne, marché, étang, moulin, grange, poulailler, serre et veillées. Clique pour y aller.', 'What counts for the whole quarter: town hall, bank, tavern, market, pond, mill, barn, henhouse, greenhouse and bonfires. Click to go there.'],
+  ['La prochaine maison de la semaine se construira ici, au prochain événement social.', 'The next house of the week will be built here, at the next social event.'], ['Le coin où l\'on se retrouve dans le quartier. Rien à mesurer, juste pour le plaisir.', 'Where the district gathers. Nothing to measure, just for the pleasure.'],
+  [/Pas encore construit : les premières maisons apparaîtront le (.+?)\./g, 'Not built yet: the first houses appear on $1.'], [' Pas encore construit.', ' Not built yet.'], [/Semaines (S\d+) à (S\d+), du (.+?) au (.+?)\./g, 'Weeks $1 to $2, from $3 to $4.'],
+  [/Né de ta séance du (.+?) : (.+?)\. Il dort dans la tente la nuit et quand il pleut\./g, 'Born from your session of $1: $2. He sleeps in the tent at night and when it rains.'],
+  [/(\d+) séances? de Muay Thai ce mois-ci : un petit soldat par séance\./g, '$1 Muay Thai sessions this month: one little soldier per session.'],
+  ['Une maison par semaine, qui grandit avec ta vie sociale : petite maison sans événement, maison à étage avec un, grande maison avec deux, très grande maison avec trois, auberge à partir de quatre. La plaque devant la porte donne le lundi de la semaine ; le petit drapeau jaune marque la semaine en cours.', 'One house per week, growing with your social life: small house without an event, two-storey house with one, large house with two, very large house with three, inn from four. The plaque by the door gives the Monday of the week; the little yellow flag marks the current week.'],
+  // fiches des habitants
+  ['Je suis née le', 'I was born on'], ['Je suis né le', 'I was born on'], [/\b(Né|Née) le\b/g, 'Born on'], [/\b(né|née) le\b/g, 'born on'], ['ce jour-là', 'that day'], ['JOIE', 'JOY'], ['ÉNERGIE', 'ENERGY'], ['CALME', 'CALM'], ['SOMMEIL', 'SLEEP'],
+  [/I was born on (.+?), le jour (.+?)\./g, 'I was born on $1, the day $2.'],
+  [/le jour où tu as bouclé (\d+) tâches/g, 'the day you closed $1 tasks'], [/un jour où tu as travaillé ([\d,.]+) h/g, 'a day you worked $1 h'], ['un jour de grand chantier', 'a day of hard work'],
+  [/au matin d'une nuit à (\d+) %, quand l'eau était d'huile/g, 'on the morning after a $1 % night, when the water was glassy'], ['un matin où l\'eau était d\'huile', 'a morning when the water was glassy'], [/un jour où ta joie est montée à ([\d,.]+)\/10/g, 'a day your joy rose to $1/10'], ['un jour tranquille', 'a quiet day'],
+  [/un jour où tu as vu du monde \(vie sociale (\d+)\/10\)/g, 'a day you saw people (social life $1/10)'], ['un jour comme les autres, et c\'est très bien', 'a day like any other, and that is fine'],
+  ['J\'ai vu le jour à Gap, avant le grand départ pour Berlin.', 'I was born in Gap, before the big move to Berlin.'], ['Le jour même du voyage vers Berlin.', 'On the very day of the trip to Berlin.'],
+  [/Il faisait grand soleil à Berlin \((-?\d+) °C\)\./g, 'It was sunny in Berlin ($1 °C).'], [/Il y avait quelques nuages à Berlin \((-?\d+) °C\)\./g, 'It was partly cloudy in Berlin ($1 °C).'], [/Il faisait gris à Berlin \((-?\d+) °C\)\./g, 'It was grey in Berlin ($1 °C).'], [/Il pleuvait à Berlin \((-?\d+) °C\)\./g, 'It was raining in Berlin ($1 °C).'],
+  [/Il y avait du brouillard à Berlin \((-?\d+) °C\)\./g, 'It was foggy in Berlin ($1 °C).'], [/Il neigeait à Berlin \((-?\d+) °C\)\./g, 'It was snowing in Berlin ($1 °C).'], [/Il y avait de l'orage à Berlin \((-?\d+) °C\)\./g, 'It was stormy in Berlin ($1 °C).'], [/Il faisait doux à Berlin \((-?\d+) °C\)\./g, 'It was mild in Berlin ($1 °C).'],
+  [/Depuis, je suis (.+?)\./g, (m, a) => `Since then I am ${a.replace(/, /g, ', ').replace(/ et /g, ' and ')}.`], ['Ce jour-là tu n\'avais rien noté, alors j\'ai gardé un caractère discret.', 'You noted nothing that day, so I kept a quiet character.'],
+  ['Ce jour-là, tu as noté :', 'That day, you wrote:'], ['Ta grande tâche ce jour-là :', 'Your big task that day:'], ['Ton cap cette semaine-là :', 'Your focus that week:'],
+  ['une soirée à deux', 'an evening for two'], ['un repas entre amis', 'a meal with friends'], ['un moment entre amis', 'a moment with friends'], ['des retrouvailles avec un proche', 'a reunion with someone close'], ['une séance de Muay Thai', 'a Muay Thai session'], ['une balade', 'a walk'], ['une fête', 'a party'], ['une sortie', 'an outing'],
+  [/\bd'une soirée pour deux\b/g, 'of an evening for two'], [/\bd'un repas entre amis\b/g, 'of a meal with friends'], [/\bd'un moment entre amis\b/g, 'of a moment with friends'], [/\bde retrouvailles avec un proche\b/g, 'of a reunion with someone close'], [/\bd'une séance de Muay Thai\b/g, 'of a Muay Thai session'], [/\bd'une balade\b/g, 'of a walk'], [/\bd'une fête\b/g, 'of a party'], [/\bd'une sortie\b/g, 'of an outing'], [/, puis /g, ', then '],
+  [/Alors, ce Muay Thai \? Cette semaine j'ai compté (\d+) séances? sur (\d+)\./g, 'So, that Muay Thai? This week I counted $1 sessions of $2.'], ['Le prochain grand dîner, c\'est quand ? Je te garde une chaise.', 'When is the next big dinner? I am saving you a chair.'],
+  ['Je garde un bon souvenir de cette soirée-là. Le reste ne regarde que toi.', 'I have fond memories of that evening. The rest is your business.'], [/On refait un tour du parc \? Cette semaine tu marches ([\d\s ,.]+) pas par jour en moyenne\./g, 'Another lap of the park? This week you average $1 steps a day.'], ['On refait un tour du parc ?', 'Another lap of the park?'],
+  ['Quand est-ce qu\'on remet ça ? Le village adore les fêtes.', 'When do we do that again? The village loves a party.'], [/Le sprint webinaire en est à (\d+) étapes? sur (\d+)(?:, pour le (.+?))?\. On tient le rythme \?/g, (m, a, b, d) => `The webinar sprint is at ${a} steps of ${b}${d ? `, for ${d}` : ''}. Keeping the pace?`],
+  [/(\d+) tâches cette semaine\. On tient le rythme \?/g, '$1 tasks this week. Keeping the pace?'], [/Tu as bien dormi \? Sur l'étang je compte (\d+) cygnes? blancs? cette semaine\./g, 'Did you sleep well? On the pond I count $1 white swans this week.'],
+  [/On en est à ([\d\s ,.]+) leads sur ([\d\s ,.]+)\. Je compte les poules tous les matins !/g, 'We are at $1 leads of $2. I count the hens every morning!'],
+  [/Je marche ([\d,.]+) fois plus vite que les autres : (\d+) grandes? marches? de 90 minutes ou plus en (septembre|octobre|novembre)\./g, (m, f, n, mo) => `I walk ${f} times faster than the others: ${n} long walks of 90 minutes or more in ${({septembre: 'September', octobre: 'October', novembre: 'November'})[mo]}.`],
+  // la Gazette
+  ['LA GAZETTE DE L\'ÎLE', 'THE ISLAND GAZETTE'], [/N° (\d+) · semaine du (.+?)(?: \(édition du (.+?)\))? · prix : un café/g, (m, n, w, e) => `No. ${n} · week of ${w}${e ? ` (edition of ${e})` : ''} · price: one coffee`],
+  ['LA UNE', 'FRONT PAGE'], ['ÉCONOMIE', 'ECONOMY'], ['POULAILLER', 'HENHOUSE'], ['NUITS', 'NIGHTS'], ['BAROMÈTRE', 'BAROMETER'], ['CÉRÉMONIE', 'CEREMONY'], ['TRAVAUX', 'WORKS'], ['RUMEUR', 'RUMOUR'], ['MÉTÉO', 'WEATHER'], ['LE MOT DU MAIRE', 'THE MAYOR\'S WORD'], ['BOULANGERIE', 'BAKERY'], ['PRIMEUR', 'GREENGROCER'],
+  ['On a vu des cœurs au-dessus du banc', 'Hearts were seen above the bench'], ['Le village a fait la fête', 'The village threw a party'], ['Grande tablée sur l\'île', 'Big feast on the island'], ['Promenade et bavardages', 'A stroll and some chatter'], ['Le camp a sonné la cloche', 'The camp rang the bell'], ['Semaine tranquille sur l\'île', 'A quiet week on the island'],
+  [/(\d+) événements? cette semaine : (.+?)\. La maison de la semaine est (?:une |un )?(.+?)(?:, et le village compte (\d+) (?:nouvel habitant|nouveaux habitants) : (.+?))?\./g, (m, n, ev, h, k, who) => `${n} events this week: ${ev}. The house of the week is ${({'petite maison': 'a small house', 'maison à étage': 'a two-storey house', 'grande maison': 'a large house', 'très grande maison': 'a very large house', 'auberge': 'an inn', 'encore en chantier': 'still under construction'})[h] || h}${k ? `, and the village has ${k} new residents: ${who}` : ''}.`],
+  [/Pas d'événement social (pour l'instant|cette semaine) : les rues sont calmes, la taverne compte ses chaises et les pêcheurs ont l'étang pour eux\./g, (m, w) => `No social event ${w === 'cette semaine' ? 'this week' : 'so far'}: the streets are quiet, the tavern counts its chairs and the anglers have the pond to themselves.`],
+  [/répond à la Gazette/g, 'answers the Gazette'], ['La Gazette : D\'où venez-vous ?', 'The Gazette: Where are you from?'], ['La Gazette : Et comment allez-vous ?', 'The Gazette: And how are you?'], ['La Gazette : Un mot pour nos lecteurs ?', 'The Gazette: A word for our readers?'],
+  ['Franchement, la Gazette, elle est cool.', 'Honestly, the Gazette is cool.'], ['Je la lis au café, le lundi, avant tout le monde.', 'I read it at the café on Mondays, before everyone else.'], ['Sans elle, on ne saurait rien des cygnes.', 'Without it we would know nothing about the swans.'], ['Le crieur me la tend avant même que le pain soit cuit.', 'The crier hands it to me before the bread is even baked.'], ['Je découpe la une et je la colle au-dessus du lit.', 'I cut out the front page and stick it above my bed.'],
+  ['Au marché, on compte les étals bâchés', 'At the market, the covered stalls are being counted'], ['Le marché tient le rythme', 'The market keeps the pace'],
+  [/(\d+) ventes? sur (\d+) depuis le 1er septembre(?: ; à ce point du trimestre, les commerçants en espéraient (\d+)\. On s'inquiète un peu, à voix basse, et on regarde vers la place)?\.(?: Tout le village attend la veillée du (.+?) : le bois est déjà empilé\.)?/g, (m, a, b, p, d) => `${a} ${a == 1 ? 'sale' : 'sales'} of ${b} since 1 September${p ? `; at this point of the quarter the traders hoped for ${p}. People worry a little, quietly, and look towards the square` : ''}.${d ? ` The whole village awaits the bonfire of ${d}: the wood is already stacked.` : ''}`],
+  [/(\d+) poules? de plus cette semaine/g, '$1 more hens this week'], ['Le poulailler compte ses poules', 'The henhouse counts its hens'], [/Le trimestre en est à ([\d\s ,.]+) leads sur ([\d\s ,.]+) ; la grange a (\d+) bottes? de foin\./g, 'The quarter is at $1 leads of $2; the barn holds $3 hay bales.'],
+  ['Pas de nouvelles de l\'étang', 'No news from the pond'], ['Nuits paisibles sur l\'étang', 'Peaceful nights on the pond'], ['Des nuits correctes', 'Decent nights'], ['Des nuits agitées', 'Restless nights'], ['Personne n\'a noté ses nuits cette semaine.', 'Nobody logged their nights this week.'],
+  [/Sommeil moyen de (\d+) % sur (\d+) nuits?, (\d+) cygnes? blancs? sur l'étang(?: ; un cygne noir a été aperçu)?\./g, (m, s, n, w) => `Average sleep ${s} % over ${n} nights, ${w} white swans on the pond${/cygne noir/.test(m) ? '; a black swan was spotted' : ''}.`],
+  ['Le baromètre est resté dans le tiroir', 'The barometer stayed in the drawer'], ['Grand beau sur les humeurs', 'Clear skies on the mood front'], ['Temps variable', 'Changeable'], ['Ciel bas cette semaine', 'Low clouds this week'], ['Pas de note d\'humeur cette semaine.', 'No mood score this week.'],
+  [/Bonheur moyen ([\d,.]+)\/10(?:, calme ([\d,.]+)\/10)?\. (La fontaine coule, les papillons sont de sortie\.|La fontaine coule, mais on garde un pull\.|La fontaine tousse ; le village se serre les coudes\.)/g, (m, h, c, t) => `Average happiness ${h}/10${c ? `, calm ${c}/10` : ''}. ${({'La fontaine coule, les papillons sont de sortie.': 'The fountain flows and the butterflies are out.', 'La fontaine coule, mais on garde un pull.': 'The fountain flows, but keep a jumper on.', 'La fontaine tousse ; le village se serre les coudes.': 'The fountain coughs; the village sticks together.'})[t]}`],
+  [/(La boulangerie|La guinguette|Le primeur) ne désemplit pas/g, (m, a) => `${({'La boulangerie': 'The bakery', 'La guinguette': 'The guinguette', 'Le primeur': 'The greengrocer'})[a]} is packed`], [/(La boulangerie|La guinguette|Le primeur) fait sa semaine/g, (m, a) => `${({'La boulangerie': 'The bakery', 'La guinguette': 'The guinguette', 'Le primeur': 'The greengrocer'})[a]} does its week`], [/(La boulangerie|La guinguette|Le primeur) a vu passer des jours maigres/g, (m, a) => `${({'La boulangerie': 'The bakery', 'La guinguette': 'The guinguette', 'Le primeur': 'The greengrocer'})[a]} saw some lean days`],
+  [/Assiette notée ([\d,.]+)\/10 cette semaine, (\d+) bons? jours?(?:, (\d+) g de protéines par jour)?\./g, (m, a, g, p) => `Plate rated ${a}/10 this week, ${g} good days${p ? `, ${p} g of protein a day` : ''}.`],
+  [/(\d+) recrues? au camp cette semaine/g, '$1 recruits at the camp this week'], ['Le camp attend ses recrues', 'The camp awaits its recruits'], [/(\d+) séances? de Muay Thai(?:, (\d+) grandes? marches? vers la montagne)?\.(?: L'objectif est de (\d+) par semaine\.)?/g, (m, a, w, t) => `${a} Muay Thai sessions${w ? `, ${w} long walks to the mountain` : ''}.${t ? ` The target is ${t} a week.` : ''}`], [/Aucune séance de Muay Thai(?:, (\d+) grandes? marches? vers la montagne)?\.(?: L'objectif est de (\d+) par semaine\.)?/g, (m, w, t) => `No Muay Thai session${w ? `, ${w} long walks to the mountain` : ''}.${t ? ` The target is ${t} a week.` : ''}`],
+  [/(\d+) statues inaugurées cette semaine/g, '$1 statues unveiled this week'], ['Une statue inaugurée sur la place', 'A statue unveiled on the square'], ['Un chantier dans le quartier', 'A building site in the district'], [/La maison de la semaine (en est au plan : palissade, coffre et planches|monte ses murs)\. Les voisins passent voir\./g, (m, s) => `The house of the week ${s === 'monte ses murs' ? 'is raising its walls' : 'is at the plan stage: fence, chest and planks'}. The neighbours drop by.`],
+  ['Des ombres dans les bois du sud-ouest', 'Shadows in the south-west woods'], [/Les bûcherons disent en avoir vu (\d+)\. Elles ne font rien ; personne ne s'approche, et le village continue sa semaine\./g, 'The lumberjacks say they saw $1. They do nothing; nobody goes near, and the village gets on with its week.'],
+  ['Le café a tourné à plein', 'The café ran at full tilt'], ['Au comptoir du café', 'At the café counter'], [/(\d+) cafés? servis? cette semaine\./g, '$1 coffees served this week.'],
+  ['Du soleil sur l\'île', 'Sun over the island'], ['Les parapluies sont de sortie', 'Umbrellas are out'], ['Ciel couvert', 'Overcast'], [/(\d+) jours? de soleil et (\d+) jours? de pluie sur (\d+), (-?\d+) °C l'après-midi\./g, '$1 sunny days and $2 rainy days out of $3, $4 °C in the afternoon.'], ['Le cap de la semaine', 'The focus of the week'],
+  [/\brayonnante?\b/g, 'radiant'], [/\bjoyeu(?:x|se)\b/g, 'cheerful'], [/\binfatigable\b/g, 'tireless'], [/\bserein(?:e)?\b/g, 'serene'], ['solide comme un roc', 'solid as a rock'], [/toujours bien reposée?/g, 'always well rested'], [/grande? marcheu(?:r|se)/g, 'a great walker'], [/\bbavarde?\b/g, 'chatty'],
+  [/\benthousiaste\b/g, 'enthusiastic'], [/plein(?:e)? d'espoir/g, 'hopeful'], [/\bfi(?:er|ère)\b/g, 'proud'], [/\bflâneu(?:r|se)\b/g, 'a dawdler'], [/un peu fatiguée?/g, 'a bit tired'], [/\bnuancée?\b/g, 'nuanced'], [/\breconnaissante?\b/g, 'grateful'], [/\bheureu(?:x|se)\b/g, 'happy'], [/\bconcentrée?\b/g, 'focused'], [/\bmotivée?\b/g, 'motivated'], [/\bcurieu(?:x|se)\b/g, 'curious'], [/\bespiègle\b/g, 'playful'], [/\bdétendue?\b/g, 'relaxed'], [/\bimprévisible\b/g, 'unpredictable'], [/\bstressée?\b/g, 'stressed'], [/\btriste\b/g, 'sad'], [/\bénergique\b/g, 'energetic'], [/\bcalme\b/g, 'calm'],
+  [/\b(le|la) Combattante?\b/g, 'the Fighter'], ['des Grandes Tablées', 'of the Big Feasts'], [/\b(le|la) Discr(?:et|ète)\b/g, 'the Discreet'], [/\b(le|la) Promeneu(?:r|se)\b/g, 'the Stroller'], [/\b(le|la) Fêtarde?\b/g, 'the Party Animal'], [/l'Acharnée?/g, 'the Relentless'], [/\b(le|la) Patiente?\b/g, 'the Patient'], [/\b(le|la) Tranquille\b/g, 'the Quiet'],
+  [/\b(le|la) Rayonnante?\b/g, 'the Radiant'], [/\b(le|la) Joyeu(?:x|se)\b/g, 'the Cheerful'], [/l'Infatigable/g, 'the Tireless'], [/\b(le|la) Sereine?\b/g, 'the Serene'], ['la Roche', 'the Rock'], [/\b(le|la) Fra(?:is|îche)\b/g, 'the Fresh'], [/\b(le|la) Marcheu(?:r|se)\b/g, 'the Walker'], [/\b(le|la) Bavarde?\b/g, 'the Chatterbox'],
+  // time-lapse et divers
+  [/(\d+) maisons? · ([\d\s ,.]+) leads · (\d+) ventes?/g, '$1 houses · $2 leads · $3 sales'], [/\bévénements sociaux\b/g, 'social events'], [/\bévénement social\b/g, 'social event'],
+  // étiquettes des panneaux
+  ['Bonheur / 10', 'Happiness / 10'], [' vs sem. passée', ' vs last week'], ['Santé du village', 'Village health'], ['bonheur, stabilité, anxiété, énergie sur 14 j', 'happiness, stability, anxiety, energy over 14 d'], ['Stabilité', 'Stability'], ['Anxiété', 'Anxiety'], ['Sommeil', 'Sleep'], ['Apple Health manquant', 'Apple Health missing'], ['Vie sociale', 'Social life'],
+  ['Bonheur quotidien sur 60 jours avec moyenne mobile 7 jours', 'Daily happiness over 60 days with a 7-day moving average'], ['dans les clous', 'on track'], ['Pas encore de dépense perso ce mois.', 'No personal spending yet this month.'], ['Aucune vente enregistrée.', 'No sale recorded.'], ['Ventes 2PaP depuis le 1er septembre. Clique pour la liste.', '2PaP sales since 1 September. Click for the list.'],
+  ['Qualité / 10', 'Quality / 10'], ['pas noté cette semaine', 'not rated this week'], ['Protéines / jour', 'Protein / day'], ['kcal mangées', 'kcal eaten'], ['Verres d\'alcool', 'Glasses of alcohol'], ['sur 7 jours', 'over 7 days'], ['Cafés / jour', 'Coffees / day'], ['Jours non-vegan', 'Non-vegan days'], ['Pas / jour', 'Steps / day'], ['Tâches Todoist', 'Todoist tasks'], ['règles alimentaires suivies', 'food rules followed'], ['jeûne moyen ', 'average fast '], ['qualité ', 'quality '], ['cible ', 'target '], ['brûlées ', 'burned '],
+  ['Objectif quotidien atteint. ', 'Daily goal reached. '], [/Objectif hebdo Todoist : (\d+)\. Série en cours :/g, 'Weekly Todoist goal: $1. Current streak:'], [/Objectif (\d+) cours par semaine\. (\d+) faits? \(Daily Form\)/g, 'Goal $1 classes a week. $2 done (Daily Form)'], [/Dernière Daily Review : /g, 'Last Daily Review: '], [/Compteur au (.+?)\./g, 'Counter as of $1.'], [/Météo : (.+?) du /g, 'Weather: $1 from '],
+  ['Rien au calendrier aujourd\'hui.', 'Nothing in the calendar today.'], ['Rien de prévu sur 7 jours.', 'Nothing planned over 7 days.'], ['Cette semaine, pour toi :', 'This week, for you:'], [/pas commencées?/g, 'not started'], [/\bJ-(\d+)/g, 'D-$1'], ['Vidéos YouTube', 'YouTube videos'],
+  ['Ce mois-ci', 'This month'], ['Centre-ville', 'Town centre'], ['Tout le village', 'Whole village'], [/\baujourd'hui\b/g, 'today'], [/Quartier (d'octobre|de septembre|de novembre)/g, 'District $1'],
+  // restes fréquents
+  [/\bcette semaine-là\b/g, 'that week'], [/\bcette semaine\b/g, 'this week'], [/\bce mois-ci\b/g, 'this month'], [/\bce mois\b/g, 'this month'], [/\bce trimestre\b/g, 'this quarter'], [/\bdepuis le 1er septembre\b/g, 'since 1 September'], [/\bd'octobre\b/g, 'of October'], [/\bde septembre\b/g, 'of September'], [/\bde novembre\b/g, 'of November'],
+  [/\bseptembre\b/g, 'September'], [/\boctobre\b/g, 'October'], [/\bnovembre\b/g, 'November'], [/\bdécembre\b/g, 'December'], [/\blundi\b/g, 'Monday'], [/\bSemaine\b/g, 'Week'], [/\bsemaine\b/g, 'week'], [/(\d+) (?:ventes)\b/g, '$1 sales'], [/\b1 vente\b/g, '1 sale'], [/(\d+) nuits?\b/g, '$1 nights'], [/(\d+) tâches?\b/g, '$1 tasks'], [/(\d+) jours?\b/g, '$1 days'], [/(\d+) poules?\b/g, '$1 hens'], [/(\d+) cafés?\b/g, '$1 coffees'], [/(\d+) moutons?\b/g, '$1 sheep'],
+  [/\bsur (\d+)\b/g, 'of $1'], ['sans montants · au', 'no amounts · as of'],
+];
+function toEN(s) { if (!/[A-Za-zÀ-ÿ]/.test(s)) return s; let out = s; for (const [from, to] of EN_RULES) out = typeof from === 'string' ? out.split(from).join(to) : out.replace(from, to); return out; }
+function localizeNode(n) { if (n.nodeType === 3) { const v = n.nodeValue, w = toEN(v); if (w !== v) n.nodeValue = w; return; } if (n.nodeType !== 1) return; if (n.id === 'lang') return; if (n.title) { const w = toEN(n.title); if (w !== n.title) n.title = w; } n.childNodes.forEach(localizeNode); }
+if (LANG === 'en') { document.documentElement.lang = 'en'; const mo = new MutationObserver(ms => ms.forEach(m => { if (m.type === 'characterData') localizeNode(m.target); else m.addedNodes.forEach(localizeNode); })); mo.observe(document.documentElement, {childList: true, subtree: true, characterData: true}); document.addEventListener('DOMContentLoaded', () => localizeNode(document.body)); }
+function setLang(l) { try { localStorage.setItem('dash-lang', l); } catch (e) {} location.reload(); }
+const fmtDay = (iso, opts) => new Date(iso + 'T12:00:00Z').toLocaleDateString(LANG === 'en' ? 'en-GB' : 'fr-FR', Object.assign({timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long'}, opts || {}));
+const fmtShort = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString(LANG === 'en' ? 'en-GB' : 'fr-FR', {timeZone: 'UTC', day: 'numeric', month: 'short'});
 const WX = {0: ['☀️', 'Ciel clair'], 1: ['🌤️', 'Plutôt clair'], 2: ['⛅', 'Partiellement nuageux'], 3: ['☁️', 'Couvert'], 45: ['🌫️', 'Brouillard'], 48: ['🌫️', 'Brouillard givrant'], 51: ['🌦️', 'Bruine légère'], 53: ['🌦️', 'Bruine'], 55: ['🌧️', 'Bruine dense'], 61: ['🌧️', 'Pluie légère'], 63: ['🌧️', 'Pluie'], 65: ['🌧️', 'Pluie forte'], 71: ['🌨️', 'Neige légère'], 73: ['🌨️', 'Neige'], 75: ['❄️', 'Neige forte'], 80: ['🌦️', 'Averses'], 81: ['🌧️', 'Averses'], 82: ['⛈️', 'Averses violentes'], 95: ['⛈️', 'Orage'], 96: ['⛈️', 'Orage et grêle'], 99: ['⛈️', 'Orage et grêle']};
 const wx = code => WX[code] || WX[3];
 
@@ -516,6 +632,7 @@ const IMG = {}; let assetsReady = false;
 function keyGrass() { // le vert uni que les tuiles de route, d'eau et de champs peignent sur leurs bords devient transparent : la texture de l'herbe passe dessous
   ['path', 'water', 'water_anim', 'farm', 'cobble'].forEach(k => { const im = IMG[k]; if (!im || !im.naturalWidth) return; const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0);
     const d = x.getImageData(0, 0, c.width, c.height), p = d.data; for (let i = 0; i < p.length; i += 4) if (p[i] === 62 && p[i + 1] === 137 && p[i + 2] === 72) p[i + 3] = 0; x.putImageData(d, 0, 0); IMG[k] = c; });
+  { const im = IMG.capy; if (im && im.naturalWidth) { const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c.width, c.height), p = d.data; for (let i = 0; i < p.length; i += 4) if (p[i] === 0 && p[i + 1] === 149 && p[i + 2] === 233) p[i + 3] = 0; x.putImageData(d, 0, 0); IMG.capy = c; } } // le capybara nage sans son carré d'eau
 }
 (function loadAssets() { const names = Object.keys(ASSETS); if (!names.length) return; let n = 0; names.forEach(k => { const im = new Image(); im.onload = im.onerror = () => { if (++n === names.length) { keyGrass(); makeSeaPat(); assetsReady = true; buildScene(); try { renderQuestbar(); renderGoals(); } catch (e) {} } }; im.src = ASSETS[k]; IMG[k] = im; }); })();
 const T = 16;
@@ -604,11 +721,11 @@ function monthLayout(dir) { // tout en tuiles relatives au centre de l'étang
   if (dir === 'W' || dir === 'E') {
     const XR = (a, b) => dir === 'W' ? [a, b] : [-b, -a]; L.XR = XR; // plages écrites pour l'ouest, en miroir pour l'est
     L.rows = {A: {R: -2, st: [0, 1], tall: true}, B: {R: 10, st: [11, 12]}, C: {R: -14, st: [-12, -11], tall: true}}; L.rowOrder = ['A', 'B', 'A', 'B', 'A', 'B', 'C', 'C', 'C'];
-    L.lane = XR(-22, -21); L.inner = dir === 'W' ? -16 : 15; L.start = dir === 'W' ? -23 : 23;
-    L.fac = {pen: [XR(-40, -23)[0], 15], pond: [XR(-52, -45)[0], 15], fields: [XR(-36, -24)[0], 23], park: [XR(-53, -45)[0], 21], bench: [XR(-40, -39)[0], 25]};
+    L.lane = XR(-22, -21); L.inner = dir === 'W' ? -14 : 13; L.start = dir === 'W' ? -23 : 23;
+    L.fac = {pen: [XR(-40, -23)[0], 15], pond: [XR(-52, -45)[0], 15], fields: [XR(-36, -24)[0], 23], park: [XR(-53, -45)[0], 21], bench: [XR(-46, -45)[0], 26]};
     L.beds = [[XR(-31, -24)[0], -24], [XR(-40, -33)[0], -24], [XR(-31, -24)[0], -18], [XR(-40, -33)[0], -18]]; L.bedPath = [XR(-41, -23), -20, -19];
     L.orchard = [-46, -50, -54].flatMap(c => [[XR(c, c + 1)[0], -24], [XR(c, c + 1)[0], -18]]); L.square = [XR(-20, -17)[0], 2]; L.hive = [XR(-57, -56)[0], 21];
-    L.sign = [XR(-20, -19)[0], -6]; L.lamps = [[XR(-17, -17)[0], -3], [XR(-20, -20)[0], 14], [XR(-31, -31)[0], 13], [XR(-48, -48)[0], 13]]; L.farW = dir === 'W' ? -92 : dir === 'E' ? 71 : null; // l'ouest file vers la rivière, l'est jusqu'à la plage
+    L.sign = [XR(-20, -19)[0], -6]; L.lamps = [[XR(-16, -16)[0], -3], [XR(-20, -20)[0], 14], [XR(-31, -31)[0], 13], [XR(-48, -48)[0], 13]]; L.farW = dir === 'W' ? -92 : dir === 'E' ? 71 : null; // l'ouest file vers la rivière, l'est jusqu'à la plage
     L.trails = [[XR(-26, -25)[0], 13, 14]]; L.stream = XR(-43, -43)[0]; L.bEnd = XR(-50, -50)[0];
     L.box = {x0: dir === 'W' ? -62 : 21, x1: dir === 'W' ? -21 : 62, y0: -27, y1: 29};
     L.food = dir === 'W' ? [-60, -4] : [56, -4]; L.camp = dir === 'W' ? [-71, 13] : [56, 13]; L.foodSpur = dir === 'W' ? -58 : 57; // le coin pour manger et le camp d'entraînement, dans les prés
@@ -655,7 +772,7 @@ function monthRoads(mo, add) {
       L.trails.forEach(([c, r0, r1]) => { for (let r = r0; r <= r1; r++) { add(c, r); add(c + 1, r); } }); }
     if (inRow('C').length) { lane(-12, 1); span(W ? L.lane[0] : L.lane[1], outer(inRow('C')), c => { add(c, -12); add(c, -11); }); } }
   mo.houses.forEach(h => { for (let r = h.R - 1; r < h.st; r++) { add(h.pc, r); add(h.pc + 1, r); } });
-  if (L.dir !== 'S') { if (mo.foodStage) for (let r = L.food[1] + 1; r <= -1; r++) { add(L.foodSpur, r); add(L.foodSpur + 1, r); } }
+  if (L.dir !== 'S') { if (mo.foodStage) for (let r = L.food[1]; r <= -1; r++) { add(L.foodSpur, r); add(L.foodSpur + 1, r); } }
   else { if (mo.foodStage) { for (let c = 1; c <= 54; c++) { add(c, 38); add(c, 39); } for (let r = 40; r <= 41; r++) { add(52, r); add(53, r); } } if (mo.campStage) { for (let c = -48; c <= -1; c++) { add(c, 38); add(c, 39); } for (let r = 40; r <= 43; r++) { add(-49, r); add(-48, r); } } }
 }
 
@@ -788,7 +905,7 @@ function drawMonth(mo, g) {
     if (lit && h.stage >= 3) { res.lights.push({x: P(h.pc + 1), y: Q(h.R) - 16, r: 18, c: '255,214,120'}); if (h.tier >= 1) res.lights.push({x: x + T0.w * .35, y: y + T0.vis * .55, r: 16, c: '255,214,120'}); if (h.tier >= 3) res.lights.push({x: x + T0.w * .75, y: y + T0.vis * .7, r: 16, c: '255,214,120'}); }
     // devant la porte : pots de fleurs, plaque de la semaine, un petit quelque chose
     const fy = Q(h.R) - 4, fl = (idx * 3 + mo.mi * 2) % 10; [[P(h.pc) - 15, 0], [P(h.pc + 2) - 1, 1]].forEach(([fx, j]) => prop(fx, fy + 14, () => blit(IMG.flowers, (5 + (fl + j * 2) % 5) * 16, ((fl + j * 3) % 10) * 16, 16, 16, fx, fy)));
-    const px0 = P(h.pc + 3) + 4, day = String(+h.q.start.slice(8, 10)); if (!h.annex && h.stage >= 3) { prop(px0, fy + 14, () => drawPlaque(px0, fy - 1, day)); obj(px0, fy - 1, day.length * 4 + 3, 16, 'house', {hs: h}); }
+    const px0 = P(h.pc + 3) + 4, day = String(+h.q.start.slice(8, 10)); if (!h.annex && h.stage >= 3) { PLQ.push([px0, fy]); prop(px0, fy + 14, () => drawPlaque(px0, fy - 1, day)); obj(px0, fy - 1, day.length * 4 + 3, 16, 'house', {hs: h}); }
     const c = CUTE[Math.floor(r() * CUTE.length)], bx = r() < .5 ? P(h.x0) - 10 : P(h.x1) - 2; prop(bx, Q(h.R) + 6, () => odecor(c[0], c[1], bx, Q(h.R) - c[3] * 16 + 6, c[2], c[3]));
     if (h.tier >= 2 && h.stage >= 3) { const gx = r() < .5 ? x - 30 : x + T0.w + 2, gy = Q(h.R) - 40; if (gx > P(h.x0) - 40) { for (let k = 0; k < 4; k++) blit(IMG.crops, (3 + (k % 2)) * 16, CROP_ROWS[(k + idx) % 6] * 32, 16, 32, gx + (k % 2) * 14, gy + Math.floor(k / 2) * 14 - 8); } }
   });
@@ -857,14 +974,14 @@ function drawMonth(mo, g) {
 
 /* ---- le centre-ville ---- */
 function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'étang ; la place va de -240 à 224 en x, de -144 à 160 en y
-  const res = mkRes(); const X = v => OX * T + v, Y = v => OY * T + v; const night = g.day < .6; const r = rnd(4242);
+  PLQ = []; const res = mkRes(); const X = v => OX * T + v, Y = v => OY * T + v; const night = g.day < .6; const r = rnd(4242);
   const dq = daysBetween(QSTART, cm.date), st = d0 => stageAt(addDays(QSTART, d0), cm.date); // l'âge du village et le chantier de chaque bâtiment
   const obj = (x, y, w, h, key) => res.objects.push({x, y, w, h, key, c: true});
   const prop = (x, y, base, draw) => res.props.push({base, x, draw});
   // au nord de la place : banque, puits, mairie, taverne, portes sur la place
   const bx = X(-232), by = Y(-228), stB = st(3); if (stB) { prop(bx, by, by + 82, () => { blitStage(IMG.bank, 0, 0, 112, 96, bx, by, stB); if (stB >= 3) drawPlate(bx + 54, by + 64, 'BANQUE'); }); res.block(bx + 4, by + 44, 104, 40); obj(bx + 2, by + 4, 108, 80, 'banque'); }
-  if (stB >= 3) for (let i = 0; i < cm.chests; i++) { const cx = X(-300 + (i % 4) * 15), cy = Y(-178 + Math.floor(i / 4) * 13); prop(cx, cy, cy + 14, () => blit(IMG.gchest, 5 * 16, 0, 16, 16, cx, cy)); }
-  if (cm.chests && stB >= 3) obj(X(-302), Y(-180), 64, 30, 'banque');
+  if (stB >= 3) for (let i = 0; i < cm.chests; i++) { const cx = X(-318 + (i % 2) * 15), cy = Y(-190 + Math.floor(i / 2) * 13); prop(cx, cy, cy + 14, () => blit(IMG.gchest, 5 * 16, 0, 16, 16, cx, cy)); }
+  if (cm.chests && stB >= 3) obj(X(-320), Y(-192), 34, 56, 'banque');
   if (night && stB >= 3) res.lights.push({x: bx + 70, y: by + 74, r: 14, c: '255,214,120'});
   const wx = X(-108), wy = Y(-196); prop(wx, wy, wy + 44, () => blit(IMG.well, 0, 0, 32, 48, wx, wy)); res.block(wx + 4, wy + 26, 24, 18); obj(wx, wy, 32, 48, 'puits');
   const mx = X(-56), my = Y(-275), stM = st(1); if (stM) { prop(mx, my, my + 128, () => blitStage(IMG.church, (night ? 3 : 0) * 112, 0, 112, 144, mx, my, stM)); res.block(mx + 8, my + 84, 96, 46); obj(mx + 6, my + 8, 100, 124, 'mairie'); }
@@ -927,19 +1044,19 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
   if (dq >= 17) { [[-286, 312, 0], [-246, 236, 32]].forEach(([a, b, sx]) => { const x = X(a), y = Y(b); prop(x, y, y + 20, () => blit(IMG.benches, sx, 0, 32, 32, x, y)); res.block(x + 2, y + 12, 28, 10); });
   obj(X(-318), Y(232), 136, 104, 'veillee'); }
   // arbres d'ornement et petites douceurs
-  [[-300, -260, 'fruit'], [-150, -306, 'birch'], [300, -240, 'birch'], [-312, 120, 'fruit'], [292, 120, 'fruit']].forEach(([a, b, k]) => propTree(res, X(a), Y(b), k));
+  [[-150, -306, 'birch'], [300, -240, 'birch'], [-312, 120, 'fruit'], [292, 120, 'fruit']].forEach(([a, b, k]) => propTree(res, X(a), Y(b), k));
   [[-268, 140, 6], [250, 142, 4], [-150, 228, 0], [196, 228, 3], [-34, 236, 7], [-330, -150, 8]].forEach(([a, b, k]) => { const c = CUTE[k % CUTE.length], x = X(a), y = Y(b); prop(x, y, y + 14, () => odecor(c[0], c[1], x, y, c[2], c[3])); });
-  drawMonuments(res, X, Y, prop, cm.date); plazaLife(res, X, Y, cm, dq); workers(res, dq); if (dq >= 9) porters(res, X, Y, 2); shades(res, cm);
+  drawMonuments(res, X, Y, prop, cm.date); plazaLife(res, X, Y, cm, dq); workers(res, dq); if (dq >= 5) porters(res, X, Y, dq >= 20 ? 5 : 3); shades(res, cm);
   return res;
 }
 
 /* ---- l'eau, la faune, les arbres de la forêt ---- */
 let WATERS = [], sea = null;
 const waterMemo = new Map();
-function waterBody(cells, kind) { // pré-rend 8 images d'eau animée sur l'emprise des cellules (mémorisées : l'eau ne bouge pas d'un jour à l'autre)
+function waterBody(cells, kind, near) { // pré-rend 8 images d'eau animée sur l'emprise des cellules (mémorisées : l'eau ne bouge pas d'un jour à l'autre)
   if (!cells.size) return null; const mk = kind + '|' + worldW + 'x' + worldH + '|' + [...cells].sort().join(';'); const hit = waterMemo.get(mk); if (hit) { if (hit.frames[0]) octx.drawImage(hit.frames[0], hit.box.x, hit.box.y); WATERS.push(hit); return hit; } const xs = [], ys = []; cells.forEach(k => { const [c, r] = k.split(',').map(Number); xs.push(c); ys.push(r); });
   const box = {x: Math.min(...xs) * T, y: Math.min(...ys) * T, w: (Math.max(...xs) - Math.min(...xs) + 1) * T, h: (Math.max(...ys) - Math.min(...ys) + 1) * T}; const frames = [];
-  if (ok(IMG.water_anim)) for (let f = 0; f < 8; f++) { const cnv = document.createElement('canvas'); cnv.width = box.w; cnv.height = box.h; const sv = octx; octx = cnv.getContext('2d'); octx.imageSmoothingEnabled = false; drawAuto(cells, IMG.water_anim, f * 48, box.x, box.y); octx = sv; frames.push(cnv); }
+  if (ok(IMG.water_anim)) for (let f = 0; f < 8; f++) { const cnv = document.createElement('canvas'); cnv.width = box.w; cnv.height = box.h; const sv = octx; octx = cnv.getContext('2d'); octx.imageSmoothingEnabled = false; drawAuto(near ? {has: k => cells.has(k) || near(k), [Symbol.iterator]: () => cells[Symbol.iterator]()} : cells, IMG.water_anim, f * 48, box.x, box.y); octx = sv; frames.push(cnv); }
   if (frames[0]) octx.drawImage(frames[0], box.x, box.y); const w = {box, frames, cells, kind}; if (assetsReady) waterMemo.set(mk, w); WATERS.push(w); return w;
 }
 let seaMemo = null;
@@ -1014,7 +1131,7 @@ function stoneBridge(g) { // un pont de pierre : dalles, parapets, piles qui tre
 }
 function settleActors() { // aucune bête ne doit apparaître sur une case bloquée : on la déplace dans son enclos, sinon on la retire
   const bad = (x, y) => isBlocked(x, y) || isBlocked(x, y - 6);
-  actors = actors.filter(a => { if (a.swim || ['duck', 'swan', 'bfly', 'bee', 'npc', 'loop', 'idle', 'fish', 'worker', 'soldier', 'guest', 'chop', 'porter'].includes(a.kind)) return true;
+  actors = actors.filter(a => { if (a.swim || ['duck', 'swan', 'bfly', 'bee', 'npc', 'loop', 'idle', 'fish', 'worker', 'soldier', 'guest', 'chop', 'porter', 'vendor'].includes(a.kind)) return true;
     if (a.still) { if (!bad(a.x, a.y)) return true; for (const dx of [16, -16, 32, -32, 48, -48]) if (!bad(a.x + dx, a.y)) { a.x += dx; return true; } return false; }
     if (!bad(a.x, a.y)) return true; const b = a.box; if (!b) return false;
     for (let k = 0; k < 60; k++) { const x = b.x0 + Math.random() * (b.x1 - b.x0), y = b.y0 + Math.random() * (b.y1 - b.y0); if (!bad(x, y)) { a.x = x; a.y = y; return true; } } return false; });
@@ -1046,7 +1163,7 @@ function buildScene() {
   const corner = (c, r) => (c <= -12 || c >= 11) && (r <= -7 || r >= 7) && (Math.abs(c + .5) + Math.abs(r + .5) > 18.5); for (let c = -13; c <= 12; c++) for (let r = -8; r <= 8; r++) if (!hole(c, r) && !corner(c, r)) add(c, r); // une place resserrée aux coins arrondis
   for (let r = 9; r <= 24; r++) if (dq >= 2 + (r - 10) / 3) { add(-1, r); add(0, r); } for (let c = -19; c <= 19; c++) if (dq >= 8 + Math.abs(c) / 5) { add(c, 23); add(c, 24); } // l'avenue du sud puis l'allée de la ferme avancent jour après jour
   if (dq >= 9) [[-6, -5], [10, 11], [17, 18], [3, 4]].forEach(([a, b]) => { add(a, 22); add(b, 22); });
-  [[-13, -12, 3], [-1, 0, 1], [11, 12, 5], [-7, -6, 0]].forEach(([a, b, d0]) => { if (dq >= d0) { add(a, -10); add(b, -10); add(a, -9); add(b, -9); } }); // seuils de la banque, de la mairie, de la taverne, du puits // seuils de la serre, de la grange, du poulailler, du moulin
+  [[-13, -12, 3], [-1, 0, 1], [11, 12, 5], [-7, -6, 0]].forEach(([a, b, d0]) => { if (dq >= d0) for (let r = -10; r <= -8; r++) { add(a, r); add(b, r); } }); if (dq >= 6) for (let r = -15; r <= -1; r++) { add(-18, r); add(-17, r); } // le chemin du café descend jusqu'à l'avenue ; seuils de la banque, de la mairie, de la taverne, du puits // seuils de la serre, de la grange, du poulailler, du moulin
   MOS.forEach(mo => monthRoads(mo, add)); { const nw = sportOf(QSTART, date).walk.length, top = Math.max(-23, -4 - 3 * Math.ceil(nw / 2)); for (let r = top; r <= -1; r++) { add(-63, r); add(-62, r); } } // le sentier de la montagne s'allonge avec tes marches
   // un peu de fantaisie : des renflements le long des routes, là où rien n'est construit
   const noBump = new Set(); const nb = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) noBump.add(KEY(c, r)); };
@@ -1063,15 +1180,23 @@ function buildScene() {
   const inWorld = (c, r) => c + OX >= 0 && c + OX < cols && r + OY >= 0 && r + OY < rows; const bridges = [];
   const carve = (cells, c, r, kind) => { if (!inWorld(c, r) || !isleRel(c, r)) return; if (road.has(KEY(c, r))) bridges.push([c, r, kind]); cells.add(KEY(c, r)); };
   const sMo = MOS.find(mo => mo.L.stream != null); const streamCol = r => sMo.L.stream + Math.round(.6 * Math.sin(r / 5.5) + .5 * Math.sin(r / 2.2 + 1) + (r < -12 || r > 28 ? 1.5 * Math.sin(r / 7) : 0));
-  const wcells = new Set(); if (sMo) { let prev = null; for (let r = -29; r <= 26; r++) { const c = streamCol(r); [c, c + 1].concat(prev != null ? [prev, prev + 1] : []).forEach(cc => carve(wcells, cc, r, 'wood')); prev = c; } /* le ruisseau du marécage descend le long de septembre */
-    for (let c = streamCol(26); c <= 3; c++) { const w = Math.round(.6 * Math.sin(c / 4)); carve(wcells, c, 27 + w, 'wood'); carve(wcells, c, 28 + w, 'wood'); if (w !== Math.round(.6 * Math.sin((c - 1) / 4))) carve(wcells, c, 28 + w - Math.sign(w || 1), 'wood'); } } /* puis tourne vers l'est, sous le centre */
+  const wcells = new Set(); const paint = (c, r) => { for (let dc = 0; dc < 2; dc++) for (let dr = 0; dr < 2; dr++) carve(wcells, c + dc, r + dr, 'wood'); }; /* pinceau 2 x 2 : jamais de coupure en diagonale, et les virages s'élargissent d'eux-mêmes */
+  const walk = (x0, y0, x1, y1) => { let x = x0, y = y0; const sx = Math.sign(x1 - x0), sy = Math.sign(y1 - y0), ax = Math.abs(x1 - x0), ay = Math.abs(y1 - y0); let err = 0; paint(x, y);
+    if (ax >= ay) { for (let i = 0; i < ax; i++) { x += sx; paint(x, y); err += ay; if (err * 2 >= ax && y !== y1) { y += sy; err -= ax; paint(x, y); } } } else { for (let i = 0; i < ay; i++) { y += sy; paint(x, y); err += ax; if (err * 2 >= ay && x !== x1) { x += sx; err -= ay; paint(x, y); } } }
+    while (y !== y1) { y += sy; paint(x, y); } while (x !== x1) { x += sx; paint(x, y); } };
+  if (sMo) { let prev = null; for (let r = -34; r <= 21; r++) { const c = streamCol(r); [c, c + 1].concat(prev != null ? [prev, prev + 1] : []).forEach(cc => carve(wcells, cc, r, 'wood')); prev = c; } /* né dans le marécage, le ruisseau descend le long de septembre */
+    let cur = [streamCol(21), 21]; [[streamCol(21) + 5, 27], [-30, 28], [-24, 27], [-18, 28], [-13, 27], [1, 27]].forEach(([tx, ty]) => { walk(cur[0], cur[1], tx, ty); cur = [tx, ty]; }); } /* puis file en diagonale, par zigzags, jusqu'au confluent */
   for (let r = 9; r <= 28; r++) { carve(wcells, 2, r, 'wood'); carve(wcells, 3, r, 'wood'); } /* le ruisseau de l'étang sort de sous la place et descend le long de l'avenue */
-  const rcol = r => 6 + Math.round(1.2 * Math.sin(r / 8) + .8 * Math.sin(r / 3.1)), riverCol = r => rcol(r >= 36 && r <= 41 ? 38 : r >= 58 && r <= 63 ? 60 : r >= 72 && r <= 77 ? 74 : r); const rcells = new Set(); for (let r = 29; r < y1; r++) { const c = riverCol(r); const half = r < 31 ? 2 : 3; for (let cc = c - half; cc <= c + half - 1; cc++) carve(rcells, cc, r, 'stone'); } /* les deux ruisseaux se rejoignent et font la rivière, qui traverse novembre jusqu'à la mer */
+  const rbase = r => r < 31 ? 4 : r < 34 ? 5 : 6, rcol = r => rbase(r) + Math.round(1.2 * Math.sin(r / 8) + .8 * Math.sin(r / 3.1)), riverCol = r => rcol(r >= 36 && r <= 41 ? 38 : r >= 58 && r <= 63 ? 60 : r >= 72 && r <= 77 ? 74 : r); const rcells = new Set();
+  let mouth = y1; for (let r = 40; r < y1; r++) if (isleRel(riverCol(r), r) !== 2) { mouth = r; break; } const d0 = mouth - 7; /* le delta s'ouvre un peu avant le sable */
+  for (let r = 27; r < y1; r++) { const c = riverCol(r), k = r - d0; if (k < 2) { for (let cc = c - 2; cc <= c + 1; cc++) carve(rcells, cc, r, 'stone'); } else { carve(rcells, c - 1, r, 'stone'); carve(rcells, c, r, 'stone'); }
+    if (k >= 0) { const sp = Math.floor(k * .7), xl = c - 2 - sp, xr = c + 1 + sp; [xl - 1, xl, xr, xr + 1].forEach(cc => carve(rcells, cc, r, 'stone')); } } /* les deux ruisseaux font une rivière de quatre cases, qui s'ouvre en trois bras pour entrer dans la mer */
   const swamp = [[-34, -35, 6, 3.6], [-27, -33, 5, 3], [-39, -31.5, 4.2, 2.6], [-24, -38, 3.6, 2.2], [-31, -29, 3.2, 1.9], [-38, -38, 3, 2]]; const mcells = new Set();
   for (let c = -46; c <= -18; c++) for (let r = -43; r <= -25; r++) if (swamp.some(([cx, cy, rx, ry]) => Math.pow((c + .5 - cx) / rx, 2) + Math.pow((r + .5 - cy) / ry, 2) <= 1)) carve(mcells, c, r, 'wood');
-  drawAuto(road, IMG.path);
-  streamW = sMo ? waterBody(wcells, 'stream') : null; const riverW = waterBody(rcells, 'river'), swampW = waterBody(mcells, 'swamp'); WATERSETS = {stream: wcells, river: rcells, swamp: mcells};
-  const allWater = new Set([...wcells, ...rcells, ...mcells]);
+  drawAuto({has: k => road.has(k) || isleAt(...k.split(',').map(Number)) === 1, [Symbol.iterator]: () => road[Symbol.iterator]()}, IMG.path); /* sur le sable, le chemin se fond sans bordure */
+  const allWater = new Set([...wcells, ...rcells, ...mcells]); const nearW = k => allWater.has(k) || isleAt(...k.split(',').map(Number)) !== 2; /* ruisseaux, rivière, marécage et mer ne font qu'une eau, et sur le sable l'eau n'a pas de berge : pas de bord entre eux */
+  streamW = sMo ? waterBody(wcells, 'stream', nearW) : null; const riverW = waterBody(rcells, 'river', nearW), swampW = waterBody(mcells, 'swamp', nearW); WATERSETS = {stream: wcells, river: rcells, swamp: mcells};
+  FOAM = FOAM.filter(([x, y]) => ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => rcells.has((x / T + a) + ',' + (y / T + b)))); /* pas d'écume à l'embouchure */
   const cob = new Set(); for (let c = -12; c <= 11; c++) for (let r = -7; r <= 7; r++) if (!hole(c, r) && !corner(c, r)) cob.add(KEY(c, r)); drawAuto(cob, IMG.cobble);
   // l'étang : masque ovale, eau animée pré-rendue sur 8 images
   const lrx = 7.4, lry = 3.7; const lcells = new Set(); for (let c = -9; c <= 8; c++) for (let r = -5; r <= 4; r++) if (Math.pow((c + .5) / lrx, 2) + Math.pow((r + .5) / lry, 2) <= 1) lcells.add(KEY(c, r));
@@ -1173,7 +1298,7 @@ function restForTime() {
   actors = actors.filter(a => {
     if (a.kind === 'bfly' || a.kind === 'bee') return ph === 'day' && !rain;
     if (a.kind === 'wild' && a.sheet === 'mouse') return ph !== 'night' && !rain;
-    if (a.kind === 'soldier') return ph !== 'night' && !rain; if (a.kind === 'pigeon') return ph === 'day' && !rain; if (a.kind === 'chop' || a.kind === 'porter') return ph === 'day' && !rain;
+    if (a.kind === 'soldier') return ph !== 'night' && !rain; if (a.kind === 'pigeon') return ph === 'day' && !rain; if (a.kind === 'chop' || a.kind === 'porter' || a.kind === 'vendor') return ph === 'day' && !rain;
     if (!HUMANS.has(a.kind)) return true;
     if (ph === 'night') { if (a.kind === 'loop' && !owl) { owl++; a.lantern = true; return true; } return false; } // un seul noctambule, avec sa lanterne
     if (a.staff === 'stall') return true; // la marchande reste sous l'auvent de son étal
@@ -1255,7 +1380,7 @@ function stepActors(dt, t) {
     if (a.kind === 'npc') { if (a.axis === 'h') { a.x += a.dir * a.speed * dt; if (a.x < a.x0) { a.x = a.x0; a.dir = 1; } if (a.x > a.x1) { a.x = a.x1; a.dir = -1; } } else { a.y += a.dir * a.speed * dt; if (a.y < a.y0) { a.y = a.y0; a.dir = 1; } if (a.y > a.y1) { a.y = a.y1; a.dir = -1; } } return; }
     if (a.kind === 'idle' || a.kind === 'fish') return;
     if (a.kind === 'horse') { stepHorse(a, dt); return; }
-    if (a.kind === 'soldier' && a.mode !== 'march') return; if (a.kind === 'chop') return; if (a.kind === 'porter') { stepLoop(a, dt); return; }
+    if (a.kind === 'soldier' && a.mode !== 'march') return; if (a.kind === 'chop') return; if (a.kind === 'porter') { stepLoop(a, dt); return; } if (a.kind === 'vendor') { stepVendor(a, dt); return; }
     if (a.kind === 'loop' || a.kind === 'soldier') { a.p = (a.p + a.speed * dt) % 1; const P = a.path; const seg = [0, 1, 2, 3].map(i => Math.hypot(P[(i + 1) % 4][0] - P[i][0], P[(i + 1) % 4][1] - P[i][1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i]) { d -= seg[i]; i++; } const A = P[i], B = P[(i + 1) % 4], k = d / seg[i]; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k; return; }
     if (a.kind === 'bee') { a.t += dt / 60; a.x = a.cx + Math.sin(a.t * 2.1) * a.rx + Math.sin(a.t * 5.3) * 3; a.y = a.cy + Math.sin(a.t * 2.9) * a.ry; return; }
     if (a.kind === 'wild' && a.still) return;
@@ -1273,7 +1398,7 @@ function stepActors(dt, t) {
     if (a.state === 'walk') { a.x += a.dir * a.speed * dt; a.y += Math.sin(a.t * 2) * .03 * dt; if (a.x < a.box.x0) { a.x = a.box.x0; a.dir = 1; } if (a.x > a.box.x1) { a.x = a.box.x1; a.dir = -1; } a.y = clamp(a.y, a.box.y0, a.box.y1); }
   });
 }
-const DRAW = {chop: drawChop, porter: drawPorter, pigeon: drawPigeon, shade: drawShade, soldier: drawSoldier, chicken: drawFarm, cow: drawFarm, pig: drawFarm, sheep: drawFarm, guest: drawGuest, horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
+const DRAW = {chop: drawChop, porter: drawPorter, vendor: drawVendor, pigeon: drawPigeon, shade: drawShade, soldier: drawSoldier, chicken: drawFarm, cow: drawFarm, pig: drawFarm, sheep: drawFarm, guest: drawGuest, horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
 let lastT = 0;
 function animate(now) {
   if (!assetsReady || !QS.length) { requestAnimationFrame(animate); return; }
@@ -1345,7 +1470,7 @@ function drawFood(res, mo, prop, obj, g) { // le coin pour manger du quartier
   const pot = (x, y, i) => { const p = POTS[(i + mo.mi) % POTS.length]; prop(x, y + p[3], () => blit(IMG.i_plants, p[0], p[1] + 32 * ((i + mo.mi) % 4), p[2], p[3], x, y)); };
   let tables = [], cook = null;
   if (mo.mi % 3 === 0) { // la boulangerie : une petite maison, son comptoir, ses pains
-    const hx = x0, hy = base - 84, H = HOUSE[4]; prop(hx, base - 4, t => { blitStage(IMG.hs4R, 0, 0, 112, 96, hx, hy, mo.foodStage); if (mo.foodStage < 3) return; drawPlate(hx + 14, hy + 50, open ? th.sign : 'FERME'); if (lv >= 1) blit(IMG.smoke, ((Math.floor(t * 5) + 2) % 5) * 32, 0, 32, 32, hx + H.chim[0] - 7, hy + H.chim[1] - 27); });
+    const hx = x0 + 8, hy = base - 84, H = HOUSE[4]; /* décalée de 8 px : la porte tombe pile sur son chemin */ prop(hx, base - 4, t => { blitStage(IMG.hs4R, 0, 0, 112, 96, hx, hy, mo.foodStage); if (mo.foodStage < 3) return; drawPlate(hx + 14, hy + 50, open ? th.sign : 'FERME'); if (lv >= 1) blit(IMG.smoke, ((Math.floor(t * 5) + 2) % 5) * 32, 0, 32, 32, hx + H.chim[0] - 7, hy + H.chim[1] - 27); });
     res.block(hx + 2, hy + 30, 108, 50); if (night && open) H.win.forEach(([wx, wy]) => res.lights.push({x: hx + wx, y: hy + wy, r: 14, c: '255,214,120'}));
     const sx = x0 + 118, sy = base - 46; cook = [sx + 24, sy + 30]; prop(sx, sy + 44, () => { blit(IMG.stalls, th.stall * 48, 0, 48, 48, sx, sy); for (let i = 0; i < Math.min(10, open ? 2 + lv * 2 : 0); i++) blit(IMG.i_small, LOAF[0], LOAF[1], LOAF[2], LOAF[3], sx + 5 + (i % 5) * 8, sy + 24 + Math.floor(i / 5) * 5); });
     res.block(sx + 2, sy + 30, 44, 16); tables = [[x0 + 186, base - 92], [x0 + 186, base - 54], [x0 + 186, base - 16]].slice(0, Math.min(3, lv));
@@ -1500,11 +1625,12 @@ function drawFireworks(now, s) { // en espace écran, après la lumière : ça b
 /* ---- les pêcheurs : la règle du bout de la canne ----
    Le bouchon tombe à 25 px à droite et 15 px sous les pieds. On cherche une case d'eau dont la case en haut à gauche
    est de la terre libre, et on pose le pêcheur là. */
-let WATERSETS = {};
+let WATERSETS = {}, PLQ = [];
 function fisherAt(cells, near, taken) { // cells : clés monde "C,R" ; near : [c, r] relatif ; renvoie la position du pêcheur ou null
   const isW = (C, R) => cells.has(C + ',' + R); let best = null, bd = Infinity; const [nc, nr] = near;
   cells.forEach(k => { const [C, R] = k.split(',').map(Number); const c = C - OX, r = R - OY; const d = Math.hypot(c - nc, r - nr); if (d >= bd) return;
-    if (isW(C - 2, R - 1) || isW(C - 1, R - 1) || isW(C - 2, R) || blocked.has((C - 2) + ',' + (R - 1)) || blocked.has((C - 1) + ',' + (R - 1)) || isleAt(C - 2, R - 1) === 0 || isleAt(C - 1, R - 1) === 0) return;
+    if (isW(C - 2, R - 1) || isW(C - 1, R - 1) || isW(C - 2, R) || blocked.has((C - 2) + ',' + (R - 1)) || blocked.has((C - 1) + ',' + (R - 1)) || blocked.has((C - 2) + ',' + (R - 2)) || blocked.has((C - 1) + ',' + (R - 2)) || isleAt(C - 2, R - 1) === 0 || isleAt(C - 1, R - 1) === 0) return;
+    const fx = pxc(c) - 17, fy = pyc(r) - 7; if (objects.some(o => !o.big && (o.w || 16) * (o.h || 16) <= 6400 && o.x < fx + 28 && o.x + (o.w || 16) > fx - 12 && o.y < fy + 14 && o.y + (o.h || 16) > fy - 30) || PLQ.some(([px, py]) => Math.abs(px - fx) < 30 && Math.abs(py - fy) < 26)) return; /* ni devant une plaque, ni dans un objet */
     if (taken && taken.some(([tc, tr]) => Math.abs(tc - c) < 4 && Math.abs(tr - r) < 3)) return; bd = d; best = [c, r]; });
   if (!best) return null; if (taken) taken.push(best); return {x: pxc(best[0]) - 17, y: pyc(best[1]) - 7};
 }
@@ -1516,17 +1642,23 @@ function placeFishers() { // après les bâtiments, pour ne pas poser un pêcheu
 /* ---- les gens au travail : bûcherons, mineur, porteurs, clients du marché ---- */
 function drawChop(a, t) { drawSheet(a.sheet, a.row, Math.floor(t * 6 + a.t) % 6, a.x, a.y, a.dir < 0); }
 function drawCrate(x, y) { if (ok(IMG.crate)) blit(IMG.crate, 0, 0, 16, 16, x - 8, y); else { octx.fillStyle = '#8a5a2b'; octx.fillRect(x - 7, y + 2, 14, 11); octx.fillStyle = '#c08a4a'; octx.fillRect(x - 6, y + 3, 12, 9); octx.fillStyle = '#8a5a2b'; octx.fillRect(x - 1, y + 3, 2, 9); octx.fillRect(x - 6, y + 7, 12, 1); } }
-function drawPorter(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f, a.x, a.y, dx < 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f, a.x, a.y, false); if (a.p < .5) drawCrate(a.x, a.y - 44 + (f % 2)); }
+function drawPorter(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f, a.x, a.y, dx < 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f, a.x, a.y, false); if (a.p < .5) drawCrate(a.x + (Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? -5 : 5) : 0), a.y - 30 + (f % 2)); }
 function workers(res, dq) { // bûcherons à la lisière, mineur à la mine, porteurs entre le marché et la taverne
-  const chop = (c, r, dir, sheet, row) => { const x = pxc(c), y = pyc(r); propTree({props: res.props, objects: res.objects, block: res.block}, x + (dir > 0 ? 14 : -78), y - 56, 'boak'); const lx = x + (dir > 0 ? -22 : 10), ly = y - 6; res.props.push({x: lx, base: ly + 14, draw: () => odecor(5, 9, lx, ly)});
+  const chop = (c, r, dir, sheet, row) => { const x = pxc(c), y = pyc(r); propTree({props: res.props, objects: res.objects, block: res.block}, x + (dir > 0 ? -6 : -70), y - 56, 'boak'); const lx = x + (dir > 0 ? -22 : 10), ly = y - 6; res.props.push({x: lx, base: ly + 14, draw: () => odecor(5, 9, lx, ly)});
     res.actors.push({kind: 'chop', sheet, row, x, y, dir, t: c * .3}); res.objects.push({x: x - 10, y: y - 40, w: 20, h: 42, key: 'bucheron', c: true}); };
   if (dq >= 4) chop(50, -14, 1, 'npc_lumberjack_jack', 7); if (dq >= 12) chop(-52, 58, -1, 'npc_lumberjack_jack', 7); if (dq >= 20) chop(30, 82, 1, 'npc_lumberjack_jack', 7);
-  if (dq >= 6) { const x = pxc(-61) + 4, y = pyc(-22) + 10; res.actors.push({kind: 'chop', sheet: 'npc_miner_mike', row: 7, x, y, dir: -1, t: 2}); res.objects.push({x: x - 10, y: y - 40, w: 20, h: 42, key: 'mineur', c: true}); }
+  if (dq >= 6) { const x = pxc(-61) + 4, y = pyc(-22) + 10; res.actors.push({kind: 'chop', sheet: 'npc_miner_mike', row: 7, x, y, dir: -1, t: 2}); res.props.push({x: x - 30, base: y + 2, draw: () => { if (!ok(IMG.ores)) return; blit(IMG.ores, 16, 16, 16, 16, x - 30, y - 14); blit(IMG.ores, 80, 16, 16, 16, x - 26, y - 2); }}); /* le filon qu'il frappe */ res.objects.push({x: x - 10, y: y - 40, w: 20, h: 42, key: 'mineur', c: true}); }
 }
-function porters(res, X, Y, n) { // ils chargent au marché, livrent à la taverne, reviennent les mains vides
-  const path = [[X(-150), Y(150)], [X(-150), Y(-70)], [X(-176), Y(-70)], [X(-176), Y(-120)], [X(230), Y(-120)], [X(230), Y(-100)], [X(176), Y(-100)], [X(176), Y(150)]]; // place, rue du nord, retour
-  for (let i = 0; i < n; i++) res.actors.push({kind: 'porter', sheet: i % 2 ? 'npc_farmer_bob' : 'npc_farmer_buba', p: (i / n + .1) % 1, speed: .00011, path: i % 2 ? path : path.slice().reverse(), t: i * 2});
+function porters(res, X, Y, n) { // ils chargent au marché, traversent la place, livrent à la taverne et reviennent les mains vides
+  const go = [[X(-80), Y(224)], [X(4), Y(224)], [X(4), Y(118)], [X(176), Y(118)], [X(176), Y(-104)], [X(186), Y(-128)]], path = go.concat(go.slice(1, -1).reverse());
+  for (let i = 0; i < n; i++) res.actors.push({kind: 'porter', sheet: ['npc_farmer_bob', 'npc_farmer_buba', 'npc_miner_mike', 'npc_chef_chloe', 'npc_bartender_bruno'][i % 5], p: (i / n) % 1, speed: .00008, path, t: i * 2});
 }
+function stepVendor(a, dt) { if (a.shout > 0) { a.shout -= dt; return; } a.cool -= dt; if (a.cool <= 0) { a.shout = 2400; a.cool = 3500 + Math.random() * 4000; return; } stepLoop(a, dt); }
+function drawPaper(x, y) { octx.fillStyle = '#f3edda'; octx.fillRect(x, y, 7, 9); octx.fillStyle = '#5a4632'; octx.fillRect(x + 1, y + 2, 5, 1); octx.fillRect(x + 1, y + 4, 5, 1); octx.fillRect(x + 1, y + 6, 3, 1); }
+function drawBubble(x, y, txt) { const w = txt.length * 4 + 5, bx = Math.round(x - w / 2), by = y - 9; octx.fillStyle = '#2b2b2b'; octx.fillRect(bx - 1, by - 1, w + 2, 12); octx.fillStyle = '#fff'; octx.fillRect(bx, by, w, 10); octx.fillStyle = '#2b2b2b'; octx.fillRect(x - 2, by + 11, 5, 1); octx.fillRect(x - 1, by + 12, 3, 1); octx.fillStyle = '#fff'; octx.fillRect(x - 1, by + 10, 3, 1); octx.fillRect(x, by + 11, 1, 1); pxText(txt, bx + 3, by + 2, '#2b2b2b'); }
+function drawVendor(a, t) { // il crie, il saute, il agite son journal
+  const f = Math.floor(t * 6 + a.t) % 6; if (a.shout > 0) { const hop = Math.round(Math.abs(Math.sin(t * 9)) * 4); drawSheet(a.sheet, 0, f, a.x, a.y - hop, Math.floor(t * 4) % 2 === 0); drawPaper(a.x + 6, a.y - hop - 34 + (f % 2) * 2); if (a.shout > 400) drawBubble(a.x, a.y - hop - 52, 'GAZETTE !'); return; }
+  const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f, a.x, a.y, dx < 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f, a.x, a.y, false); drawPaper(a.x + (dx < 0 ? -11 : 5), a.y - 26); }
 function stepLoop(a, dt) { // un chemin fermé de n points
   a.p = (a.p + a.speed * dt) % 1; const P = a.path, n = P.length; const seg = P.map((p, i) => Math.hypot(P[(i + 1) % n][0] - p[0], P[(i + 1) % n][1] - p[1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i] && i < n - 1) { d -= seg[i]; i++; }
   const A = P[i], B = P[(i + 1) % n], k = seg[i] ? d / seg[i] : 0; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k;
@@ -1536,12 +1668,15 @@ function drawPigeon(a, t) { const x = Math.round(a.x), y = Math.round(a.y), peck
   octx.fillStyle = a.col; octx.fillRect(x - 3, y - 5, 6, 3); octx.fillRect(x - 2, y - 6, 4, 1); octx.fillStyle = '#5a5f6e'; octx.fillRect(fl ? x - 4 : x + 2, y - 6 + (peck ? 1 : 0), 2, 2); octx.fillStyle = '#e8c547'; octx.fillRect(fl ? x - 5 : x + 4, y - 5 + (peck ? 1 : 0), 1, 1); octx.fillStyle = '#c9a0a0'; octx.fillRect(x - 1, y - 2, 1, 2); octx.fillRect(x + 1, y - 2, 1, 2); }
 function plazaLife(res, X, Y, cm, dq) {
   const r = rnd(1313);
-  if (dq >= 2) [[-160, -92, 0], [128, -92, 0], [-160, 60, 32], [128, 60, 32]].forEach(([a, b, sx]) => { const x = X(a), y = Y(b); res.props.push({x, base: y + 20, draw: () => blit(IMG.benches, sx, 0, 32, 32, x, y)}); res.block(x + 2, y + 12, 28, 10); });
-  if (dq >= 3) for (let i = 0; i < 7; i++) res.actors.push({kind: 'pigeon', x: X(-150 + r() * 300), y: Y(-110 + (r() < .5 ? 0 : 220)) + r() * 14, box: {x0: X(-190), x1: X(176), y0: Y(-124), y1: Y(124)}, free: true, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 9, speed: .06, col: ['#8a8f9c', '#6f7482', '#a9adb8', '#b7b1a2'][i % 4]});
+  if (dq >= 2) [[-160, -92, 32], [128, -92, 32], [-160, 60, 32], [128, 60, 32]].forEach(([a, b, sx]) => { const x = X(a), y = Y(b); res.props.push({x, base: y + 20, draw: () => blit(IMG.benches, sx, 0, 32, 32, x, y)}); res.block(x + 2, y + 12, 28, 10); });
+  const pigeon = (x, y, box, i) => res.actors.push({kind: 'pigeon', x, y, box, free: true, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 9, speed: .06, col: ['#f0ebe0', '#d9d3c4', '#8a8f9c', '#6f7482'][i % 4]});
+  if (dq >= 3) for (let i = 0; i < 3; i++) pigeon(X(-150 + r() * 300), Y(-110 + (r() < .5 ? 0 : 220)) + r() * 14, {x0: X(-190), x1: X(176), y0: Y(-124), y1: Y(124)}, i);
+  MOS.forEach(mo => { if (!mo.built || mo.age < 7 || !mo.L.fac.park) return; const [pc, pr] = mo.L.fac.park, box = {x0: pxc(pc) + 4, x1: pxc(pc + 9) - 4, y0: pyc(pr) + 6, y1: pyc(pr + 5) - 4}; for (let i = 0; i < 5; i++) pigeon(box.x0 + r() * (box.x1 - box.x0), box.y0 + r() * (box.y1 - box.y0), box, i); }); /* les pigeons préfèrent l'herbe des parcs : on les y voit */
+  if (dq >= 7) res.actors.push({kind: 'vendor', sheet: 'npc_farmer_bob', p: .3, speed: .00016, path: [[X(-180), Y(-104)], [X(170), Y(-104)], [X(170), Y(104)], [X(-180), Y(104)]], t: 0, shout: 0, cool: 2500, vx: 1, vy: 0}); /* le crieur de la Gazette fait le tour de la place */
   // le café : les cafés du trimestre, une tasse pour dix
   const nc = Math.round(sum(S.daily.filter(d => d.date >= QSTART && d.date <= cm.date).map(d => num(d.coffee) || 0))), days = S.daily.filter(d => d.date >= QSTART && d.date <= cm.date && num(d.coffee) != null).length;
-  if (dq >= 6) { const kx = X(-330), ky = Y(-60); res.props.push({x: kx, base: ky + 44, draw: () => { blit(IMG.stalls, 2 * 48, 0, 48, 48, kx, ky); for (let i = 0; i < Math.min(12, Math.floor(nc / 10)); i++) { const cx = kx + 5 + (i % 6) * 7, cy = ky + 24 + Math.floor(i / 6) * 5; octx.fillStyle = '#f3edda'; octx.fillRect(cx, cy, 4, 3); octx.fillStyle = '#6b3d1f'; octx.fillRect(cx + 1, cy, 2, 1); octx.fillStyle = '#f3edda'; octx.fillRect(cx + 4, cy + 1, 1, 1); } drawPlate(kx + 6, ky - 12, 'CAFE'); }});
-    res.block(kx + 2, ky + 30, 44, 16); res.objects.push({x: kx - 2, y: ky - 14, w: 52, h: 60, key: 'cafe', c: true, nc, days}); res.actors.push({kind: 'idle', staff: 'stall', sheet: 'npc_bartender_katy', x: kx + 24, y: ky + 30, t: 3}); }
+  if (dq >= 6) { const stC = stageAt(addDays(QSTART, 6), cm.date), kx = X(-320), ky = Y(-344); res.props.push({x: kx, base: ky + CABIN.vis, draw: () => { blitStage(IMG.shedR, 0, 0, 96, 112, kx, ky, stC); if (stC < 3) return; drawPlate(kx + 52, ky + 72, 'CAFE'); for (let i = 0; i < Math.min(9, Math.floor(nc / 10)); i++) { const cx = kx + 8 + (i % 3) * 7, cy = ky + 76 + Math.floor(i / 3) * 5; octx.fillStyle = '#f3edda'; octx.fillRect(cx, cy, 4, 3); octx.fillStyle = '#6b3d1f'; octx.fillRect(cx + 1, cy, 2, 1); octx.fillStyle = '#f3edda'; octx.fillRect(cx + 4, cy + 1, 1, 1); } }}); /* le café est une vraie maison, au coin nord-ouest de la place */
+    res.block(kx + 4, ky + 62, 88, 36); res.objects.push({x: kx, y: ky + 8, w: 96, h: 92, key: 'cafe', c: true, nc, days}); if (stC >= 3) res.actors.push({kind: 'idle', staff: 'stall', sheet: 'npc_bartender_katy', x: kx + 62, y: ky + 108, t: 3}); }
   // le banc des amoureux et le parterre en cœur : les soirées à deux, sans un mot de plus
   const deux = S.daily.filter(d => d.date >= QSTART && d.date <= cm.date && d.socialev && eventBits(d.socialev).some(e => e.k === 'deux')).map(d => d.date); const recent = deux.filter(d => d > addDays(cm.date, -7)).length;
   const hx = X(70), hy = Y(96); const HEART = [[3, 0], [4, 0], [8, 0], [9, 0], [2, 1], [5, 1], [7, 1], [10, 1], [1, 2], [11, 2], [1, 3], [11, 3], [2, 4], [10, 4], [3, 5], [9, 5], [4, 6], [8, 6], [5, 7], [7, 7], [6, 8]];
@@ -1577,6 +1712,7 @@ function gazPic(kind, o) { // une petite image 128 x 80, rendue avec les sprites
     else if (kind === 'swans') { water(); for (let i = 0; i < Math.min(3, o.white); i++) blit(IMG.swan, 0, 0, 32, 32, 10 + i * 34, 20 + (i % 2) * 14); if (o.black) blit(IMG.swanb, 0, 0, 32, 32, 90, 44); if (!o.white && !o.black) blit(IMG.duck, 0, 8 * 32, 32, 32, 48, 30); if (o.night) { octx.fillStyle = 'rgba(40,40,100,.45)'; octx.fillRect(0, 0, 128, 80); } }
     else if (kind === 'camp') { grass(); octx.fillStyle = '#efe6cf'; octx.fillRect(8, 24, 70, 44); octx.fillStyle = o.col; octx.fillRect(8, 24, 70, 3); octx.fillRect(8, 65, 70, 3); for (let i = 0; i < Math.min(4, o.n); i++) drawSheet(o.sheet, i < 2 ? 9 : 0, i, 26 + i * 18, 60, i % 2 === 1); if (ok(IMG.tent)) octx.drawImage(IMG.tent, 0, 0, 80, 96, 84, -4, 48, 58); }
     else if (kind === 'shade') { grass(); octx.fillStyle = 'rgba(0,0,0,.25)'; octx.fillRect(0, 0, 128, 80); [[4, 0], [60, -6], [96, 4]].forEach(([x, y]) => { const [ik, sx, w, h] = TREES.spruce_s; blit(IMG[ik], sx, 0, w, h, x, y); }); for (let i = 0; i < Math.min(3, o.n); i++) blit(IMG[i % 2 ? 'slime_p' : 'slime_b'], 0, 0, 32, 32, 20 + i * 30, 46); }
+    else if (kind === 'portrait') { grass(); octx.fillStyle = 'rgba(0,0,0,.18)'; octx.fillRect(0, 64, 128, 16); drawSheet(o.sheet, 0, 1, 64, 60, false); }
     else if (kind === 'calm') { water(); grass(); octx.clearRect(60, 0, 68, 80); water(); grass(); octx.save(); octx.beginPath(); octx.rect(0, 0, 64, 80); octx.clip(); grass(); octx.restore(); drawSheet('npc_fisherman_fin', 8, 1, 30, 48, false); blit(IMG.duck, 0, 8 * 32, 32, 32, 84, 30); }
     else if (kind === 'weather') { sky(o.night); octx.fillStyle = o.sun ? '#f2c14e' : '#d8dde6'; octx.beginPath(); octx.arc(o.sun ? 40 : 50, 30, 14, 0, Math.PI * 2); octx.fill(); if (!o.sun) { octx.fillStyle = '#eef1f6'; octx.beginPath(); octx.arc(70, 36, 16, 0, Math.PI * 2); octx.arc(88, 40, 12, 0, Math.PI * 2); octx.fill(); } if (o.rain) { octx.fillStyle = '#bcd6f2'; for (let i = 0; i < 24; i++) octx.fillRect(10 + (i * 37) % 110, 50 + (i * 13) % 24, 1, 4); } octx.fillStyle = '#4e9c6a'; octx.fillRect(0, 68, 128, 12); }
     else if (kind === 'statue') { grass(); octx.fillStyle = '#8d93a0'; octx.fillRect(48, 60, 32, 12); octx.fillStyle = '#b9bec8'; octx.fillRect(48, 58, 32, 4); const sc = o.m.stele ? null : stoneFrame(o.m.pose[0], o.m.pose[1], o.m.pose[2], false); if (sc) octx.drawImage(sc, 32, 6); else { octx.fillStyle = '#a3a9b5'; octx.fillRect(58, 26, 12, 32); } }
@@ -1597,7 +1733,9 @@ function gazArticles(d) {
     const titles = {deux: 'On a vu des cœurs au-dessus du banc', fete: 'Le village a fait la fête', table: 'Grande tablée sur l\'île', balade: 'Promenade et bavardages', muay: 'Le camp a sonné la cloche'};
     art('LA UNE', titles[top], `${evs.length} ${plural(evs.length, 'événement', 'événements')} cette semaine : ${joinFr(evs.map(e => e.t))}. ${h ? `La maison de la semaine est ${h.stage >= 3 ? 'une ' + h.T.name : 'encore en chantier'}` : 'La maison de la semaine attend son plan'}${res.length ? `, et le village compte ${res.length} ${plural(res.length, 'nouvel habitant', 'nouveaux habitants')} : ${joinFr(res.map(r => r.name))}` : ''}.`,
       top === 'deux' ? gazPic('hearts') : gazPic('house', {h, mi: mo ? mo.mi : 0, res})); }
-  else art('LA UNE', 'Semaine tranquille sur l\'île', `Pas d'événement social ${to < addDays(ws, 6) ? 'pour l\'instant' : 'cette semaine'} : les rues sont calmes, la taverne compte ses chaises et les pêcheurs ont l'étang pour eux.`, gazPic('calm'));
+  if (!evs.length) art('LA UNE', 'Semaine tranquille sur l\'île', `Pas d'événement social ${to < addDays(ws, 6) ? 'pour l\'instant' : 'cette semaine'} : les rues sont calmes, la taverne compte ses chaises et les pêcheurs ont l'étang pour eux.`, gazPic('calm'));
+  const cand = res.length ? res : Object.values(RES).filter(x => x.role !== 'fisher'); if (cand.length) { const r = cand[hashStr(ws) % cand.length], quotes = ['Franchement, la Gazette, elle est cool.', 'Je la lis au café, le lundi, avant tout le monde.', 'Sans elle, on ne saurait rien des cygnes.', 'Le crieur me la tend avant même que le pain soit cuit.', 'Je découpe la une et je la colle au-dessus du lit.'];
+    art('INTERVIEW', `${r.name} ${r.epi} répond à la Gazette`, `La Gazette : D'où venez-vous ?\n${r.name} : « ${r.lines[0]} »\nLa Gazette : Et comment allez-vous ?\n${r.name} : « ${r.lines[1]} »\nLa Gazette : Un mot pour nos lecteurs ?\n${r.name} : « ${quotes[hashStr(r.name) % quotes.length]} »`, gazPic('portrait', {sheet: r.sheet})); }
   // l'économie : le marché, la veillée qu'on attend
   const pace = cm.salesTarget * clamp(daysBetween(QSTART, to) / (daysBetween(QSTART, QEND) + 1), 0, 1), worry = cm.sales.length < pace - .8, nxt = (K.webinars || {}).next;
   art('ÉCONOMIE', worry ? 'Au marché, on compte les étals bâchés' : 'Le marché tient le rythme', `${cm.sales.length} ${plural(cm.sales.length, 'vente', 'ventes')} sur ${cm.salesTarget} depuis le 1er septembre${worry ? ` ; à ce point du trimestre, les commerçants en espéraient ${Math.round(pace)}. On s'inquiète un peu, à voix basse, et on regarde vers la place.` : '.'}${nxt && nxt > to ? ` Tout le village attend la veillée du ${fmtDay(nxt)} : le bois est déjà empilé.` : ''}`, gazPic('market', {open: cm.sales.length}));
@@ -1623,7 +1761,7 @@ function gazArticles(d) {
 }
 function openGazette() {
   const el = $('gaz'); if (!el) return; const d = viewDate(), g = gazArticles(d); closeRoom(); selected = null; renderLegend();
-  const num = isoWeek(g.ws); el.querySelector('.gaz-paper').innerHTML = `<button class="gaz-x" id="gaz-x">✕</button><div class="gaz-head"><div class="gaz-title">LA GAZETTE DE L'ÎLE</div><div class="gaz-sub">N° ${num} · semaine du ${esc(fmtDay(g.ws))}${g.to < addDays(g.ws, 6) ? ' (édition du ' + esc(fmtDay(g.to)) + ')' : ''} · prix : un café</div></div><div class="gaz-cols">${g.A.map((a, i) => `<article class="${i === 0 ? 'une' : ''}">${a.pic ? '<div class="gaz-pic" data-i="' + i + '"></div>' : ''}<div class="kicker">${esc(a.kicker)}</div><h3>${esc(a.title)}</h3><p>${esc(a.body)}</p></article>`).join('')}</div>`;
+  const num = isoWeek(g.ws); el.querySelector('.gaz-paper').innerHTML = `<button class="gaz-x" id="gaz-x">✕</button><div class="gaz-head"><div class="gaz-title">LA GAZETTE DE L'ÎLE</div><div class="gaz-sub">N° ${num} · semaine du ${esc(fmtDay(g.ws))}${g.to < addDays(g.ws, 6) ? ' (édition du ' + esc(fmtDay(g.to)) + ')' : ''} · prix : un café</div></div><div class="gaz-cols">${g.A.map((a, i) => `<article class="${i === 0 ? 'une' : ''}">${a.pic ? '<div class="gaz-pic" data-i="' + i + '"></div>' : ''}<div class="kicker">${esc(a.kicker)}</div><h3>${esc(a.title)}</h3><p>${esc(a.body).replace(/\n/g, '<br>')}</p></article>`).join('')}</div>`;
   el.querySelectorAll('.gaz-pic').forEach(div => { const a = g.A[+div.dataset.i]; if (a.pic) { a.pic.className = 'gaz-img'; div.appendChild(a.pic); } });
   el.classList.remove('hidden'); $('gaz-x').addEventListener('click', closeGazette);
 }
@@ -1635,6 +1773,10 @@ function closeGazette() { const el = $('gaz'); if (el) el.classList.add('hidden'
 const SEX = {npc_bartender_katy: 'f', npc_chef_chloe: 'f', npc_farmer_buba: 'f'};
 const FIRST = {f: ['Rose', 'Lila', 'Maëlle', 'Jeanne', 'Iris', 'Nina', 'Louise', 'Capucine', 'Mona', 'Elsa', 'Suzon', 'Margot', 'Anouk', 'Prune', 'Agathe', 'Céleste', 'Odile', 'Blanche'],
   m: ['Gaspard', 'Léon', 'Hugo', 'Basile', 'Émile', 'Félix', 'Jules', 'Octave', 'Marius', 'Anatole', 'Noé', 'Victor', 'Lucien', 'Aristide', 'Firmin', 'Achille', 'Barnabé', 'Ernest']};
+const INTL = { // à partir d'octobre : Berlin, donc surtout allemand, avec du turc, du russe, du polonais, de l'italien et un peu de français
+  f: ['Greta', 'Frieda', 'Lotte', 'Hanna', 'Lena', 'Marlene', 'Ida', 'Klara', 'Leonie', 'Antonia', 'Johanna', 'Mathilda', 'Paula', 'Franziska', 'Hedwig', 'Annika', 'Wiebke', 'Ulrike', 'Elif', 'Defne', 'Zeynep', 'Ayşe', 'Dasha', 'Katya', 'Polina', 'Vera', 'Masha', 'Zofia', 'Kasia', 'Agnieszka', 'Giulia', 'Chiara', 'Francesca', 'Camille', 'Léa'],
+  m: ['Jonas', 'Lukas', 'Finn', 'Moritz', 'Jannik', 'Lennart', 'Till', 'Henrik', 'Konstantin', 'Matthias', 'Niklas', 'Paul', 'Max', 'Friedrich', 'Tobias', 'Hannes', 'Jörg', 'Bastian', 'Emre', 'Mert', 'Can', 'Kerem', 'Dima', 'Sasha', 'Misha', 'Kirill', 'Nikita', 'Piotr', 'Kuba', 'Bartek', 'Matteo', 'Luca', 'Giacomo', 'Théo', 'Mathis']};
+const namePool = date => { const mo = monthOf(date); return mo && mo.mi > 0 ? INTL : FIRST; }; // septembre, c'était la France : que des prénoms bien de chez nous
 const gx = (sx, m, f) => sx === 'f' ? f : m;
 const hashStr = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 const num = v => v == null || v === '' || isNaN(+v) ? null : +v;
@@ -1678,7 +1820,7 @@ function eventBits(s) { // un événement social, raconté sans les prénoms
   });
 }
 const deA = t => /^(un|une)\b/.test(t) ? "d'" + t : /^le\b/.test(t) ? t.replace(/^le\b/, 'du') : /^les\b/.test(t) ? t.replace(/^les\b/, 'des') : /^des\b/.test(t) ? 'de ' + t.slice(4) : 'de ' + t;
-const joinFr = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' et ' + a[a.length - 1];
+const joinFr = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + (LANG === 'en' ? ' and ' : ' et ') + a[a.length - 1];
 function dayStats(d) { const anx = num(d.anx); return {joie: num(d.happy), energie: num(d.energy), calme: anx == null ? null : clamp(10 - anx * 2, 0, 10), stable: num(d.stab), sleep: sleepOf(d), steps: num(d.steps), social: num(d.social)}; }
 const TRAITS = [ // test, adjectif (il, elle), surnom (il, elle)
   [s => s.joie >= 8.5, 'rayonnant', 'rayonnante', 'le Rayonnant', 'la Rayonnante'], [s => s.joie >= 7 && s.joie < 8.5, 'joyeux', 'joyeuse', 'le Joyeux', 'la Joyeuse'],
@@ -1705,7 +1847,7 @@ function residentAsk(kind) { // ce qu'il te demande aujourd'hui : toujours tourn
 let RES = {}, RES_NAMES = new Set(), RES_EPI = new Set();
 function makeResident(d, role, sheet) { // role : social, worker, fisher, joy
   if (RES[d.date] && RES[d.date].role === role) return RES[d.date];
-  const sx = SEX[sheet] || 'm', st = dayStats(d), h = hashStr(d.date + role), pool = FIRST[sx]; let name = pool[h % pool.length];
+  const sx = SEX[sheet] || 'm', st = dayStats(d), h = hashStr(d.date + role), pool = namePool(d.date)[sx]; let name = pool[h % pool.length];
   for (let i = 1; RES_NAMES.has(name) && i < pool.length; i++) name = pool[(h + i) % pool.length]; RES_NAMES.add(name);
   const ev = role === 'social' && d.socialev ? eventBits(d.socialev) : []; const kind = ev.length ? ev[0].k : role;
   const traits = TRAITS.filter(t => t[0](st)); const moods = (Array.isArray(d.moods) ? d.moods : d.moods ? String(d.moods).split(/\s*,\s*/) : []).map(x => String(x).toLowerCase().trim()).filter(x => MOODS[x]).map(x => gx(sx, ...MOODS[x]));
@@ -1717,7 +1859,7 @@ function makeResident(d, role, sheet) { // role : social, worker, fisher, joy
     : st.social != null ? `un jour où tu as vu du monde (vie sociale ${fmtNum(st.social, 0)}/10)` : 'un jour comme les autres, et c\'est très bien';
   const wh = d.where ? String(d.where) : ''; const wx = ((S.weather || {}).history || []).find(x => x.date === d.date);
   let place = ''; if (/gap/i.test(wh) && !/berlin/i.test(wh)) place = ' J\'ai vu le jour à Gap, avant le grand départ pour Berlin.'; else if (/berlin/i.test(wh) && /gap/i.test(wh)) place = ' Le jour même du voyage vers Berlin.'; else if (wx && (!wh || /berlin/i.test(wh))) place = ` Il ${WXW[weatherKind(wx.weather_code)] || 'faisait doux'} à Berlin (${Math.round(wx.temperature_2m_max)} °C).`;
-  const lines = [`Je suis ${gx(sx, 'né', 'née')} le ${fmtDay(d.date).replace(/ 1 /, ' 1er ')}, ${origin}.${place}`];
+  const lines = [`Je suis ${gx(sx, 'né', 'née')} le ${fmtDay(d.date).replace(/ 1 /, LANG === 'en' ? ' 1 ' : ' 1er ')}, ${origin}.${place}`];
   lines.push(adj.length ? `Depuis, je suis ${joinFr(adj)}.` : "Ce jour-là tu n'avais rien noté, alors j'ai gardé un caractère discret.");
   const mem = cleanBits(d.wins)[0] || cleanBits(d.grateful)[0] || cleanBits(d.feel)[0]; const mit = !mem && cleanBits(d.mit, 1, 130)[0]; const wr = !mem && !mit && (S.weeks || []).find(w => w.start === weekStart(d.date)); const foc = wr && cleanBits(wr.focus)[0];
   if (mem) lines.push(`Ce jour-là, tu as noté : « ${mem} »`); else if (mit) lines.push(`Ta grande tâche ce jour-là : « ${mit} »`); else if (foc) lines.push(`Ton cap cette semaine-là : « ${foc} »`);
@@ -1886,6 +2028,7 @@ const LEGEND = {
   quartier: (m, o) => { const mo = o.mo; return [`🏘️ Quartier ${deM(mo.label)}`, mo.built ? 'Clique pour y aller.' : `Pas encore construit : les premières maisons apparaîtront le ${fmtDay(mo.start)}.`]; },
 };
 const LEGEND_C = {
+  gazette: () => ['📰 Le crieur de la Gazette · clic pour lire', '', ''],
   mairie: c => { const st = c.cap.steps || []; const done = st.filter(s => s[1] === 'ok').length; return ['🏛️ La mairie : Cap Berlin', `${done} démarches sur ${st.length} bouclées, ${st.filter(s => s[1] === 'wait').length} attendent quelqu'un d'autre. Chaque drapeau sur la place est une démarche : vert fait, jaune en attente, gris pas commencé.`]; },
   flags: c => LEGEND_C.mairie(c),
   banque: c => ['🏦 La banque : ton avance', `${fmtNum(c.runway, 1)} mois d'avance sur ton budget perso : un coffre d'or par mois, à côté de la banque. Aucun montant affiché.`],
@@ -1950,7 +2093,7 @@ function renderTimeline() {
   let cellsHtml = ''; for (let i = 0; i < n; i++) { const iso = addDays(QSTART, i); const m2 = +iso.slice(5, 7); const cls = ['tl-day', 'm' + (m2 % 3), iso === M.today ? 'today' : '', iso === d ? 'sel' : '', iso > M.today ? 'future' : '', cur && iso >= cur.start && iso <= cur.end ? 'week' : ''].filter(Boolean).join(' '); cellsHtml += `<i class="${cls}" data-d="${iso}" title="${esc(fmtDay(iso))}"></i>`; }
   const months = [8, 9, 10, 11].map(m3 => { const start = `2026-${pad(m3)}-01`; const s = start < QSTART ? QSTART : start; const e = addDays(`2026-${pad(m3 + 1 > 12 ? 1 : m3 + 1)}-01`, -1); if (s > QEND || e < QSTART) return ''; const left = daysBetween(QSTART, s) / n * 100, w = (daysBetween(s, e > QEND ? QEND : e) + 1) / n * 100; return `<span class="tl-month" style="left:${left}%;width:${w}%">${MONTHS_FR[m3 - 1]}</span>`; }).join('');
   const b = (mode, label) => `<button class="btn ${VIEW.mode === mode ? 'on' : ''}" data-mode="${mode}">${label}</button>`;
-  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${mo ? 'Quartier de ' + mo.label : ''}</b>${cur ? ' · semaine ' + cur.label : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns">${b('month', 'Ce mois-ci')}${b('center', 'Centre-ville')}${b('all', 'Tout le village')}<button class="btn" data-lapse="1" title="Revoir le village se construire jour après jour">▶ Time-lapse</button><button class="btn" data-gaz="1" title="Le journal de la semaine regardée">📰 Gazette</button><button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
+  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${mo ? 'Quartier ' + deM(mo.label) : ''}</b>${cur ? ' · semaine ' + cur.label : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns">${b('month', 'Ce mois-ci')}${b('center', 'Centre-ville')}${b('all', 'Tout le village')}<button class="btn" data-lapse="1" title="Revoir le village se construire jour après jour">▶ Time-lapse</button><button class="btn" data-gaz="1" title="Le journal de la semaine regardée">📰 Gazette</button><button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
   el.querySelectorAll('[data-mode]').forEach(bt => bt.addEventListener('click', () => { VIEW.mode = bt.dataset.mode; selected = null; animateCam(camForMode()); renderTimeline(); renderLegend(); }));
   el.querySelector('[data-lapse]').addEventListener('click', () => startLapse()); el.querySelector('[data-gaz]').addEventListener('click', () => openGazette());
   el.querySelector('[data-today]').addEventListener('click', () => { VIEW.date = null; selected = null; buildScene(); });
@@ -1962,6 +2105,7 @@ const zoomedOut = () => cam.s < .7;
 function hitArea(p) { const mo = MOS.find(mo => { const b = mo.L.box; return p.x >= pxc(b.x0) && p.x < pxc(b.x1) && p.y >= pyc(b.y0) && p.y < pyc(b.y1); }); if (mo) return {key: 'quartier', mo, big: true}; const b = CENTER_BOX; if (b && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) return {key: 'centre', c: true, big: true}; return null; }
 function hit(e) { const p = toWorld(e); if (zoomedOut()) return hitArea(p);
   const sol = actors.find(a => a.kind === 'soldier' && Math.abs(a.x - p.x) < 9 && p.y > a.y - 24 && p.y < a.y + 3); if (sol) return {key: 'soldier', a: sol, mo: sol.mo, x: sol.x - 8, y: sol.y - 24, w: 16, h: 26};
+  const vend = actors.find(a => a.kind === 'vendor' && Math.abs(a.x - p.x) < 10 && p.y > a.y - 30 && p.y < a.y + 3); if (vend) return {key: 'gazette', a: vend, x: vend.x - 8, y: vend.y - 28, w: 16, h: 30, c: true};
   const who = actors.filter(a => a.res && !a.hidden && !(a.appear && performance.now() < a.appear) && Math.abs(a.x - p.x) < 9 && p.y > a.y - 28 && p.y < a.y + 3).sort((a, b) => b.y - a.y)[0]; if (who) return {key: 'pnj', a: who, x: who.x - 8, y: who.y - 27, w: 16, h: 29};
   const hen = actors.find(a => a.kind === 'chicken' && a.mo && Math.abs(a.x - p.x) < 10 && p.y > a.y - 20 && p.y < a.y + 4); if (hen) return {key: 'poules', mo: hen.mo, x: hen.x - 9, y: hen.y - 18, w: 18, h: 20};
   let best = null, bestA = Infinity; for (const o of objects) { if (o.big) continue; if (p.x >= o.x - 1 && p.x <= o.x + o.w + 1 && p.y >= o.y - 1 && p.y <= o.y + o.h + 1) { const a = o.w * o.h; if (a < bestA) { best = o; bestA = a; } } } return best; }
@@ -1971,7 +2115,7 @@ window.addEventListener('mousemove', e => { if (dragging) { const dx = (e.client
 window.addEventListener('mouseup', () => { dragging = null; });
 cv.addEventListener('mousemove', e => { if (dragging) return; const rc = cv.getBoundingClientRect(); mouseAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; hover = hit(e); cv.style.cursor = hover ? 'pointer' : 'grab'; renderLegend(); });
 cv.addEventListener('mouseleave', () => { hover = null; renderLegend(); });
-cv.addEventListener('click', e => { if (moved) { moved = false; return; } { const rc = cv.getBoundingClientRect(); clickAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; } const o = hit(e); if (o && o.key === 'quartier' && zoomedOut()) { if (o.mo.built) goMonth(o.mo); return; } if (o && o.key === 'house' && !o.hs.annex && !o.hs.future) { openRoom(o.hs, o.mo); return; } if (o && o.key === 'pnj' && selected && selected.a === o.a) { selected = null; renderLegend(); return; } if (o && o.key === 'centre') { VIEW.mode = 'center'; animateCam(camCenter()); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
+cv.addEventListener('click', e => { if (moved) { moved = false; return; } { const rc = cv.getBoundingClientRect(); clickAt = {x: e.clientX - rc.left, y: e.clientY - rc.top}; } const o = hit(e); if (o && o.key === 'gazette') { openGazette(); return; } if (o && o.key === 'quartier' && zoomedOut()) { if (o.mo.built) goMonth(o.mo); return; } if (o && o.key === 'house' && !o.hs.annex && !o.hs.future) { openRoom(o.hs, o.mo); return; } if (o && o.key === 'pnj' && selected && selected.a === o.a) { selected = null; renderLegend(); return; } if (o && o.key === 'centre') { VIEW.mode = 'center'; animateCam(camCenter()); selected = null; renderTimeline(); renderLegend(); return; } selected = (o && selected && o === selected) ? null : o; renderLegend(); });
 cv.addEventListener('dblclick', e => { const a = hitArea(toWorld(e)); if (!a) return; if (a.mo) goMonth(a.mo); else { VIEW.mode = 'center'; animateCam(camCenter()); renderTimeline(); } });
 // la molette fait défiler la page ; Ctrl + molette (ou le pincement du pavé tactile) zoome
 cv.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const rc = cv.getBoundingClientRect(); zoomBy(Math.pow(1.0015, -e.deltaY * (e.ctrlKey && Math.abs(e.deltaY) < 20 ? 6 : 1)), e.clientX - rc.left, e.clientY - rc.top); }, {passive: false});
@@ -2011,6 +2155,7 @@ async function updateAll(btn) { // vide le cache des connecteurs (Coda, Todoist,
   location.reload();
 }
 $('refresh').addEventListener('click', () => updateAll()); $('upd').addEventListener('click', () => updateAll()); showSync();
+$('lang').textContent = LANG === 'en' ? 'FR' : 'EN'; $('lang').addEventListener('click', () => setLang(LANG === 'en' ? 'fr' : 'en'));
 $('theme').addEventListener('click', () => { const cur = document.documentElement.getAttribute('data-theme'); const next = cur === 'light' ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', next); try { localStorage.setItem('dash-theme', next); } catch (e) {} });
 (() => { let th = null; try { th = localStorage.getItem('dash-theme'); } catch (e) {} document.documentElement.setAttribute('data-theme', th || 'dark'); })();
 

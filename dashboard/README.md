@@ -28,8 +28,8 @@ Une île : une côte qui ondule, une plage tout autour, la mer animée à perte 
 (septembre à l'ouest, octobre à l'est, novembre au sud). Dans un quartier, les maisons de toutes les
 semaines du mois se rangent par ordre de construction, les premières au plus près de la place ;
 chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. La forêt recouvre ce
-qui n'est pas encore bâti. Un ruisseau traverse le quartier de septembre (pont, grenouilles, oies), une grande rivière coule à l'ouest
-(pont de pierre, capybaras), un marécage dort dans les bois au nord, la mer borde l'est avec sa plage ;
+qui n'est pas encore bâti. Un ruisseau né dans le marécage traverse le quartier de septembre (pont, grenouilles, oies), une rivière de quatre cases
+traverse novembre (ponts de pierre, capybaras) et s'ouvre en delta dans la mer, un marécage dort dans les bois au nord, la mer borde l'est avec sa plage ;
 des chevaux de toutes les robes paissent au nord-est, des souris et des cochons traînent près de la grange, des abeilles tournent autour des ruches ; le sol a des taches de prairie
 et les routes quelques renflements. Vues : « Ce mois-ci », « Centre-ville », « Tout le village », et « ▶ Time-lapse » qui rejoue le
 trimestre jour par jour en plein écran (Échap ou Stop pour sortir). Un clic ouvre une bulle à côté de
@@ -99,19 +99,24 @@ Le corps et les caps franchis :
 | Stèles au pied du moulin | chaque centaine de leads |
 | Banderole de l'entrée sud | les trois derniers caps, à tour de rôle |
 
-L'eau et le relief : le ruisseau du marécage descend le long de septembre puis tourne vers l'est ; celui de
-l'étang sort de sous la place et longe l'avenue ; ils se rejoignent au sud du centre et font la rivière qui
-traverse novembre (trois ponts de pierre) jusqu'à la mer. Une montagne en terrasses au nord-ouest, un marécage
+L'eau et le relief : le ruisseau part du marécage, descend le long de septembre puis file en diagonale, par
+zigzags, jusqu'au confluent (tracé 4-connexe peint au pinceau 2 x 2, donc sans coupure) ; celui de l'étang sort de
+sous la place et longe l'avenue ; ils font la rivière, large de quatre cases, qui traverse novembre (trois ponts
+de pierre) et s'ouvre en trois bras pour entrer dans la mer. Toutes les eaux et la mer comptent comme une seule
+eau pour l'autotile : aucune berge entre elles, et sur le sable l'eau n'a pas de bord. Les chemins qui arrivent
+sur le sable s'y fondent de la même façon. Une montagne en terrasses au nord-ouest, un marécage
 dans les bois du nord. Les pêcheurs suivent la règle du bouchon : il tombe 25 px à droite et 15 px sous les
 pieds, dans l'eau, les pieds sur la terre.
 
-La place et ses gens : café (une tasse sur le comptoir pour dix cafés du trimestre), bancs et pigeons, parterre
-en cœur qui fleurit à chaque soirée à deux et banc des amoureux la semaine où il y en a eu une, bûcherons à la
-lisière, mineur à la mine, porteurs de caisses entre le marché et la taverne. Dans les bois du sud-ouest, des
+La place et ses gens : le café est une maison au coin nord-ouest (une tasse sur le mur pour dix cafés du
+trimestre, son chemin descend jusqu'à l'avenue), bancs de bois, pigeons clairs sur la place et dans l'herbe des
+parcs, parterre en cœur qui fleurit à chaque soirée à deux et banc des amoureux la semaine où il y en a eu une,
+bûcherons face à leur arbre, mineur face à son filon, porteurs de caisses du marché à la taverne par la place, et
+le crieur de la Gazette qui fait le tour de la place en sautillant (« GAZETTE ! ») : un clic sur lui ouvre le journal. Dans les bois du sud-ouest, des
 ombres (slimes) rôdent, plus nombreuses quand le calme baisse ; à partir de quatre, une s'approche du camp.
 
-La Gazette de l'île (bouton 📰 dans la barre) : le journal de la semaine regardée. La une raconte les
-événements (sans prénom), puis l'économie du village (ventes contre le rythme attendu, la veillée qu'on attend),
+La Gazette de l'île (bouton 📰 dans la barre, ou le crieur sur la place) : le journal de la semaine regardée. La
+une raconte les événements (sans prénom), une interview d'un habitant (ses propres phrases, déjà tamisées), puis l'économie du village (ventes contre le rythme attendu, la veillée qu'on attend),
 le poulailler, les nuits, le baromètre des humeurs, l'assiette, le camp, les cérémonies de statues, les rumeurs
 d'ombres, le café, la météo et le mot du maire (le cap de la Weekly). Les illustrations sont dessinées avec les
 sprites du village.
@@ -144,7 +149,13 @@ nés cette semaine-là. Les objets racontent la semaine :
 | Tableau | la victoire de la semaine |
 
 Ce qui vient du journal passe au tamis : une ligne qui contient un prénom, un montant ou un sujet intime
-est écartée en entier, les événements sociaux sont racontés sans les noms.
+est écartée en entier, les événements sociaux sont racontés sans les noms. Les prénoms des habitants suivent
+les lieux : septembre n'a que des prénoms français, à partir d'octobre un mélange berlinois (surtout allemand,
+avec du turc, du russe, du polonais, de l'italien et un peu de français).
+
+Langue : le bouton EN / FR de la barre du haut bascule l'interface (dates, panneaux, légendes, fiches des
+habitants, Gazette) ; le choix est mémorisé dans le navigateur. Les enseignes du village restent en français, et
+ce que tu as écrit toi-même (objectifs, citations du journal) n'est pas traduit.
 
 ## Mise à jour
 
