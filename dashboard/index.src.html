@@ -602,12 +602,12 @@ function monthLayout(dir) { // tout en tuiles relatives au centre de l'étang
     L.sign = [XR(-20, -19)[0], -6]; L.lamps = [[XR(-17, -17)[0], -3], [XR(-20, -20)[0], 14], [XR(-31, -31)[0], 13], [XR(-48, -48)[0], 13]]; L.farW = dir === 'W' ? -92 : dir === 'E' ? 71 : null; // l'ouest file vers la rivière, l'est jusqu'à la plage
     L.trails = [[XR(-26, -25)[0], 13, 14]]; L.stream = XR(-43, -43)[0]; L.bEnd = XR(-50, -50)[0];
     L.box = {x0: dir === 'W' ? -62 : 21, x1: dir === 'W' ? -21 : 62, y0: -27, y1: 29};
-    L.food = dir === 'W' ? [-60, -4] : [56, -4]; L.camp = dir === 'W' ? [-71, 4] : [56, 4]; L.foodSpur = dir === 'W' ? -58 : 57; // le coin pour manger et le camp d'entraînement, dans les prés
+    L.food = dir === 'W' ? [-60, -4] : [56, -4]; L.camp = dir === 'W' ? [-71, 13] : [56, 13]; L.foodSpur = dir === 'W' ? -58 : 57; // le coin pour manger et le camp d'entraînement, dans les prés
   } else { // au sud : des rues de part et d'autre de l'avenue
     L.rows = {A: {R: 36, st: [38, 39], tall: true}, B: {R: 58, st: [60, 61]}, C: {R: 72, st: [74, 75]}}; L.rowOrder = ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C'];
-    L.fac = {pen: [-21, 41], pond: [3, 41], fields: [3, 46], park: [12, 41], bench: [17, 47]};
-    L.beds = [[-31, 41], [-40, 41], [-31, 47], [-40, 47]]; L.bedPath = [[-41, -23], 45, 46]; L.orchard = [24, 28, 32].flatMap(c => [[c, 47], [c, 52]]); L.square = null; L.hive = [21, 47];
-    L.food = [44, 48]; L.camp = [-58, 44]; L.sign = [1, 27]; L.lamps = [[-3, 36], [2, 40]]; L.trails = []; L.stream = null; L.farW = null;
+    L.fac = {pen: [-21, 41], pond: [14, 41], fields: [14, 46], park: [23, 41], bench: [28, 47]}; // la rivière passe entre l'avenue et le côté droit
+    L.beds = [[-31, 41], [-40, 41], [-31, 47], [-40, 47]]; L.bedPath = [[-41, -23], 45, 46]; L.orchard = [35, 39, 43].flatMap(c => [[c, 47], [c, 52]]); L.square = null; L.hive = [32, 47];
+    L.food = [48, 48]; L.camp = [-58, 44]; L.sign = [-6, 30]; L.lamps = [[-3, 36], [13, 40]]; L.trails = []; L.stream = null; L.farW = null;
     L.box = {x0: -40, x1: 40, y0: 27, y1: 77};
   }
   return L;
@@ -618,7 +618,7 @@ function monthsOf(qs) {
 }
 const monthOf = date => MOS.find(mo => date >= mo.start && date <= mo.end) || null;
 function packSlot(L, row, cursor, tilesW, side) { // place une maison de « tilesW » tuiles à la suite dans sa rangée
-  if (L.dir === 'S') { const c = cursor[row + side] == null ? (side === 'L' ? -2 : 1) : cursor[row + side]; const x0 = side === 'L' ? c - tilesW + 1 : c; cursor[row + side] = side === 'L' ? x0 - 2 : x0 + tilesW + 1; return x0; }
+  if (L.dir === 'S') { const c = cursor[row + side] == null ? (side === 'L' ? -2 : 12) : cursor[row + side]; const x0 = side === 'L' ? c - tilesW + 1 : c; cursor[row + side] = side === 'L' ? x0 - 2 : x0 + tilesW + 1; return x0; }
   const c = cursor[row] == null ? L.start : cursor[row]; const x0 = L.dir === 'W' ? c - tilesW + 1 : c; cursor[row] = L.dir === 'W' ? x0 - 2 : x0 + tilesW + 1; return x0;
 }
 function planMonth(mo, date) {
@@ -638,15 +638,16 @@ function monthRoads(mo, add) {
     ['A', 'B', 'C'].forEach(r => { const hs = inRow(r); if (!hs.length) return; const st = L.rows[r].st; last = Math.max(last, st[1]); const xl = Math.min(-1, ...hs.map(h => h.x0)), xr = Math.max(0, ...hs.map(h => h.x1)); for (let c = xl; c <= xr; c++) { add(c, st[0]); add(c, st[1]); } });
     for (let r = 10; r <= last; r++) { add(-1, r); add(0, r); } }
   else { const W = L.dir === 'W'; const outer = hs => W ? Math.min(...hs.map(h => h.x0)) : Math.max(...hs.map(h => h.x1)); const span = (a, b, f) => { for (let c = Math.min(a, b); c <= Math.max(a, b); c++) f(c); };
-    const a = inRow('A'); span(L.inner, L.farW != null && mo.age >= 10 ? L.farW : a.length ? outer(a) : (W ? L.lane[0] : L.lane[1]), c => { add(c, 0); add(c, 1); }); // l'avenue file vers la rivière ou la plage au milieu du mois
+    const toSand = () => { let c = L.inner; for (let k = 0; k < 90; k++) { c += W ? -1 : 1; if (isleRel(c, 0) === 1) return c + (W ? -1 : 1); } return L.farW; }; // l'avenue s'arrête un pas dans le sable
+    const a = inRow('A'); span(L.inner, L.farW != null && mo.age >= 10 ? toSand() : a.length ? outer(a) : (W ? L.lane[0] : L.lane[1]), c => { add(c, 0); add(c, 1); }); // l'avenue file vers la rivière ou la plage au milieu du mois
     if (mo.age >= 1) { for (let r = -20; r <= -1; r++) { add(L.lane[0], r); add(L.lane[1], r); } span(L.bedPath[0][0], L.bedPath[0][1], c => { add(c, L.bedPath[1]); add(c, L.bedPath[2]); }); }
     const lane = (r0, r1) => { for (let r = r0; r <= r1; r++) { add(L.lane[0], r); add(L.lane[1], r); } };
-    if (mo.age >= 2 || inRow('B').length) { lane(0, 12); const ob = inRow('B').length ? outer(inRow('B')) : L.bEnd; span(W ? L.lane[0] : L.lane[1], W ? Math.min(ob, L.bEnd) : Math.max(ob, L.bEnd), c => { add(c, 11); add(c, 12); });
+    if (mo.age >= 2 || inRow('B').length) { lane(0, 12); const ob = inRow('B').length ? outer(inRow('B')) : L.bEnd, cEnd = mo.campStage ? (W ? L.camp[0] + 14 : L.camp[0] - 1) : L.bEnd; span(W ? L.lane[0] : L.lane[1], W ? Math.min(ob, L.bEnd, cEnd) : Math.max(ob, L.bEnd, cEnd), c => { add(c, 11); add(c, 12); }); // la rue file jusqu'au camp d'entraînement
       L.trails.forEach(([c, r0, r1]) => { for (let r = r0; r <= r1; r++) { add(c, r); add(c + 1, r); } }); }
     if (inRow('C').length) { lane(-12, 1); span(W ? L.lane[0] : L.lane[1], outer(inRow('C')), c => { add(c, -12); add(c, -11); }); } }
   mo.houses.forEach(h => { for (let r = h.R - 1; r < h.st; r++) { add(h.pc, r); add(h.pc + 1, r); } });
-  if (L.dir !== 'S') { if (mo.foodStage) for (let r = L.food[1] + 1; r <= -1; r++) { add(L.foodSpur, r); add(L.foodSpur + 1, r); } if (mo.campStage) for (let r = 2; r < L.camp[1]; r++) { add(L.camp[0] + 3, r); add(L.camp[0] + 4, r); } }
-  else { if (mo.foodStage) { for (let c = 1; c <= 50; c++) { add(c, 38); add(c, 39); } for (let r = 40; r <= 41; r++) { add(48, r); add(49, r); } } if (mo.campStage) { for (let c = -48; c <= -1; c++) { add(c, 38); add(c, 39); } for (let r = 40; r <= 43; r++) { add(-49, r); add(-48, r); } } }
+  if (L.dir !== 'S') { if (mo.foodStage) for (let r = L.food[1] + 1; r <= -1; r++) { add(L.foodSpur, r); add(L.foodSpur + 1, r); } }
+  else { if (mo.foodStage) { for (let c = 1; c <= 54; c++) { add(c, 38); add(c, 39); } for (let r = 40; r <= 41; r++) { add(52, r); add(53, r); } } if (mo.campStage) { for (let c = -48; c <= -1; c++) { add(c, 38); add(c, 39); } for (let r = 40; r <= 43; r++) { add(-49, r); add(-48, r); } } }
 }
 
 /* ---- modèles de données ---- */
@@ -885,28 +886,28 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
     lk.ring.forEach(([x, y], i) => prop(x, y, y + 2, t => blit(IMG.fgrass, ((Math.floor(t * 2.5) + i * 5) % 8) * 16, 0, 16, 16, x, y)));
     const bxx = lk.cx + 30, byy = lk.cy - 36; if (dq >= 2) prop(bxx, byy, byy + 36, t => blit(IMG.boat, 0, 0, 48, 48, bxx, byy + Math.round(Math.sin(t * 1.5))));
     obj(lk.cx - lk.rx, lk.cy - lk.ry, lk.rx * 2, lk.ry * 2, 'lac');
-    res.actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: lk.cx - lk.rx - 14, y: lk.cy + 4, t: 1}); obj(lk.cx - lk.rx - 30, lk.cy - 26, 34, 40, 'lac'); } // le pêcheur, les pieds sur la berge, la ligne dans l'eau
+    obj(lk.cx - lk.rx - 34, lk.cy - 20, 34, 40, 'lac'); }
   const fx = X(-16), fyy = Y(-32); const flowing = cm.happy7 == null || cm.happy7 >= 5;
   if (dq >= 6) prop(fx, fyy, fyy + 44, t => flowing ? blit(IMG.fountain, (Math.floor(t * 8) % 8) * 32, 0, 32, 48, fx, fyy) : blit(IMG.fountain_dry, 0, 0, 32, 40, fx, fyy + 8)); obj(fx, fyy, 32, 48, 'fontaine');
   if (dq >= 4) [[-212, -116], [196, -116], [-212, 84], [196, 84]].forEach(([a, b], k) => propLampS(res, X(a) - 8, Y(b), g, 6 + (k % 2)));
   if (cm.party) { obj(X(-192), Y(126), 352, 30, 'fete'); for (let i = 0; i < 11; i++) { const x = X(-192 + i * 32), y = Y(126); prop(x, y, y + 30, t => blit(IMG.bunting, ((Math.floor(t * 6) + i) % 8) * 32, 0, 32, 32, x, y)); } }
   if (dq >= 3) for (let i = 0; i < cm.walkers; i++) res.actors.push({kind: 'loop', sheet: NPC_SHEETS[(i + 3) % NPC_SHEETS.length], p: i / cm.walkers, path: [[X(-184), Y(-92)], [X(184), Y(-92)], [X(184), Y(108)], [X(-184), Y(108)]], speed: .00012 + r() * .00004, t: r() * 5});
   // la rue du marché, de part et d'autre de l'avenue : un étal ouvert par vente, les autres bâchés
-  if (dq >= 9) [-184, -128, -72, 24, 80, 136].forEach((sx, i) => { const x = X(sx), y = Y(172); const open = i < cm.sales.length;
+  if (dq >= 9) [-184, -128, -72, 72, 128, 184].forEach((sx, i) => { const x = X(sx), y = Y(172); const open = i < cm.sales.length;
     prop(x, y, y + 42, () => { if (open) { blit(IMG.stalls, (i % 4) * 48, 0, 48, 48, x, y); blit(IMG.crops, 5 * 16, CROP_ROWS[(i + 3) % 6] * 32 + 8, 16, 24, x + 8, y + 14); blit(IMG.crops, 5 * 16, CROP_ROWS[(i + 1) % 6] * 32 + 8, 16, 24, x + 24, y + 14); }
       else { blit(IMG.stalls, (i % 4) * 48, 0, 48, 48, x, y, false, 'grayscale(.75) brightness(.85)'); octx.fillStyle = '#7d6a55'; octx.fillRect(x + 5, y + 26, 38, 13); octx.fillStyle = '#9c8669'; octx.fillRect(x + 5, y + 26, 38, 2); octx.fillStyle = '#5c4c3c'; for (let k = 0; k < 4; k++) octx.fillRect(x + 9 + k * 10, y + 28, 1, 11); } });
     if (open) res.actors.push({kind: 'idle', staff: 'stall', sheet: 'npc_chef_chloe', x: x + 24, y: y + 54, t: i}); res.block(x + 2, y + 24, 44, 20); });
   const msx = X(-238), msy = Y(176); if (dq >= 9) { prop(msx, msy, msy + 30, () => drawSign(msx, msy, 'MARCHE', cm.sales.length + '/' + cm.salesTarget)); obj(X(-240), Y(170), 430, 56, 'marche'); }
   // au sud-est, la ferme : moulin (rythme Todoist), grange et foin (leads), poulailler (leads)
-  const wmx = X(36), wmy = Y(257), stW = st(9); if (stW) prop(wmx, wmy, wmy + 108, t => { blitStage(IMG.windmill, 0, 0, 64, 112, wmx, wmy, stW); if (stW >= 3) blit(IMG.sails, (Math.floor(t * 5 * cm.windSpeed) % 4) * 64, 0, 64, 80, wmx, wmy - 3); }); if (stW) res.block(wmx + 12, wmy + 60, 40, 48); if (stW) obj(wmx + 6, wmy, 52, 110, 'moulin');
-  const bnx = X(112), bny = Y(237), stG = st(11); if (stG) { prop(bnx, bny, bny + 128, () => blitStage(IMG.barn, 0, 0, 128, 144, bnx, bny, stG)); res.block(bnx + 14, bny + 88, 100, 42); obj(bnx + 14, bny + 14, 100, 116, 'grange'); }
-  const cpx = X(248), cpy = Y(246), stP = st(13); if (stP) { prop(cpx, cpy, cpy + 118, () => blitStage(IMG.coop, 0, 0, 80, 128, cpx, cpy, stP)); res.block(cpx + 6, cpy + 70, 68, 48); obj(cpx + 4, cpy + 10, 72, 112, 'poulailler'); }
+  const wmx = X(80), wmy = Y(257), stW = st(9); if (stW) prop(wmx, wmy, wmy + 108, t => { blitStage(IMG.windmill, 0, 0, 64, 112, wmx, wmy, stW); if (stW >= 3) blit(IMG.sails, (Math.floor(t * 5 * cm.windSpeed) % 4) * 64, 0, 64, 80, wmx, wmy - 3); }); if (stW) res.block(wmx + 12, wmy + 60, 40, 48); if (stW) obj(wmx + 6, wmy, 52, 110, 'moulin');
+  const bnx = X(152), bny = Y(237), stG = st(11); if (stG) { prop(bnx, bny, bny + 128, () => blitStage(IMG.barn, 0, 0, 128, 144, bnx, bny, stG)); res.block(bnx + 14, bny + 88, 100, 42); obj(bnx + 14, bny + 14, 100, 116, 'grange'); }
+  const cpx = X(288), cpy = Y(246), stP = st(13); if (stP) { prop(cpx, cpy, cpy + 118, () => blitStage(IMG.coop, 0, 0, 80, 128, cpx, cpy, stP)); res.block(cpx + 6, cpy + 70, 68, 48); obj(cpx + 4, cpy + 10, 72, 112, 'poulailler'); }
   if (stG >= 3) for (let i = 0; i < cm.bales; i++) { const hx = X(108 + (i % 5) * 34), hy = Y(406 + Math.floor(i / 5) * 18); prop(hx, hy, hy + 14, () => blit(IMG.hay, 16, 0, 32, 16, hx, hy)); res.block(hx + 2, hy + 4, 28, 10); }
-  if (stG >= 3) obj(X(104), Y(402), 176, 40, 'grange');
-  const coopHome = {mid: {x: cpx + 40, y: cpy + 136}}; if (stP >= 3) for (let i = 0; i < Math.min(6, Math.round(cm.leads / 40)); i++) res.actors.push({kind: 'chicken', sheet: farmSheet('chicken', i + 5), home: coopHome, x: X(232 + (i % 3) * 20), y: Y(410 + Math.floor(i / 3) * 12), box: {x0: X(196), x1: X(318), y0: Y(404), y1: Y(440)}, free: true, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: .1});
-  if (stG >= 3) res.actors.push({kind: 'idle', sheet: 'npc_lumberjack_jack', x: X(96), y: Y(386), t: 2});
-  if (stG >= 3) for (let i = 0; i < 3; i++) res.actors.push({kind: 'wild', sheet: 'mouse', x: X(110 + i * 40), y: Y(380 + (i % 2) * 8), row: 2, frames: 10, walkRow: 1, fps: 6, free: true, box: {x0: X(96), x1: X(240), y0: Y(372), y1: Y(396)}, dir: 1, vx: 0, vy: 0, state: 'idle', t: i * 2, speed: .05});
-  const pigHome = {mid: {x: X(262), y: Y(426)}}; if (stP >= 3) for (let i = 0; i < 2; i++) res.actors.push({kind: 'pig', sheet: farmSheet('pig', i + 2), home: pigHome, x: X(270 + i * 20), y: Y(420), box: {x0: X(200), x1: X(318), y0: Y(404), y1: Y(446)}, free: true, dir: i ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: i, speed: .05});
+  if (stG >= 3) obj(X(144), Y(402), 176, 40, 'grange');
+  const coopHome = {mid: {x: cpx + 40, y: cpy + 136}}; if (stP >= 3) for (let i = 0; i < Math.min(6, Math.round(cm.leads / 40)); i++) res.actors.push({kind: 'chicken', sheet: farmSheet('chicken', i + 5), home: coopHome, x: X(232 + (i % 3) * 20), y: Y(410 + Math.floor(i / 3) * 12), box: {x0: X(236), x1: X(358), y0: Y(404), y1: Y(440)}, free: true, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 5, speed: .1});
+  if (stG >= 3) res.actors.push({kind: 'idle', sheet: 'npc_lumberjack_jack', x: X(136), y: Y(386), t: 2});
+  if (stG >= 3) for (let i = 0; i < 3; i++) res.actors.push({kind: 'wild', sheet: 'mouse', x: X(110 + i * 40), y: Y(380 + (i % 2) * 8), row: 2, frames: 10, walkRow: 1, fps: 6, free: true, box: {x0: X(136), x1: X(280), y0: Y(372), y1: Y(396)}, dir: 1, vx: 0, vy: 0, state: 'idle', t: i * 2, speed: .05});
+  const pigHome = {mid: {x: X(302), y: Y(426)}}; if (stP >= 3) for (let i = 0; i < 2; i++) res.actors.push({kind: 'pig', sheet: farmSheet('pig', i + 2), home: pigHome, x: X(270 + i * 20), y: Y(420), box: {x0: X(240), x1: X(358), y0: Y(404), y1: Y(446)}, free: true, dir: i ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: i, speed: .05});
   // au sud-ouest : la serre (vidéos) et les veillées (webinaires)
   const ghx = X(-136), ghy = Y(252), stS = st(15); if (stS) { prop(ghx, ghy, ghy + 112, () => blitStage(IMG.greenhouse, 96, 0, 96, 128, ghx, ghy, stS)); res.block(ghx + 4, ghy + 66, 88, 48); obj(ghx, ghy + 6, 96, 112, 'serre'); }
   if (stS >= 3) for (let i = 0; i < Math.min(12, cm.videosTarget); i++) { const px2 = X(-244 + (i % 6) * 17), py2 = Y(404 + Math.floor(i / 6) * 22); const done = i < cm.videos.length; prop(px2, py2, py2 + 30, () => blit(IMG.barrels, done ? (i % 6) * 16 : 48, done ? 32 : 0, 16, 32, px2, py2)); }
@@ -919,7 +920,7 @@ function drawCenter(cm, g) { // coordonnées en pixels relatives au centre de l'
   // arbres d'ornement et petites douceurs
   [[-300, -260, 'fruit'], [-150, -306, 'birch'], [300, -240, 'birch'], [-312, 120, 'fruit'], [292, 120, 'fruit']].forEach(([a, b, k]) => propTree(res, X(a), Y(b), k));
   [[-268, 140, 6], [250, 142, 4], [-150, 228, 0], [196, 228, 3], [-34, 236, 7], [-330, -150, 8]].forEach(([a, b, k]) => { const c = CUTE[k % CUTE.length], x = X(a), y = Y(b); prop(x, y, y + 14, () => odecor(c[0], c[1], x, y, c[2], c[3])); });
-  drawMonuments(res, X, Y, prop, cm.date);
+  drawMonuments(res, X, Y, prop, cm.date); plazaLife(res, X, Y, cm, dq); workers(res, dq); if (dq >= 9) porters(res, X, Y, 2); shades(res, cm);
   return res;
 }
 
@@ -957,9 +958,8 @@ function wildlife(o) { // les bêtes qui n'ont rien à mesurer : elles sont là 
   if (o.sMo) { for (let i = 0; i < 3; i++) { const r = Math.floor(rw() * 40) - 18, c = o.streamCol(r); frog(pxc(c + (i % 2 ? 3 : -1)) + 4, pyc(r) + 8, i); }
     const gb = {x0: pxc(o.sMo.L.stream - 7), x1: pxc(o.sMo.L.stream + 9), y0: pyc(-12), y1: pyc(10)}; for (let i = 0; i < 4; i++) goose(gb, i); }
   // la rivière : capybaras, oies sur la rive, un pêcheur
-  [[-30, 0], [14, 1], [36, 0]].forEach(([r, k]) => capy(pxc(o.riverCol(r)) - 4 + k * 10, pyc(r) + 10));
-  const rb = {x0: pxc(-72), x1: pxc(-64), y0: pyc(4), y1: pyc(20)}; for (let i = 0; i < 3; i++) goose(rb, i + 1);
-  actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: pxc(o.riverCol(-12) - 5), y: pyc(-12) + 6, t: 2});
+  [[33, 0], [50, 1], [68, 0]].forEach(([r, k]) => capy(pxc(o.riverCol(r)) - 4 + k * 10, pyc(r) + 10));
+  const rb = {x0: pxc(-3), x1: pxc(3), y0: pyc(80), y1: pyc(86)}; for (let i = 0; i < 3; i++) goose(rb, i + 1); // les oies à l'embouchure
   // le marécage : nénuphars, roseaux, bûches qui flottent, grenouilles, un capybara, un pêcheur
   const mc = [...o.mcells].map(k => k.split(',').map(Number)); const rm = rnd(71);
   mc.forEach(([c, r], i) => { const x = c * T, y = r * T; const roll = rm(); const edge = !o.mcells.has((c + 1) + ',' + r) || !o.mcells.has(c + ',' + (r + 1)) || !o.mcells.has((c - 1) + ',' + r);
@@ -968,14 +968,12 @@ function wildlife(o) { // les bêtes qui n'ont rien à mesurer : elles sont là 
     else if (!edge && roll < .27) props.push({x, base: y - 28, draw: t => blit(IMG.wlog, ((Math.floor(t * 3) + i) % 8) * 32, 0, 32, 16, x - 8, y)});
     else if (!edge && roll < .3) props.push({x, base: y - 28, draw: t => blit(IMG.wrock, ((Math.floor(t * 3) + i) % 8) * 16, 0, 16, 16, x, y)}); });
   const sw = o.swamp; capy(pxc(sw[0][0]) + 8, pyc(sw[0][1]) + 6); for (let i = 0; i < 4; i++) { const [cx, cy, rx, ry] = sw[i % sw.length]; frog(pxc(cx + (i % 2 ? rx + .6 : -rx - .8)), pyc(cy) + 6, i); }
-  actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: pxc(-43) + 6, y: pyc(-31) + 2, t: 4});
   // la prairie des chevaux, de toutes les robes
   autoRect(IMG.fences, OX + 24, OY - 40, 23, 13, true, 1, 1); for (let c = 24; c <= 46; c++) { blocked.add(KEY(c, -40)); blocked.add(KEY(c, -28)); } for (let r = -40; r <= -28; r++) { blocked.add(KEY(24, r)); blocked.add(KEY(46, r)); }
   const hb = {x0: pxc(26), x1: pxc(44), y0: pyc(-36), y1: pyc(-29)}, hhome = {shelter: propShelter({props}, pxc(27), pyc(-40) + 4, 8 * T), mid: {x: pxc(38), y: pyc(-33)}};
   HORSES.forEach((sh, i) => actors.push({kind: 'horse', sheet: sh, home: hhome, x: hb.x0 + rw() * (hb.x1 - hb.x0), y: hb.y0 + rw() * (hb.y1 - hb.y0), box: hb, free: true, dir: i % 2 ? 1 : -1, vx: 0, vy: 0, state: night ? 'sleep' : 'graze', timer: 2 + rw() * 6, t: rw() * 9, speed: .045}));
   // la plage : un pêcheur au bord de l'eau, deux promeneurs, des choses qui flottent
-  { const fy = pyc(2) + 4; actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: o.shoreX(fy) - 18, y: fy, t: 5});
-    const wy0 = pyc(-24), wy1 = pyc(24); ['npc_bartender_katy', 'npc_miner_mike'].forEach((sh, i) => { const x = o.shoreX(pyc(i ? 10 : -10)) - 40 - i * 12; actors.push({kind: 'npc', sheet: sh, x, y: wy0 + (i ? .7 : .2) * (wy1 - wy0), dir: i ? -1 : 1, axis: 'v', y0: wy0, y1: wy1, t: i * 3, speed: .05}); });
+  { const wy0 = pyc(-24), wy1 = pyc(24); ['npc_bartender_katy', 'npc_miner_mike'].forEach((sh, i) => { const x = o.shoreX(pyc(i ? 10 : -10)) - 40 - i * 12; actors.push({kind: 'npc', sheet: sh, x, y: wy0 + (i ? .7 : .2) * (wy1 - wy0), dir: i ? -1 : 1, axis: 'v', y0: wy0, y1: wy1, t: i * 3, speed: .05}); });
     [[-30, 70, 'wlog'], [-6, 130, 'wrock'], [26, 96, 'wlog'], [44, 60, 'lily_g']].forEach(([r, dx, k], i) => { const y = pyc(r), x = o.shoreX(y) + dx; props.push({x, base: y - 30, draw: t => blit(IMG[k], ((Math.floor(t * 3) + i) % 8) * (k === 'wlog' ? 32 : 16), 0, k === 'wlog' ? 32 : 16, 16, x, y + Math.round(Math.sin(t * 1.2 + i) * 1.5))}); }); }
   // la mer : un bateau qui se balance
   const by = pyc(18); props.push({x: o.shoreX(by) + 40, base: by + 36, draw: t => blit(IMG.boat, 0, 0, 48, 48, o.shoreX(by) + 40, by + Math.round(Math.sin(t * 1.3) * 2))});
@@ -1007,7 +1005,7 @@ function stoneBridge(g) { // un pont de pierre : dalles, parapets, piles qui tre
 }
 function settleActors() { // aucune bête ne doit apparaître sur une case bloquée : on la déplace dans son enclos, sinon on la retire
   const bad = (x, y) => isBlocked(x, y) || isBlocked(x, y - 6);
-  actors = actors.filter(a => { if (a.swim || ['duck', 'swan', 'bfly', 'bee', 'npc', 'loop', 'idle', 'fish', 'worker', 'soldier', 'guest'].includes(a.kind)) return true;
+  actors = actors.filter(a => { if (a.swim || ['duck', 'swan', 'bfly', 'bee', 'npc', 'loop', 'idle', 'fish', 'worker', 'soldier', 'guest', 'chop', 'porter'].includes(a.kind)) return true;
     if (a.still) { if (!bad(a.x, a.y)) return true; for (const dx of [16, -16, 32, -32, 48, -48]) if (!bad(a.x + dx, a.y)) { a.x += dx; return true; } return false; }
     if (!bad(a.x, a.y)) return true; const b = a.box; if (!b) return false;
     for (let k = 0; k < 60; k++) { const x = b.x0 + Math.random() * (b.x1 - b.x0), y = b.y0 + Math.random() * (b.y1 - b.y0); if (!bad(x, y)) { a.x = x; a.y = y; return true; } } return false; });
@@ -1036,10 +1034,10 @@ function buildScene() {
   // routes : la place, l'avenue du sud jusqu'à la ferme, l'allée de la ferme, puis les rues des quartiers construits
   const road = new Set(); const add = (c, r) => road.add(KEY(c, r));
   const hole = (c, r) => c >= -10 && c <= 9 && r >= -5 && r <= 4 && !((c === -10 || c === 9) && (r === -5 || r === 4)); // l'étang et sa berge au milieu de la place
-  for (let c = -15; c <= 14; c++) for (let r = -9; r <= 9; r++) if (!hole(c, r)) add(c, r);
-  for (let r = 10; r <= 24; r++) if (dq >= 2 + (r - 10) / 3) { add(-1, r); add(0, r); } for (let c = -19; c <= 19; c++) if (dq >= 8 + Math.abs(c) / 5) { add(c, 23); add(c, 24); } // l'avenue du sud puis l'allée de la ferme avancent jour après jour
+  const corner = (c, r) => (c <= -12 || c >= 11) && (r <= -7 || r >= 7) && (Math.abs(c + .5) + Math.abs(r + .5) > 18.5); for (let c = -13; c <= 12; c++) for (let r = -8; r <= 8; r++) if (!hole(c, r) && !corner(c, r)) add(c, r); // une place resserrée aux coins arrondis
+  for (let r = 9; r <= 24; r++) if (dq >= 2 + (r - 10) / 3) { add(-1, r); add(0, r); } for (let c = -19; c <= 19; c++) if (dq >= 8 + Math.abs(c) / 5) { add(c, 23); add(c, 24); } // l'avenue du sud puis l'allée de la ferme avancent jour après jour
   if (dq >= 9) [[-6, -5], [10, 11], [17, 18], [3, 4]].forEach(([a, b]) => { add(a, 22); add(b, 22); });
-  [[-13, -12, 3], [-1, 0, 1], [11, 12, 5], [-7, -6, 0]].forEach(([a, b, d0]) => { if (dq >= d0) { add(a, -10); add(b, -10); } }); // seuils de la banque, de la mairie, de la taverne, du puits // seuils de la serre, de la grange, du poulailler, du moulin
+  [[-13, -12, 3], [-1, 0, 1], [11, 12, 5], [-7, -6, 0]].forEach(([a, b, d0]) => { if (dq >= d0) { add(a, -10); add(b, -10); add(a, -9); add(b, -9); } }); // seuils de la banque, de la mairie, de la taverne, du puits // seuils de la serre, de la grange, du poulailler, du moulin
   MOS.forEach(mo => monthRoads(mo, add)); { const nw = sportOf(QSTART, date).walk.length, top = Math.max(-23, -4 - 3 * Math.ceil(nw / 2)); for (let r = top; r <= -1; r++) { add(-63, r); add(-62, r); } } // le sentier de la montagne s'allonge avec tes marches
   // un peu de fantaisie : des renflements le long des routes, là où rien n'est construit
   const noBump = new Set(); const nb = (c0, r0, c1, r1) => { for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) noBump.add(KEY(c, r)); };
@@ -1056,14 +1054,16 @@ function buildScene() {
   const inWorld = (c, r) => c + OX >= 0 && c + OX < cols && r + OY >= 0 && r + OY < rows; const bridges = [];
   const carve = (cells, c, r, kind) => { if (!inWorld(c, r) || !isleRel(c, r)) return; if (road.has(KEY(c, r))) bridges.push([c, r, kind]); cells.add(KEY(c, r)); };
   const sMo = MOS.find(mo => mo.L.stream != null); const streamCol = r => sMo.L.stream + Math.round(.6 * Math.sin(r / 5.5) + .5 * Math.sin(r / 2.2 + 1) + (r < -12 || r > 28 ? 1.5 * Math.sin(r / 7) : 0));
-  const wcells = new Set(); if (sMo) { let prev = null; for (let r = -27; r < y1; r++) { /* le ruisseau sort du marécage et file vers la mer du sud */ const c = streamCol(r); [c, c + 1].concat(prev != null ? [prev, prev + 1] : []).forEach(cc => carve(wcells, cc, r, 'wood')); prev = c; } }
-  const rcol = r => -78 + Math.round(2 * Math.sin(r / 8) + 1.2 * Math.sin(r / 3.1)), riverCol = r => rcol(r >= -2 && r <= 3 ? 0 : r); const rcells = new Set(); for (let r = -37; r < y1; r++) { const c = riverCol(r); const half = r < -34 ? 5 : 3; for (let cc = c - half; cc <= c + half - 1; cc++) carve(rcells, cc, r, 'stone'); } /* la rivière naît d'une source au pied de la montagne et descend vers la mer */
-  const swamp = [[-34, -35, 5, 3], [-28, -33, 4, 2.4], [-38, -31.5, 3.4, 2], [-25, -37, 3, 1.8], [-31, -29.5, 2.4, 1.5]]; const mcells = new Set();
-  for (let c = -44; c <= -20; c++) for (let r = -42; r <= -26; r++) if (swamp.some(([cx, cy, rx, ry]) => Math.pow((c + .5 - cx) / rx, 2) + Math.pow((r + .5 - cy) / ry, 2) <= 1)) carve(mcells, c, r, 'wood');
+  const wcells = new Set(); if (sMo) { let prev = null; for (let r = -29; r <= 26; r++) { const c = streamCol(r); [c, c + 1].concat(prev != null ? [prev, prev + 1] : []).forEach(cc => carve(wcells, cc, r, 'wood')); prev = c; } /* le ruisseau du marécage descend le long de septembre */
+    for (let c = streamCol(26); c <= 3; c++) { const w = Math.round(.6 * Math.sin(c / 4)); carve(wcells, c, 27 + w, 'wood'); carve(wcells, c, 28 + w, 'wood'); if (w !== Math.round(.6 * Math.sin((c - 1) / 4))) carve(wcells, c, 28 + w - Math.sign(w || 1), 'wood'); } } /* puis tourne vers l'est, sous le centre */
+  for (let r = 9; r <= 28; r++) { carve(wcells, 2, r, 'wood'); carve(wcells, 3, r, 'wood'); } /* le ruisseau de l'étang sort de sous la place et descend le long de l'avenue */
+  const rcol = r => 6 + Math.round(1.2 * Math.sin(r / 8) + .8 * Math.sin(r / 3.1)), riverCol = r => rcol(r >= 36 && r <= 41 ? 38 : r >= 58 && r <= 63 ? 60 : r >= 72 && r <= 77 ? 74 : r); const rcells = new Set(); for (let r = 29; r < y1; r++) { const c = riverCol(r); const half = r < 31 ? 2 : 3; for (let cc = c - half; cc <= c + half - 1; cc++) carve(rcells, cc, r, 'stone'); } /* les deux ruisseaux se rejoignent et font la rivière, qui traverse novembre jusqu'à la mer */
+  const swamp = [[-34, -35, 6, 3.6], [-27, -33, 5, 3], [-39, -31.5, 4.2, 2.6], [-24, -38, 3.6, 2.2], [-31, -29, 3.2, 1.9], [-38, -38, 3, 2]]; const mcells = new Set();
+  for (let c = -46; c <= -18; c++) for (let r = -43; r <= -25; r++) if (swamp.some(([cx, cy, rx, ry]) => Math.pow((c + .5 - cx) / rx, 2) + Math.pow((r + .5 - cy) / ry, 2) <= 1)) carve(mcells, c, r, 'wood');
   drawAuto(road, IMG.path);
-  streamW = sMo ? waterBody(wcells, 'stream') : null; const riverW = waterBody(rcells, 'river'), swampW = waterBody(mcells, 'swamp');
+  streamW = sMo ? waterBody(wcells, 'stream') : null; const riverW = waterBody(rcells, 'river'), swampW = waterBody(mcells, 'swamp'); WATERSETS = {stream: wcells, river: rcells, swamp: mcells};
   const allWater = new Set([...wcells, ...rcells, ...mcells]);
-  const cob = new Set(); for (let c = -13; c <= 12; c++) for (let r = -7; r <= 7; r++) if (!hole(c, r)) cob.add(KEY(c, r)); drawAuto(cob, IMG.cobble);
+  const cob = new Set(); for (let c = -12; c <= 11; c++) for (let r = -7; r <= 7; r++) if (!hole(c, r) && !corner(c, r)) cob.add(KEY(c, r)); drawAuto(cob, IMG.cobble);
   // l'étang : masque ovale, eau animée pré-rendue sur 8 images
   const lrx = 7.4, lry = 3.7; const lcells = new Set(); for (let c = -9; c <= 8; c++) for (let r = -5; r <= 4; r++) if (Math.pow((c + .5) / lrx, 2) + Math.pow((r + .5) / lry, 2) <= 1) lcells.add(KEY(c, r));
   const lb = {x: pxc(-9), y: pyc(-5), w: 18 * T, h: 10 * T}; const frames = [];
@@ -1101,7 +1101,7 @@ function buildScene() {
   const fr = rnd(31); for (let r = 0; r < rows - 5; r += 3) for (let c = 0; c < cols - 4; c += 3) { const cc = c + Math.floor(fr() * 2), rr = r + Math.floor(fr() * 2); let free = true; for (let dc = 0; dc < 4 && free; dc++) for (let dr = 0; dr < 5 && free; dr++) if (reserved.has((cc + dc) + ',' + (rr + dr))) free = false; const edge = Math.min(cc, rr, cols - cc, rows - rr) < 10; if (!free || fr() > (edge ? .8 : .6)) continue;
     const k = fr(); const [ik, sx, w, h] = TREES[FOREST[Math.min(FOREST.length - 1, Math.floor(k * FOREST.length))]]; const x = cc * T + (64 - w) / 2, y = rr * T + 80 - h; if (ok(IMG[ik])) props.push({base: y + h - 4, x, draw: () => blit(IMG[ik], sx, 0, w, h, x, y)});
     if (fr() < .25) { const cu = CUTE[[1, 2, 3, 6, 7, 8][Math.floor(fr() * 6)]]; const ux = cc * T + 40, uy = rr * T + 70; props.push({base: uy + 12, x: ux, draw: () => odecor(cu[0], cu[1], ux, uy, cu[2], cu[3])}); } }
-  settleActors(); restForTime(); assignResidents(date);
+  placeFishers(); settleActors(); restForTime(); assignResidents(date);
   actors.forEach(a => { if (!a.res) return; const mo = monthOf(a.res.date); if (!mo || !mo.m) return; a.res.walk = {f: mo.m.walkF, n: mo.m.walks90, month: mo.label}; if (mo.m.walkF > 1 && ['npc', 'loop', 'guest'].includes(a.kind)) { a.walkF = mo.m.walkF; if (a.speed) a.speed *= a.walkF; } }); // les grandes marches du mois font marcher plus vite ceux qui y sont nés
   // météo
   const r = rnd(3); for (let i = 0; i < 0; i++) cloudShadows.push({x: r() * worldW, y: r() * worldH, w: 140 + r() * 180, h: 70 + r() * 70, s: .01 + r() * .015});
@@ -1131,7 +1131,7 @@ function zoomBy(f, px, py) { const s = clamp(cam.s * f, fitScale, zoomScale * 2.
    Sous la pluie, la moitié des gens rentre et les autres sortent le parapluie ; les bêtes des enclos se serrent sous leur abri.
    La nuit, il ne reste qu'un promeneur avec sa lanterne ; les bêtes dorment groupées (sous l'abri s'il pleut),
    les poules se regroupent près de leurs nids dès 20 h. */
-const HUMANS = new Set(['npc', 'idle', 'loop', 'worker', 'fish', 'guest']);
+const HUMANS = new Set(['npc', 'idle', 'loop', 'worker', 'fish', 'guest', 'chop', 'porter']);
 const FARM = { // planches du pack premium : [rangée, images, vitesse]
   cow: {sheets: ['f_cow1', 'f_cow2', 'f_cow3', 'f_cow4', 'f_cow5'], idle: [0, 2, 1.5], walk: [3, 8, 7], eat: [6, 8, 4], sleep: [11, 8, 2.5]},
   sheep: {sheets: ['f_sheep1', 'f_sheep1', 'f_sheep2'], idle: [0, 2, 1.5], walk: [3, 8, 7], eat: [6, 8, 4], sleep: [11, 8, 2.5]},
@@ -1164,11 +1164,11 @@ function restForTime() {
   actors = actors.filter(a => {
     if (a.kind === 'bfly' || a.kind === 'bee') return ph === 'day' && !rain;
     if (a.kind === 'wild' && a.sheet === 'mouse') return ph !== 'night' && !rain;
-    if (a.kind === 'soldier') return ph !== 'night' && !rain;
+    if (a.kind === 'soldier') return ph !== 'night' && !rain; if (a.kind === 'pigeon') return ph === 'day' && !rain; if (a.kind === 'chop' || a.kind === 'porter') return ph === 'day' && !rain;
     if (!HUMANS.has(a.kind)) return true;
     if (ph === 'night') { if (a.kind === 'loop' && !owl) { owl++; a.lantern = true; return true; } return false; } // un seul noctambule, avec sa lanterne
     if (a.staff === 'stall') return true; // la marchande reste sous l'auvent de son étal
-    if (a.kind === 'worker') return ph === 'day' && !rain;
+    if (a.kind === 'worker') return ph === 'day' && !rain; if (a.love) return ph !== 'night';
     if (a.kind === 'guest' || a.staff === 'door') return !rain; // sous la pluie, la terrasse rentre dans la taverne
     return rr() < (ph === 'evening' ? .5 : 1) * (rain ? .5 : 1);
   });
@@ -1197,7 +1197,7 @@ function stepGuest(a, dt) {
   if (a.state === 'out' && go(a.exit[0], a.exit[1])) { a.seat.taken = false; a.seat = null; a.state = 'away'; a.hidden = true; a.timer = 6 + Math.random() * 20; }
 }
 function drawGuest(a, t) {
-  if (a.hidden) return; if (a.sit) { drawSheet(a.sheet, 6, 1, a.x, a.y - 6, a.dir < 0); return; } // accroupi sur la chaise : la pose assise des planches
+  if (a.hidden) return; if (a.sit) { drawSheet(a.sheet, a.love ? 0 : 6, a.love ? Math.floor(t * 3 + a.t) % 6 : 1, a.x, a.y - (a.love ? 2 : 6), a.dir < 0); return; } // accroupi sur la chaise : la pose assise des planches
   const f = Math.floor(t * 5 + a.t * 3) % 6; if (a.vx) drawSheet(a.sheet, 4, f, a.x, a.y, a.vx < 0); else drawSheet(a.sheet, a.vy > 0 ? 3 : 5, f, a.x, a.y, false);
 }
 /* ---- le time-lapse : la veille sert de point de départ ; les routes poussent case par case, les bêtes arrivent une à une ---- */
@@ -1246,7 +1246,7 @@ function stepActors(dt, t) {
     if (a.kind === 'npc') { if (a.axis === 'h') { a.x += a.dir * a.speed * dt; if (a.x < a.x0) { a.x = a.x0; a.dir = 1; } if (a.x > a.x1) { a.x = a.x1; a.dir = -1; } } else { a.y += a.dir * a.speed * dt; if (a.y < a.y0) { a.y = a.y0; a.dir = 1; } if (a.y > a.y1) { a.y = a.y1; a.dir = -1; } } return; }
     if (a.kind === 'idle' || a.kind === 'fish') return;
     if (a.kind === 'horse') { stepHorse(a, dt); return; }
-    if (a.kind === 'soldier' && a.mode !== 'march') return;
+    if (a.kind === 'soldier' && a.mode !== 'march') return; if (a.kind === 'chop') return; if (a.kind === 'porter') { stepLoop(a, dt); return; }
     if (a.kind === 'loop' || a.kind === 'soldier') { a.p = (a.p + a.speed * dt) % 1; const P = a.path; const seg = [0, 1, 2, 3].map(i => Math.hypot(P[(i + 1) % 4][0] - P[i][0], P[(i + 1) % 4][1] - P[i][1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i]) { d -= seg[i]; i++; } const A = P[i], B = P[(i + 1) % 4], k = d / seg[i]; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k; return; }
     if (a.kind === 'bee') { a.t += dt / 60; a.x = a.cx + Math.sin(a.t * 2.1) * a.rx + Math.sin(a.t * 5.3) * 3; a.y = a.cy + Math.sin(a.t * 2.9) * a.ry; return; }
     if (a.kind === 'wild' && a.still) return;
@@ -1256,7 +1256,7 @@ function stepActors(dt, t) {
     a.t += dt / 60;
     if (a.kind === 'duck' || a.kind === 'swan') { if (Math.random() < .004 * dt) { const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .5; } const nx = a.x + a.vx * a.speed * dt, ny = a.y + a.vy * a.speed * dt; const b = a.box;
       const inside = (b.ell ? Math.pow((nx - b.cx) / b.rx, 2) + Math.pow((ny - b.cy) / b.ry, 2) <= 1 : (nx >= b.x0 && nx <= b.x1 && ny >= b.y0 && ny <= b.y1)) && !(b.hole && Math.pow((nx - b.hole.cx) / b.hole.rx, 2) + Math.pow((ny - b.hole.cy) / b.hole.ry, 2) < 1); if (inside) { a.x = nx; a.y = ny; } else { a.vx = -a.vx; a.vy = -a.vy; } if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; return; }
-    if (a.free) { if (Math.random() < .012 * dt) { a.state = a.state === 'idle' ? 'walk' : 'idle'; a.eat = Math.random() < .5; const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; }
+    if (a.free) { if (Math.random() < (a.kind === 'pigeon' ? .03 : .012) * dt) { a.state = a.state === 'idle' ? 'walk' : 'idle'; a.eat = Math.random() < .5; const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; if (Math.abs(a.vx) > .05) a.dir = a.vx > 0 ? 1 : -1; }
       if (a.state === 'walk') { const nx = a.x + a.vx * a.speed * dt, ny = a.y + a.vy * a.speed * dt; const inBox = nx >= a.box.x0 && nx <= a.box.x1 && ny >= a.box.y0 && ny <= a.box.y1;
         if (inBox && !isBlocked(nx, ny)) { a.x = nx; a.y = ny; } else { const ang = Math.random() * Math.PI * 2; a.vx = Math.cos(ang); a.vy = Math.sin(ang) * .6; a.dir = a.vx > 0 ? 1 : -1; } }
       return; }
@@ -1264,7 +1264,7 @@ function stepActors(dt, t) {
     if (a.state === 'walk') { a.x += a.dir * a.speed * dt; a.y += Math.sin(a.t * 2) * .03 * dt; if (a.x < a.box.x0) { a.x = a.box.x0; a.dir = 1; } if (a.x > a.box.x1) { a.x = a.box.x1; a.dir = -1; } a.y = clamp(a.y, a.box.y0, a.box.y1); }
   });
 }
-const DRAW = {soldier: drawSoldier, chicken: drawFarm, cow: drawFarm, pig: drawFarm, sheep: drawFarm, guest: drawGuest, horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
+const DRAW = {chop: drawChop, porter: drawPorter, pigeon: drawPigeon, shade: drawShade, soldier: drawSoldier, chicken: drawFarm, cow: drawFarm, pig: drawFarm, sheep: drawFarm, guest: drawGuest, horse: drawHorse, fish: drawFish, wild: drawWild, bee: drawBee, swan: drawSwan, npc: drawNpc, idle: drawIdle, loop: drawLoop, worker: drawWorker, duck: drawDuck, bfly: drawBfly};
 let lastT = 0;
 function animate(now) {
   if (!assetsReady || !QS.length) { requestAnimationFrame(animate); return; }
@@ -1433,7 +1433,7 @@ function drawMonuments(res, X, Y, prop, date) {
       else { const sc = stoneFrame(m.pose[0], m.pose[1], m.pose[2], i % 2 === 1); if (sc) octx.drawImage(sc, x - 32, y - 12 - 42); } });
     res.block(x - 12, y - 10, 24, 10); res.objects.push({x: x - 13, y: y - 48, w: 26, h: 48, key: 'monument', c: true, mon: m}); });
   if (!ms.length) return;
-  const last = ms.slice(-3).reverse(), bx0 = X(-50), bx1 = X(34), by = Y(166); // la banderole de l'entrée sud : les trois derniers caps, à tour de rôle
+  const last = ms.slice(-3).reverse(), bx0 = X(-50), bx1 = X(14), by = Y(166); // la banderole de l'entrée sud : les trois derniers caps, à tour de rôle
   prop(bx0, by, by + 34, t => { const m = last[Math.floor(t / 5) % last.length], txt = m.label, w = txt.length * 4 + 8, cx = Math.round((bx0 + bx1) / 2 - w / 2);
     octx.fillStyle = '#3b2314'; [bx0, bx1].forEach(px => octx.fillRect(px, by, 3, 34)); octx.fillStyle = '#f3edda'; octx.fillRect(bx0 + 3, by + 3, cx - bx0 - 3, 1); octx.fillRect(cx + w, by + 3, bx1 - cx - w, 1);
     const wave = Math.round(Math.sin(t * 2) * 1); octx.fillStyle = '#8a2a2a'; octx.fillRect(cx - 1, by + 1 + wave, w + 2, 13); octx.fillStyle = '#c0453a'; octx.fillRect(cx, by + 2 + wave, w, 11); octx.fillStyle = '#f2c14e'; octx.fillRect(cx, by + 2 + wave, w, 1); pxText(txt, cx + 4, by + 5 + wave, '#fff2cc'); });
@@ -1456,12 +1456,13 @@ function makeSeaPat() { if (!ok(IMG.water_anim)) return; SEAPAT = []; for (let f
 function paintIsle(cols, rows) { // herbe texturée sur l'île, sable sur la frange, rien sur la mer ; mis en cache
   if (isleCache && isleCache.width === cols * T && isleCache.height === rows * T) { octx.drawImage(isleCache, 0, 0); return; }
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) tile(IMG.grass, 0, 0, x * T, y * T); textureGround(cols * T, rows * T);
-  const N = [[0, -1, 0], [0, 1, 1], [-1, 0, 2], [1, 0, 3]];
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const k = ISL[r * cols + c], x = c * T, y = r * T; if (k === 2) continue; if (k === 0) { octx.clearRect(x, y, T, T); continue; }
-    octx.fillStyle = '#e4a672'; octx.fillRect(x, y, T, T); const h = hashStr(c + ':' + r); octx.fillStyle = h % 2 ? '#f3c79a' : '#c98f61'; octx.fillRect(x + (h % 13), y + ((h >> 4) % 13), 2, 1);
-    N.forEach(([a, b, side]) => { const n = isleAt(c + a, r + b); if (n === 1) return; octx.fillStyle = n === 0 ? '#d4925f' : '#c58a5c'; const w = n === 0 ? 3 : 2;
-      if (side === 0) octx.fillRect(x, y, T, w); else if (side === 1) octx.fillRect(x, y + T - w, T, w); else if (side === 2) octx.fillRect(x, y, w, T); else octx.fillRect(x + T - w, y, w, T);
-      if (n === 2) { octx.fillStyle = '#e4a672'; for (let i = 0; i < T; i += 4) { if (side < 2) octx.fillRect(x + i + (side ? 2 : 0), side ? y + T - 1 : y, 2, 1); else octx.fillRect(side === 2 ? x : x + T - 1, y + i + (side === 3 ? 2 : 0), 1, 2); } } }); }
+  const W = cols * T, H = rows * T, id = octx.getImageData(0, 0, W, H), px = id.data; const h2 = (x, y) => { let n = (x * 374761393 + y * 668265263) ^ 0x5bd1e995; n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+  const SAND = [228, 166, 114], WET = [212, 146, 95], EDGE = [197, 138, 92], LIGHT = [243, 199, 154], DARK = [201, 143, 97];
+  for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) { const [v, a] = isleVal((x + 1) / T - OX, (y + 1) / T - OY); if (v < .72) continue; const n = h2(x >> 1, y >> 1);
+    const g0 = .82 + .05 * Math.sin(5 * a + 2) + (n - .5) * .05, s0 = 1 + (n - .5) * .03; if (v < g0) continue;
+    const col = v >= s0 ? null : v > s0 - .035 ? WET : (v < g0 + .025 && n > .45) ? EDGE : n > .965 ? LIGHT : n < .03 ? DARK : SAND;
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const i = ((y + dy) * W + x + dx) * 4; if (!col) { px[i + 3] = 0; continue; } px[i] = col[0]; px[i + 1] = col[1]; px[i + 2] = col[2]; px[i + 3] = 255; } }
+  octx.putImageData(id, 0, 0);
   isleCache = document.createElement('canvas'); isleCache.width = cols * T; isleCache.height = rows * T; isleCache.getContext('2d').drawImage(world, 0, 0);
 }
 function drawFoam(t, vw, vh) { // l'écume le long du rivage, qui va et vient
@@ -1487,6 +1488,68 @@ function drawFireworks(now, s) { // en espace écran, après la lumière : ça b
     const a = age - .5, fade = Math.max(0, 1 - a / 1.4); if (a < .15) { ctx.fillStyle = `rgba(255,255,255,${(.6 * (1 - a / .15)).toFixed(2)})`; ctx.beginPath(); ctx.arc(sx, sy, 30 * s * (a / .15), 0, Math.PI * 2); ctx.fill(); }
     f.parts.forEach(([an, v], i) => { const d = v * a * 70, ex = sx + Math.cos(an) * d * s, ey = sy + Math.sin(an) * d * .8 * s + 38 * a * a * s; ctx.globalAlpha = fade * .4; ctx.fillStyle = '#1a1030'; ctx.fillRect(ex - 1, ey - 1, px + 2, px + 2); ctx.fillStyle = i % 5 === 0 ? '#ffffff' : f.col; ctx.globalAlpha = fade; ctx.fillRect(ex, ey, px, px); /* un liseré sombre pour que ça se voie aussi en plein jour */ ctx.globalAlpha = fade * .45; ctx.fillRect(ex - Math.cos(an) * 4 * s, ey - Math.sin(an) * 3 * s, px, px); ctx.globalAlpha = 1; }); }); // une traînée derrière chaque étincelle
 }
+/* ---- les pêcheurs : la règle du bout de la canne ----
+   Le bouchon tombe à 25 px à droite et 15 px sous les pieds. On cherche une case d'eau dont la case en haut à gauche
+   est de la terre libre, et on pose le pêcheur là. */
+let WATERSETS = {};
+function fisherAt(cells, near, taken) { // cells : clés monde "C,R" ; near : [c, r] relatif ; renvoie la position du pêcheur ou null
+  const isW = (C, R) => cells.has(C + ',' + R); let best = null, bd = Infinity; const [nc, nr] = near;
+  cells.forEach(k => { const [C, R] = k.split(',').map(Number); const c = C - OX, r = R - OY; const d = Math.hypot(c - nc, r - nr); if (d >= bd) return;
+    if (isW(C - 2, R - 1) || isW(C - 1, R - 1) || isW(C - 2, R) || blocked.has((C - 2) + ',' + (R - 1)) || blocked.has((C - 1) + ',' + (R - 1)) || isleAt(C - 2, R - 1) === 0 || isleAt(C - 1, R - 1) === 0) return;
+    if (taken && taken.some(([tc, tr]) => Math.abs(tc - c) < 4 && Math.abs(tr - r) < 3)) return; bd = d; best = [c, r]; });
+  if (!best) return null; if (taken) taken.push(best); return {x: pxc(best[0]) - 17, y: pyc(best[1]) - 7};
+}
+function placeFishers() { // après les bâtiments, pour ne pas poser un pêcheur dans un mur
+  actors = actors.filter(a => a.kind !== 'fish'); const taken = [], put = (cells, near, t) => { if (!cells) return; const p = fisherAt(cells, near, taken); if (p) actors.push({kind: 'fish', sheet: 'npc_fisherman_fin', x: p.x, y: p.y, t}); };
+  const W = WATERSETS; put(lake && lake.cells, [-9, 1], 1); put(W.river, [2, 34], 2); put(W.river, [12, 66], 3); put(W.stream, [-43, -6], 4); put(W.stream, [-20, 27], 5); put(W.swamp, [-40, -31], 6); put(W.swamp, [-24, -36], 7);
+  const sea = new Set(FOAM.map(([x, y]) => (x / T) + ',' + (y / T))); put(sea, [94, 2], 8); put(sea, [92, 30], 9); put(sea, [-96, 20], 10); put(sea, [-40, 86], 11); put(sea, [60, 82], 12);
+}
+/* ---- les gens au travail : bûcherons, mineur, porteurs, clients du marché ---- */
+function drawChop(a, t) { drawSheet(a.sheet, a.row, Math.floor(t * 6 + a.t) % 6, a.x, a.y, a.dir < 0); }
+function drawCrate(x, y) { if (ok(IMG.crate)) blit(IMG.crate, 0, 0, 16, 16, x - 8, y); else { octx.fillStyle = '#8a5a2b'; octx.fillRect(x - 7, y + 2, 14, 11); octx.fillStyle = '#c08a4a'; octx.fillRect(x - 6, y + 3, 12, 9); octx.fillStyle = '#8a5a2b'; octx.fillRect(x - 1, y + 3, 2, 9); octx.fillRect(x - 6, y + 7, 12, 1); } }
+function drawPorter(a, t) { const f = Math.floor(t * 5 + a.t * 3) % 6; const dx = a.vx || 0, dy = a.vy || 0; if (Math.abs(dx) >= Math.abs(dy)) drawSheet(a.sheet, 4, f, a.x, a.y, dx < 0); else drawSheet(a.sheet, dy > 0 ? 3 : 5, f, a.x, a.y, false); if (a.p < .5) drawCrate(a.x, a.y - 44 + (f % 2)); }
+function workers(res, dq) { // bûcherons à la lisière, mineur à la mine, porteurs entre le marché et la taverne
+  const chop = (c, r, dir, sheet, row) => { const x = pxc(c), y = pyc(r); propTree({props: res.props, objects: res.objects, block: res.block}, x + (dir > 0 ? 14 : -78), y - 56, 'boak'); const lx = x + (dir > 0 ? -22 : 10), ly = y - 6; res.props.push({x: lx, base: ly + 14, draw: () => odecor(5, 9, lx, ly)});
+    res.actors.push({kind: 'chop', sheet, row, x, y, dir, t: c * .3}); res.objects.push({x: x - 10, y: y - 40, w: 20, h: 42, key: 'bucheron', c: true}); };
+  if (dq >= 4) chop(50, -14, 1, 'npc_lumberjack_jack', 7); if (dq >= 12) chop(-52, 58, -1, 'npc_lumberjack_jack', 7); if (dq >= 20) chop(30, 82, 1, 'npc_lumberjack_jack', 7);
+  if (dq >= 6) { const x = pxc(-61) + 4, y = pyc(-22) + 10; res.actors.push({kind: 'chop', sheet: 'npc_miner_mike', row: 7, x, y, dir: -1, t: 2}); res.objects.push({x: x - 10, y: y - 40, w: 20, h: 42, key: 'mineur', c: true}); }
+}
+function porters(res, X, Y, n) { // ils chargent au marché, livrent à la taverne, reviennent les mains vides
+  const path = [[X(-150), Y(150)], [X(-150), Y(-70)], [X(-176), Y(-70)], [X(-176), Y(-120)], [X(230), Y(-120)], [X(230), Y(-100)], [X(176), Y(-100)], [X(176), Y(150)]]; // place, rue du nord, retour
+  for (let i = 0; i < n; i++) res.actors.push({kind: 'porter', sheet: i % 2 ? 'npc_farmer_bob' : 'npc_farmer_buba', p: (i / n + .1) % 1, speed: .00011, path: i % 2 ? path : path.slice().reverse(), t: i * 2});
+}
+function stepLoop(a, dt) { // un chemin fermé de n points
+  a.p = (a.p + a.speed * dt) % 1; const P = a.path, n = P.length; const seg = P.map((p, i) => Math.hypot(P[(i + 1) % n][0] - p[0], P[(i + 1) % n][1] - p[1])); const tot = sum(seg); let d = a.p * tot, i = 0; while (d > seg[i] && i < n - 1) { d -= seg[i]; i++; }
+  const A = P[i], B = P[(i + 1) % n], k = seg[i] ? d / seg[i] : 0; a.vx = B[0] - A[0]; a.vy = B[1] - A[1]; a.x = A[0] + a.vx * k; a.y = A[1] + a.vy * k;
+}
+/* ---- la place : bancs, pigeons, le café, le banc des amoureux, le parterre en cœur ---- */
+function drawPigeon(a, t) { const x = Math.round(a.x), y = Math.round(a.y), peck = a.state !== 'walk' && Math.floor(t * 3 + a.t) % 4 === 0, fl = a.dir < 0; octx.fillStyle = 'rgba(0,0,0,.2)'; octx.fillRect(x - 3, y - 1, 7, 2);
+  octx.fillStyle = a.col; octx.fillRect(x - 3, y - 5, 6, 3); octx.fillRect(x - 2, y - 6, 4, 1); octx.fillStyle = '#5a5f6e'; octx.fillRect(fl ? x - 4 : x + 2, y - 6 + (peck ? 1 : 0), 2, 2); octx.fillStyle = '#e8c547'; octx.fillRect(fl ? x - 5 : x + 4, y - 5 + (peck ? 1 : 0), 1, 1); octx.fillStyle = '#c9a0a0'; octx.fillRect(x - 1, y - 2, 1, 2); octx.fillRect(x + 1, y - 2, 1, 2); }
+function plazaLife(res, X, Y, cm, dq) {
+  const r = rnd(1313);
+  if (dq >= 2) [[-160, -92, 0], [128, -92, 0], [-160, 60, 32], [128, 60, 32]].forEach(([a, b, sx]) => { const x = X(a), y = Y(b); res.props.push({x, base: y + 20, draw: () => blit(IMG.benches, sx, 0, 32, 32, x, y)}); res.block(x + 2, y + 12, 28, 10); });
+  if (dq >= 3) for (let i = 0; i < 7; i++) res.actors.push({kind: 'pigeon', x: X(-150 + r() * 300), y: Y(-110 + (r() < .5 ? 0 : 220)) + r() * 14, box: {x0: X(-190), x1: X(176), y0: Y(-124), y1: Y(124)}, free: true, dir: r() < .5 ? 1 : -1, vx: 0, vy: 0, state: 'idle', t: r() * 9, speed: .06, col: ['#8a8f9c', '#6f7482', '#a9adb8', '#b7b1a2'][i % 4]});
+  // le café : les cafés du trimestre, une tasse pour dix
+  const nc = Math.round(sum(S.daily.filter(d => d.date >= QSTART && d.date <= cm.date).map(d => num(d.coffee) || 0))), days = S.daily.filter(d => d.date >= QSTART && d.date <= cm.date && num(d.coffee) != null).length;
+  if (dq >= 6) { const kx = X(-330), ky = Y(-60); res.props.push({x: kx, base: ky + 44, draw: () => { blit(IMG.stalls, 2 * 48, 0, 48, 48, kx, ky); for (let i = 0; i < Math.min(12, Math.floor(nc / 10)); i++) { const cx = kx + 5 + (i % 6) * 7, cy = ky + 24 + Math.floor(i / 6) * 5; octx.fillStyle = '#f3edda'; octx.fillRect(cx, cy, 4, 3); octx.fillStyle = '#6b3d1f'; octx.fillRect(cx + 1, cy, 2, 1); octx.fillStyle = '#f3edda'; octx.fillRect(cx + 4, cy + 1, 1, 1); } drawPlate(kx + 6, ky - 12, 'CAFE'); }});
+    res.block(kx + 2, ky + 30, 44, 16); res.objects.push({x: kx - 2, y: ky - 14, w: 52, h: 60, key: 'cafe', c: true, nc, days}); res.actors.push({kind: 'idle', staff: 'stall', sheet: 'npc_bartender_katy', x: kx + 24, y: ky + 30, t: 3}); }
+  // le banc des amoureux et le parterre en cœur : les soirées à deux, sans un mot de plus
+  const deux = S.daily.filter(d => d.date >= QSTART && d.date <= cm.date && d.socialev && eventBits(d.socialev).some(e => e.k === 'deux')).map(d => d.date); const recent = deux.filter(d => d > addDays(cm.date, -7)).length;
+  const hx = X(70), hy = Y(96); const HEART = [[3, 0], [4, 0], [8, 0], [9, 0], [2, 1], [5, 1], [7, 1], [10, 1], [1, 2], [11, 2], [1, 3], [11, 3], [2, 4], [10, 4], [3, 5], [9, 5], [4, 6], [8, 6], [5, 7], [7, 7], [6, 8]];
+  if (dq >= 2) { const n = Math.min(HEART.length, deux.length * 3); for (let i = 0; i < n; i++) { const [px, py] = HEART[i], fx = hx + px * 6, fy = hy + py * 5; res.props.push({x: fx, base: fy + 10, draw: () => blit(IMG.flowers, (5 + (i % 2) * 2) * 16, 6 * 16, 16, 16, fx - 4, fy - 6)}); }
+    res.objects.push({x: hx - 4, y: hy - 6, w: 80, h: 56, key: 'coeur', c: true, n: deux.length, recent}); }
+  if (recent) { const bx = X(128), by = Y(60); ['npc_bartender_katy', 'npc_miner_mike'].forEach((sh, i) => res.actors.push({kind: 'guest', sheet: sh, seats: [], exits: [], seat: {x: bx + 8 + i * 14, y: by + 26, dir: i ? -1 : 1, taken: true}, state: 'sit', sit: true, hidden: false, dir: i ? -1 : 1, x: bx + 8 + i * 14, y: by + 26, vx: 0, vy: 0, timer: 1e9, t: i, love: true}));
+    res.props.push({x: bx, base: by + 60, draw: t => { for (let i = 0; i < 3; i++) { const k = ((t * .5 + i / 3) % 1), px = bx + 16 + Math.round(Math.sin((t + i) * 2) * 5), py = by - 2 - k * 26; octx.globalAlpha = 1 - k; octx.fillStyle = '#e8577a'; octx.fillRect(px, py + 1, 1, 1); octx.fillRect(px + 2, py + 1, 1, 1); octx.fillRect(px - 1, py + 2, 5, 1); octx.fillRect(px, py + 3, 3, 1); octx.fillRect(px + 1, py + 4, 1, 1); octx.globalAlpha = 1; } }}); }
+}
+/* ---- les ombres des bois : plus nombreuses quand le calme baisse ---- */
+function shades(res, cm) {
+  const d7 = S.daily.filter(d => d.date > addDays(cm.date, -7) && d.date <= cm.date), anx = avg(d7.map(d => num(d.anx))), moody = d7.filter(d => /anx|anxi|inqui|peur|jalou/i.test(JSON.stringify(d.moods || '') + ' ' + String(d.feel || ''))).length;
+  const n = clamp(Math.round((anx || 0) * 1.1 + moody * .7), 0, 7); const box = {x0: pxc(-86), x1: pxc(-54), y0: pyc(48), y1: pyc(74)}; const r = rnd(99 + n);
+  for (let i = 0; i < n; i++) res.actors.push({kind: 'shade', sheet: i % 3 ? 'slime_p' : 'slime_b', x: box.x0 + r() * (box.x1 - box.x0), y: box.y0 + r() * (box.y1 - box.y0), box, free: true, dir: 1, vx: 0, vy: 0, state: 'idle', t: r() * 9, speed: .03});
+  if (n >= 4) res.actors.push({kind: 'shade', sheet: 'slime_p', x: pxc(-66), y: pyc(44), box: {x0: pxc(-70), x1: pxc(-60), y0: pyc(42), y1: pyc(48)}, free: true, dir: 1, vx: 0, vy: 0, state: 'idle', t: 1, speed: .03, close: true}); // une s'approche du camp de novembre
+  res.objects.push({x: box.x0, y: box.y0, w: box.x1 - box.x0, h: box.y1 - box.y0, key: 'ombres', c: true, n, anx, moody});
+}
+function drawShade(a, t) { const im = IMG[a.sheet]; if (!ok(im)) return; const jump = a.state === 'walk'; blit(im, (Math.floor(t * (jump ? 8 : 4) + a.t * 3) % (jump ? 8 : 4)) * 32, (jump ? 1 : 0) * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0); }
 /* ---- les habitants : chacun est né un jour qui comptait ----
    Les gens des quartiers naissent des événements sociaux du mois, les fermiers des grosses journées de tâches,
    les pêcheurs des nuits les plus calmes, les promeneurs des jours les plus joyeux. Leur caractère vient des notes
@@ -1755,8 +1818,13 @@ const LEGEND_C = {
   cairn: (c, o) => ['🪨 Un cairn du sentier', `Ta marche du ${fmtDay(o.wk.date)}${o.wk.min ? ` : ${o.wk.min} minutes` : ''}.`],
   monument: (c, o) => [o.mon.title, `${o.mon.text} ${o.mon.stele ? 'Stèle posée' : 'Statue érigée'} le ${fmtDay(o.mon.date)}. Une statue sur la place pour chaque cap franchi (les six plus récents), une stèle au pied du moulin pour chaque centaine de leads.`],
   banniere: (c, o) => ['🎉 La banderole des derniers caps', o.list.map(m => `${fmtShort(m.date)} : ${m.title.replace(/^\S+\s/, '')}`).join(' · ')],
+  cafe: (c, o) => ['☕ Le café : tes cafés du trimestre', `${o.nc} ${plural(o.nc, 'café', 'cafés')} depuis le 1er septembre${o.days ? `, ${fmtNum(o.nc / o.days, 1)} par jour sur ${o.days} ${plural(o.days, 'jour noté', 'jours notés')}` : ''}. Une tasse sur le comptoir pour dix cafés.`],
+  coeur: (c, o) => ['💗 Le parterre en cœur', `Il fleurit de trois fleurs à chaque soirée à deux : ${o.n} ce trimestre${o.recent ? ', dont une cette semaine, et deux amoureux sur le banc' : ''}. Le reste ne regarde que toi.`],
+  ombres: (c, o) => ['🟣 Les ombres des bois', `Elles rôdent loin du village, dans les bois du sud-ouest : ${o.n} ${plural(o.n, 'ombre', 'ombres')} cette semaine. Plus le calme baisse, plus elles sont nombreuses (anxiété moyenne ${o.anx == null ? 'non notée' : fmtNum(o.anx, 1) + '/10'} sur 7 jours${o.moody ? `, ${o.moody} ${plural(o.moody, 'jour', 'jours')} d'humeur inquiète` : ''}). À partir de quatre, une s'approche du camp de novembre. Elles ne font rien : elles regardent.`],
+  bucheron: () => ['🪓 Le bûcheron', "Il coupe du bois à la lisière. Rien à mesurer, c'est le travail du village."],
+  mineur: () => ['⛏️ Le mineur', 'Il pique la roche à l\'entrée de la vieille mine. Personne ne sait ce qu\'il cherche.'],
   puits: () => ['🪣 Le puits', 'Le cœur du village, entre la banque et la mairie.'],
-  lac: c => ['🦢 L\'étang : tes nuits', `${c.goodNights} ${plural(c.goodNights, 'nuit', 'nuits')} à 80 % ou plus sur les 7 derniers jours : un canard par bonne nuit. Un cygne blanc par nuit à 90 % ou plus (${c.whiteSwans}, trois au plus)${c.blackSwan ? ", et un cygne noir : il y a eu une mauvaise nuit (sous 70 %) cette semaine" : ''}. Moyenne ${c.sleep7 != null ? fmtNum(c.sleep7, 0) + ' %' : 'inconnue'}. Fin pêche sur la berge, un capybara barbote.`],
+  lac: c => ['🦢 L\'étang : tes nuits', `${c.goodNights} ${plural(c.goodNights, 'nuit', 'nuits')} à 80 % ou plus sur les 7 derniers jours : un canard par bonne nuit. Un ruisseau en sort par le sud et rejoint celui du marécage pour faire la rivière. Un cygne blanc par nuit à 90 % ou plus (${c.whiteSwans}, trois au plus)${c.blackSwan ? ", et un cygne noir : il y a eu une mauvaise nuit (sous 70 %) cette semaine" : ''}. Moyenne ${c.sleep7 != null ? fmtNum(c.sleep7, 0) + ' %' : 'inconnue'}. Fin pêche sur la berge, un capybara barbote.`],
   moulin: c => ['🌬️ Le moulin : ton rythme Todoist', `${c.tasks7} tâches terminées sur 7 jours. Les ailes tournent à pleine vitesse à 10 tâches par jour, s'arrêtent à zéro.`],
   grange: c => ['🌾 La grange : les leads du trimestre', `${fmtNum(c.leads)} leads sur ${fmtNum(c.leadsTarget)} : une botte de foin pour 50 leads. Chaque quartier a ses poules, une pour dix leads du mois.`],
   poulailler: c => ['🐔 Le poulailler : tes leads', `${fmtNum(c.leads)} leads sur ${fmtNum(c.leadsTarget)} (${fmtNum(c.leads / c.leadsTarget * 100, 0)} %). Une poule pour dix leads du mois dans chaque quartier, une botte de foin pour 50 devant la grange.`],
