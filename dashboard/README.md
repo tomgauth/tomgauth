@@ -99,6 +99,23 @@ Le corps et les caps franchis :
 | Stèles au pied du moulin | chaque centaine de leads |
 | Banderole de l'entrée sud | les trois derniers caps, à tour de rôle |
 
+L'eau et le relief : le ruisseau du marécage descend le long de septembre puis tourne vers l'est ; celui de
+l'étang sort de sous la place et longe l'avenue ; ils se rejoignent au sud du centre et font la rivière qui
+traverse novembre (trois ponts de pierre) jusqu'à la mer. Une montagne en terrasses au nord-ouest, un marécage
+dans les bois du nord. Les pêcheurs suivent la règle du bouchon : il tombe 25 px à droite et 15 px sous les
+pieds, dans l'eau, les pieds sur la terre.
+
+La place et ses gens : café (une tasse sur le comptoir pour dix cafés du trimestre), bancs et pigeons, parterre
+en cœur qui fleurit à chaque soirée à deux et banc des amoureux la semaine où il y en a eu une, bûcherons à la
+lisière, mineur à la mine, porteurs de caisses entre le marché et la taverne. Dans les bois du sud-ouest, des
+ombres (slimes) rôdent, plus nombreuses quand le calme baisse ; à partir de quatre, une s'approche du camp.
+
+La Gazette de l'île (bouton 📰 dans la barre) : le journal de la semaine regardée. La une raconte les
+événements (sans prénom), puis l'économie du village (ventes contre le rythme attendu, la veillée qu'on attend),
+le poulailler, les nuits, le baromètre des humeurs, l'assiette, le camp, les cérémonies de statues, les rumeurs
+d'ombres, le café, la météo et le mot du maire (le cap de la Weekly). Les illustrations sont dessinées avec les
+sprites du village.
+
 Les habitants et les intérieurs :
 
 Chaque personnage est né un jour qui comptait : les gens des quartiers d'un événement social du mois, les

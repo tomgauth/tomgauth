@@ -83,6 +83,15 @@ button { font: inherit; cursor: pointer; }
 .cal { display: flex; gap: 4px; height: 64px; align-items: flex-end; margin: 6px 0 2px; } .cal span { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; text-align: center; } .cal i { display: block; min-height: 2px; } .cal small { font-size: 9.5px; color: #cbbfa6; margin-top: 2px; }
 .mitl { list-style: none; margin: 6px 0 0; padding: 0; } .mitl li { padding: 3px 0 3px 14px; position: relative; font-size: 12.5px; } .mitl li::before { content: '·'; position: absolute; left: 3px; color: #cbbfa6; } .mitl li.ok::before { content: '✓'; color: #7bc67b; } .mitl small { color: #cbbfa6; }
 @media (max-width: 760px) { .room-in { flex-direction: column; } .room-side { width: auto; max-height: 240px; align-self: auto; } }
+.gaz { position: absolute; inset: 0; z-index: 9; background: rgba(12,9,20,.82); display: flex; align-items: flex-start; justify-content: center; padding: 14px; overflow: auto; }
+.gaz-paper { position: relative; width: min(860px, 100%); background: #f3e9d2; color: #2a1f14; border: 3px solid #3b2314; box-shadow: 0 6px 0 rgba(0,0,0,.5); padding: 14px 18px 18px; font-family: Georgia, 'Times New Roman', serif; }
+.gaz-x { position: absolute; right: 10px; top: 8px; background: #3b2314; color: #f3e9d2; border: 0; font: 10px 'Press Start 2P', monospace; padding: 6px 8px; cursor: pointer; }
+.gaz-head { text-align: center; border-bottom: 3px double #3b2314; padding-bottom: 8px; margin-bottom: 12px; } .gaz-title { font: 20px 'Press Start 2P', monospace; letter-spacing: 1px; color: #3b2314; } .gaz-sub { font-size: 12px; margin-top: 8px; font-style: italic; color: #5a4632; }
+.gaz-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; } .gaz-cols article { border-top: 1px solid #c9b48f; padding-top: 8px; } .gaz-cols article.une { grid-column: 1 / -1; border-top: 0; padding-top: 0; display: grid; grid-template-columns: 192px 1fr; gap: 14px; align-items: start; }
+.gaz-cols article.une .kicker, .gaz-cols article.une h3, .gaz-cols article.une p { grid-column: 2; } .gaz-cols article.une .gaz-pic { grid-column: 1; grid-row: 1 / span 3; }
+.gaz-cols article:not(.une) .gaz-pic { float: right; margin: 0 0 6px 10px; } .gaz-img { width: 128px; height: 80px; image-rendering: pixelated; image-rendering: crisp-edges; border: 2px solid #3b2314; display: block; } article.une .gaz-img { width: 192px; height: 120px; }
+.gaz .kicker { font: 8px 'Press Start 2P', monospace; color: #8a2a2a; letter-spacing: 1px; margin-bottom: 4px; } .gaz h3 { margin: 0 0 6px; font-size: 17px; line-height: 1.2; } article.une h3 { font-size: 24px; } .gaz p { margin: 0; font-size: 13.5px; line-height: 1.45; }
+@media (max-width: 760px) { .gaz-cols { grid-template-columns: 1fr; } .gaz-cols article.une { grid-template-columns: 1fr; } .gaz-cols article.une .kicker, .gaz-cols article.une h3, .gaz-cols article.une p, .gaz-cols article.une .gaz-pic { grid-column: 1; grid-row: auto; } }
 .hidden { display: none !important; }
 .hero.full { position: fixed; inset: 0; z-index: 90; height: 100vh !important; width: 100vw; }
 .lapse-cap { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 6; background: rgba(24,18,36,.9); color: #f2c14e; border: 3px solid #f2c14e; padding: 8px 14px; font: 14px 'Press Start 2P', monospace; text-align: center; }
@@ -202,7 +211,7 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); font-siz
 </div>
 <div class="stage">
   <div class="mid">
-    <div class="hero" id="hero"><canvas id="scene" aria-label="Village pixel art reflétant l'état du trimestre"></canvas><div class="info hidden" id="info"></div><div class="tip hidden" id="tip"></div><div class="room hidden" id="room"><div class="room-in"><div class="room-view"><canvas id="roomcv" aria-label="Intérieur de la maison"></canvas></div><div class="room-side"><button class="room-x" id="room-x">✕ Sortir</button><div id="room-txt"></div></div></div></div></div>
+    <div class="hero" id="hero"><canvas id="scene" aria-label="Village pixel art reflétant l'état du trimestre"></canvas><div class="info hidden" id="info"></div><div class="tip hidden" id="tip"></div><div class="gaz hidden" id="gaz"><div class="gaz-paper"></div></div><div class="room hidden" id="room"><div class="room-in"><div class="room-view"><canvas id="roomcv" aria-label="Intérieur de la maison"></canvas></div><div class="room-side"><button class="room-x" id="room-x">✕ Sortir</button><div id="room-txt"></div></div></div></div></div>
     <div class="timeline" id="timeline"></div>
   </div>
   <aside class="side right">
@@ -1550,6 +1559,75 @@ function shades(res, cm) {
   res.objects.push({x: box.x0, y: box.y0, w: box.x1 - box.x0, h: box.y1 - box.y0, key: 'ombres', c: true, n, anx, moody});
 }
 function drawShade(a, t) { const im = IMG[a.sheet]; if (!ok(im)) return; const jump = a.state === 'walk'; blit(im, (Math.floor(t * (jump ? 8 : 4) + a.t * 3) % (jump ? 8 : 4)) * 32, (jump ? 1 : 0) * 32, 32, 32, a.x - 16, a.y - 24, a.dir > 0); }
+/* ---- la Gazette de l'île : le journal de la semaine ----
+   Des articles écrits à partir de ce qui s'est passé : les événements, l'humeur, l'économie du village, les nuits,
+   l'assiette, le camp, les travaux, les rumeurs. Les illustrations sont dessinées avec les sprites du village.
+   Jamais de prénom ni de montant : les événements passent par le même tamis que les habitants. */
+function gazPic(kind, o) { // une petite image 128 x 80, rendue avec les sprites du jeu
+  const c = document.createElement('canvas'); c.width = 128; c.height = 80; const sv = octx; octx = c.getContext('2d'); octx.imageSmoothingEnabled = false;
+  const grass = () => { for (let y = 0; y < 80; y += 16) for (let x = 0; x < 128; x += 16) tile(IMG.grass, 0, 0, x, y); };
+  const sky = (night) => { octx.fillStyle = night ? '#2a2f5a' : '#9fd3f0'; octx.fillRect(0, 0, 128, 80); };
+  const water = () => { if (!ok(IMG.water_anim)) { octx.fillStyle = '#3a86c8'; octx.fillRect(0, 0, 128, 80); return; } for (let y = 0; y < 80; y += 16) for (let x = 0; x < 128; x += 16) octx.drawImage(IMG.water_anim, 16, 16, 16, 16, x, y, 16, 16); };
+  const heart = (x, y, col) => { octx.fillStyle = col; octx.fillRect(x, y + 1, 1, 1); octx.fillRect(x + 2, y + 1, 1, 1); octx.fillRect(x - 1, y + 2, 5, 1); octx.fillRect(x, y + 3, 3, 1); octx.fillRect(x + 1, y + 4, 1, 1); };
+  try {
+    if (kind === 'house') { grass(); const h = o.h, T0 = h.T, key = T0.m === 'inn' ? 'inn' : `h${MATERIALS[o.mi % 4]}${h.model}${ROOFS[o.mi % 3]}`; const im = IMG[key]; if (ok(im)) octx.drawImage(im, 0, 0, T0.w, T0.h, 64 - T0.w / 2 * (T0.w > 128 ? .6 : 1), 76 - T0.vis * (T0.w > 128 ? .6 : 1), T0.w * (T0.w > 128 ? .6 : 1), T0.h * (T0.w > 128 ? .6 : 1)); (o.res || []).slice(0, 3).forEach((r, i) => drawSheet(r.sheet, 0, i, 40 + i * 24, 76, i % 2 === 1)); }
+    else if (kind === 'hearts') { grass(); blit(IMG.benches, 0, 0, 32, 32, 48, 40); drawSheet('npc_bartender_katy', 0, 1, 56, 64, false); drawSheet('npc_miner_mike', 0, 2, 72, 64, true); [[60, 30], [70, 22], [52, 18], [78, 34]].forEach(([x, y], i) => heart(x, y, i % 2 ? '#e8577a' : '#f2a0b8')); }
+    else if (kind === 'market') { grass(); [0, 1, 2].forEach(i => blit(IMG.stalls, i * 48, 0, 48, 48, -8 + i * 48, 20, false, i < o.open ? '' : 'grayscale(.75) brightness(.85)')); if (o.open) drawSheet('npc_chef_chloe', 0, 0, 16, 76, false); }
+    else if (kind === 'hens') { grass(); if (ok(IMG.coop)) octx.drawImage(IMG.coop, 0, 0, 80, 128, 70, -40, 80, 128); for (let i = 0; i < Math.min(5, o.n); i++) { const im = IMG[farmSheet('chicken', i)]; if (ok(im)) blit(im, 0, 0, 32, 32, 4 + i * 16, 40 + (i % 2) * 12); } blit(IMG.hay, 16, 0, 32, 16, 8, 60); }
+    else if (kind === 'swans') { water(); for (let i = 0; i < Math.min(3, o.white); i++) blit(IMG.swan, 0, 0, 32, 32, 10 + i * 34, 20 + (i % 2) * 14); if (o.black) blit(IMG.swanb, 0, 0, 32, 32, 90, 44); if (!o.white && !o.black) blit(IMG.duck, 0, 8 * 32, 32, 32, 48, 30); if (o.night) { octx.fillStyle = 'rgba(40,40,100,.45)'; octx.fillRect(0, 0, 128, 80); } }
+    else if (kind === 'camp') { grass(); octx.fillStyle = '#efe6cf'; octx.fillRect(8, 24, 70, 44); octx.fillStyle = o.col; octx.fillRect(8, 24, 70, 3); octx.fillRect(8, 65, 70, 3); for (let i = 0; i < Math.min(4, o.n); i++) drawSheet(o.sheet, i < 2 ? 9 : 0, i, 26 + i * 18, 60, i % 2 === 1); if (ok(IMG.tent)) octx.drawImage(IMG.tent, 0, 0, 80, 96, 84, -4, 48, 58); }
+    else if (kind === 'shade') { grass(); octx.fillStyle = 'rgba(0,0,0,.25)'; octx.fillRect(0, 0, 128, 80); [[4, 0], [60, -6], [96, 4]].forEach(([x, y]) => { const [ik, sx, w, h] = TREES.spruce_s; blit(IMG[ik], sx, 0, w, h, x, y); }); for (let i = 0; i < Math.min(3, o.n); i++) blit(IMG[i % 2 ? 'slime_p' : 'slime_b'], 0, 0, 32, 32, 20 + i * 30, 46); }
+    else if (kind === 'calm') { water(); grass(); octx.clearRect(60, 0, 68, 80); water(); grass(); octx.save(); octx.beginPath(); octx.rect(0, 0, 64, 80); octx.clip(); grass(); octx.restore(); drawSheet('npc_fisherman_fin', 8, 1, 30, 48, false); blit(IMG.duck, 0, 8 * 32, 32, 32, 84, 30); }
+    else if (kind === 'weather') { sky(o.night); octx.fillStyle = o.sun ? '#f2c14e' : '#d8dde6'; octx.beginPath(); octx.arc(o.sun ? 40 : 50, 30, 14, 0, Math.PI * 2); octx.fill(); if (!o.sun) { octx.fillStyle = '#eef1f6'; octx.beginPath(); octx.arc(70, 36, 16, 0, Math.PI * 2); octx.arc(88, 40, 12, 0, Math.PI * 2); octx.fill(); } if (o.rain) { octx.fillStyle = '#bcd6f2'; for (let i = 0; i < 24; i++) octx.fillRect(10 + (i * 37) % 110, 50 + (i * 13) % 24, 1, 4); } octx.fillStyle = '#4e9c6a'; octx.fillRect(0, 68, 128, 12); }
+    else if (kind === 'statue') { grass(); octx.fillStyle = '#8d93a0'; octx.fillRect(48, 60, 32, 12); octx.fillStyle = '#b9bec8'; octx.fillRect(48, 58, 32, 4); const sc = o.m.stele ? null : stoneFrame(o.m.pose[0], o.m.pose[1], o.m.pose[2], false); if (sc) octx.drawImage(sc, 32, 6); else { octx.fillStyle = '#a3a9b5'; octx.fillRect(58, 26, 12, 32); } }
+    else if (kind === 'food') { grass(); blit(IMG.stalls, o.stall * 48, 0, 48, 48, 40, 20); for (let i = 0; i < Math.min(8, o.lv * 2); i++) blit(IMG.i_small, LOAF[0], LOAF[1], LOAF[2], LOAF[3], 44 + (i % 4) * 9, 44 + Math.floor(i / 4) * 5); drawSheet('npc_chef_chloe', 0, 0, 64, 50, false); }
+    else if (kind === 'works') { grass(); const im = IMG.hs4R; if (ok(im)) { blit(im, 0, 60, 112, 36, 8, 44); for (let i = 0; i < 7; i++) tile(IMG.fences, i === 0 ? 1 : i === 6 ? 3 : 2, 0, 8 + i * 16, 34); } blit(IMG.chest, 0, 0, 16, 16, 100, 26); decor(0, 7, 20, 24, 2, 1); }
+    else if (kind === 'coffee') { grass(); blit(IMG.stalls, 2 * 48, 0, 48, 48, 40, 18); for (let i = 0; i < 8; i++) { const cx = 46 + (i % 4) * 8, cy = 42 + Math.floor(i / 4) * 6; octx.fillStyle = '#f3edda'; octx.fillRect(cx, cy, 4, 3); octx.fillStyle = '#6b3d1f'; octx.fillRect(cx + 1, cy, 2, 1); } drawSheet('npc_bartender_katy', 0, 0, 64, 50, false); }
+    else grass();
+  } catch (e) { /* une image manquante ne doit pas bloquer le journal */ }
+  octx = sv; return c;
+}
+function gazArticles(d) {
+  const ws = weekStart(d), to = d < M.today ? d : M.today, q = quartierOf(d), mo = monthOf(d), cm = centerModel(to), K = S.kpi_live || {}; const days = S.daily.filter(x => x.date >= ws && x.date <= to); const A = [];
+  const art = (kicker, title, body, pic) => A.push({kicker, title, body, pic});
+  const h = MOS.flatMap(m => m.houses).find(x => x.q === q && !x.annex), res = h ? residentsOfWeek(h) : [];
+  // la une : les événements de la semaine
+  const evs = days.filter(x => x.socialev).flatMap(x => eventBits(String(x.socialev)).map(e => Object.assign({date: x.date}, e)));
+  if (evs.length) { const kinds = evs.map(e => e.k), top = ['deux', 'fete', 'table', 'balade', 'muay'].find(k => kinds.includes(k)) || kinds[0];
+    const titles = {deux: 'On a vu des cœurs au-dessus du banc', fete: 'Le village a fait la fête', table: 'Grande tablée sur l\'île', balade: 'Promenade et bavardages', muay: 'Le camp a sonné la cloche'};
+    art('LA UNE', titles[top], `${evs.length} ${plural(evs.length, 'événement', 'événements')} cette semaine : ${joinFr(evs.map(e => e.t))}. ${h ? `La maison de la semaine est ${h.stage >= 3 ? 'une ' + h.T.name : 'encore en chantier'}` : 'La maison de la semaine attend son plan'}${res.length ? `, et le village compte ${res.length} ${plural(res.length, 'nouvel habitant', 'nouveaux habitants')} : ${joinFr(res.map(r => r.name))}` : ''}.`,
+      top === 'deux' ? gazPic('hearts') : gazPic('house', {h, mi: mo ? mo.mi : 0, res})); }
+  else art('LA UNE', 'Semaine tranquille sur l\'île', `Pas d'événement social ${to < addDays(ws, 6) ? 'pour l\'instant' : 'cette semaine'} : les rues sont calmes, la taverne compte ses chaises et les pêcheurs ont l'étang pour eux.`, gazPic('calm'));
+  // l'économie : le marché, la veillée qu'on attend
+  const pace = cm.salesTarget * clamp(daysBetween(QSTART, to) / (daysBetween(QSTART, QEND) + 1), 0, 1), worry = cm.sales.length < pace - .8, nxt = (K.webinars || {}).next;
+  art('ÉCONOMIE', worry ? 'Au marché, on compte les étals bâchés' : 'Le marché tient le rythme', `${cm.sales.length} ${plural(cm.sales.length, 'vente', 'ventes')} sur ${cm.salesTarget} depuis le 1er septembre${worry ? ` ; à ce point du trimestre, les commerçants en espéraient ${Math.round(pace)}. On s'inquiète un peu, à voix basse, et on regarde vers la place.` : '.'}${nxt && nxt > to ? ` Tout le village attend la veillée du ${fmtDay(nxt)} : le bois est déjà empilé.` : ''}`, gazPic('market', {open: cm.sales.length}));
+  const lw = Math.max(0, Math.round(leadsAt(to) - leadsAt(addDays(ws, -1)))); art('POULAILLER', lw ? `${lw} ${plural(lw, 'poule', 'poules')} de plus cette semaine` : 'Le poulailler compte ses poules', `Le trimestre en est à ${fmtNum(cm.leads)} leads sur ${fmtNum(cm.leadsTarget)} ; la grange a ${cm.bales} ${plural(cm.bales, 'botte', 'bottes')} de foin.`, gazPic('hens', {n: cm.bales}));
+  // les nuits, le baromètre
+  const ss = days.map(sleepOf).filter(x => x != null), sl = ss.length ? avg(ss) : null, bad = ss.some(x => x < 70);
+  art('NUITS', sl == null ? 'Pas de nouvelles de l\'étang' : sl >= 88 ? 'Nuits paisibles sur l\'étang' : sl >= 78 ? 'Des nuits correctes' : 'Des nuits agitées', sl == null ? 'Personne n\'a noté ses nuits cette semaine.' : `Sommeil moyen de ${fmtNum(sl, 0)} % sur ${ss.length} ${plural(ss.length, 'nuit', 'nuits')}, ${cm.whiteSwans} ${plural(cm.whiteSwans, 'cygne blanc', 'cygnes blancs')} sur l'étang${bad ? ' ; un cygne noir a été aperçu' : ''}.`, gazPic('swans', {white: cm.whiteSwans, black: bad, night: sl != null && sl < 78}));
+  const hp = avg(days.map(x => num(x.happy))), ca = avg(days.map(x => dayStats(x).calme));
+  art('BAROMÈTRE', hp == null ? 'Le baromètre est resté dans le tiroir' : hp >= 7.5 ? 'Grand beau sur les humeurs' : hp >= 6 ? 'Temps variable' : 'Ciel bas cette semaine', hp == null ? 'Pas de note d\'humeur cette semaine.' : `Bonheur moyen ${fmtNum(hp, 1)}/10${ca != null ? `, calme ${fmtNum(ca, 1)}/10` : ''}. ${hp >= 7.5 ? 'La fontaine coule, les papillons sont de sortie.' : hp >= 6 ? 'La fontaine coule, mais on garde un pull.' : 'La fontaine tousse ; le village se serre les coudes.'}`, gazPic('weather', {sun: hp >= 7, rain: hp != null && hp < 6}));
+  // l'assiette et le camp
+  if (mo && mo.m) { const fd = foodOf(ws, to), th = FOODS[mo.mi % 3]; if (fd.n) art(th.sign, fd.avg >= 7 ? `${th.name.charAt(0).toUpperCase() + th.name.slice(1)} ne désemplit pas` : fd.avg >= 5.5 ? `${th.name.charAt(0).toUpperCase() + th.name.slice(1)} fait sa semaine` : `${th.name.charAt(0).toUpperCase() + th.name.slice(1)} a vu passer des jours maigres`, `Assiette notée ${fmtNum(fd.avg, 1)}/10 cette semaine, ${fd.good} ${plural(fd.good, 'bon jour', 'bons jours')}${fd.protein ? `, ${fmtNum(fd.protein, 0)} g de protéines par jour` : ''}.`, gazPic('food', {stall: th.stall, lv: fd.lv}));
+    const sp = sportOf(ws, to); if (sp.muay.length || sp.walk.length) art('CAMP', sp.muay.length ? `${sp.muay.length} ${plural(sp.muay.length, 'recrue', 'recrues')} au camp cette semaine` : 'Le camp attend ses recrues', `${sp.muay.length ? `${sp.muay.length} ${plural(sp.muay.length, 'séance', 'séances')} de Muay Thai` : 'Aucune séance de Muay Thai'}${sp.walk.length ? `, ${sp.walk.length} ${plural(sp.walk.length, 'grande marche', 'grandes marches')} vers la montagne` : ''}. ${M.muayTarget ? `L'objectif est de ${M.muayTarget} par semaine.` : ''}`, gazPic('camp', {n: sp.muay.length, sheet: ['sold_b', 'sold_r', 'sold_g'][mo.mi % 3], col: ['#4a8fd9', '#d94a4a', '#e8c547'][mo.mi % 3]})); }
+  // les travaux et les monuments
+  const nm = milestones(to).filter(m => m.date >= ws && m.date <= to); if (nm.length) art('CÉRÉMONIE', nm.length > 1 ? `${nm.length} statues inaugurées cette semaine` : 'Une statue inaugurée sur la place', joinFr(nm.map(m => m.title.replace(/^\S+\s/, '') + ' (' + fmtShort(m.date) + ')')) + '. ' + nm[0].text, gazPic('statue', {m: nm[0]}));
+  else if (h && h.stage < 3) art('TRAVAUX', 'Un chantier dans le quartier', `La maison de la semaine ${h.stage === 1 ? 'en est au plan : palissade, coffre et planches' : 'monte ses murs'}. Les voisins passent voir.`, gazPic('works'));
+  // les rumeurs : les ombres
+  const sh = actors.filter(a => a.kind === 'shade').length; if (sh >= 2) art('RUMEUR', 'Des ombres dans les bois du sud-ouest', `Les bûcherons disent en avoir vu ${sh}. Elles ne font rien ; personne ne s'approche, et le village continue sa semaine.`, gazPic('shade', {n: sh}));
+  // le café, la météo, le mot du maire
+  const cf = sum(days.map(x => num(x.coffee) || 0)); if (cf) art('CAFÉ', cf >= 14 ? 'Le café a tourné à plein' : 'Au comptoir du café', `${Math.round(cf)} ${plural(cf, 'café servi', 'cafés servis')} cette semaine.`, gazPic('coffee'));
+  const wx = ((S.weather || {}).history || []).filter(x => x.date >= ws && x.date <= to); if (wx.length) { const sun = wx.filter(x => x.weather_code <= 2).length, rain = wx.filter(x => x.precipitation_sum >= 1).length; art('MÉTÉO', sun >= wx.length / 2 ? 'Du soleil sur l\'île' : rain >= 2 ? 'Les parapluies sont de sortie' : 'Ciel couvert', `${sun} ${plural(sun, 'jour de soleil', 'jours de soleil')} et ${rain} ${plural(rain, 'jour de pluie', 'jours de pluie')} sur ${wx.length}, ${fmtNum(avg(wx.map(x => x.temperature_2m_max)), 0)} °C l'après-midi.`, gazPic('weather', {sun: sun >= wx.length / 2, rain: rain >= 2})); }
+  const wr = (S.weeks || []).find(w => w.start === ws), foc = wr && (cleanBits(wr.focus, 1, 170)[0] || cleanBits(wr.domino, 1, 170)[0]); if (foc) art('LE MOT DU MAIRE', 'Le cap de la semaine', `« ${foc} »`, null);
+  return {ws, to, A, q};
+}
+function openGazette() {
+  const el = $('gaz'); if (!el) return; const d = viewDate(), g = gazArticles(d); closeRoom(); selected = null; renderLegend();
+  const num = isoWeek(g.ws); el.querySelector('.gaz-paper').innerHTML = `<button class="gaz-x" id="gaz-x">✕</button><div class="gaz-head"><div class="gaz-title">LA GAZETTE DE L'ÎLE</div><div class="gaz-sub">N° ${num} · semaine du ${esc(fmtDay(g.ws))}${g.to < addDays(g.ws, 6) ? ' (édition du ' + esc(fmtDay(g.to)) + ')' : ''} · prix : un café</div></div><div class="gaz-cols">${g.A.map((a, i) => `<article class="${i === 0 ? 'une' : ''}">${a.pic ? '<div class="gaz-pic" data-i="' + i + '"></div>' : ''}<div class="kicker">${esc(a.kicker)}</div><h3>${esc(a.title)}</h3><p>${esc(a.body)}</p></article>`).join('')}</div>`;
+  el.querySelectorAll('.gaz-pic').forEach(div => { const a = g.A[+div.dataset.i]; if (a.pic) { a.pic.className = 'gaz-img'; div.appendChild(a.pic); } });
+  el.classList.remove('hidden'); $('gaz-x').addEventListener('click', closeGazette);
+}
+function closeGazette() { const el = $('gaz'); if (el) el.classList.add('hidden'); }
 /* ---- les habitants : chacun est né un jour qui comptait ----
    Les gens des quartiers naissent des événements sociaux du mois, les fermiers des grosses journées de tâches,
    les pêcheurs des nuits les plus calmes, les promeneurs des jours les plus joyeux. Leur caractère vient des notes
@@ -1849,10 +1927,10 @@ function renderLegend() {
   info.innerHTML = `<button class="x" aria-label="Fermer">×</button><b>${esc(L[0])}</b>${L[2] || esc(L[1])}${when}`; info.classList.remove('hidden'); placeInfo();
   info.querySelector('.x').addEventListener('click', () => { selected = null; renderLegend(); });
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (room) closeRoom(); else if (lapse) stopLapse(); else if (selected) { selected = null; renderLegend(); } } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('gaz') && !$('gaz').classList.contains('hidden')) closeGazette(); else if (room) closeRoom(); else if (lapse) stopLapse(); else if (selected) { selected = null; renderLegend(); } } });
 /* ---- time-lapse : le village se construit jour après jour, en plein écran ---- */
 let lapse = null;
-function startLapse() { closeRoom();
+function startLapse() { closeRoom(); closeGazette();
   if (lapse) return; const hero = $('hero'); selected = null; hover = null; renderLegend(); hero.classList.add('full'); try { if (hero.requestFullscreen) hero.requestFullscreen().catch(() => {}); } catch (e) {}
   const cap = document.createElement('div'); cap.className = 'lapse-cap'; hero.appendChild(cap); const stop = document.createElement('button'); stop.className = 'lapse-stop'; stop.textContent = '■ Stop'; stop.addEventListener('click', stopLapse); hero.appendChild(stop);
   lapse = {d: QSTART, cap, stop, mode: VIEW.mode, idle: 0}; VIEW.mode = 'all'; cam.init = false;
@@ -1872,9 +1950,9 @@ function renderTimeline() {
   let cellsHtml = ''; for (let i = 0; i < n; i++) { const iso = addDays(QSTART, i); const m2 = +iso.slice(5, 7); const cls = ['tl-day', 'm' + (m2 % 3), iso === M.today ? 'today' : '', iso === d ? 'sel' : '', iso > M.today ? 'future' : '', cur && iso >= cur.start && iso <= cur.end ? 'week' : ''].filter(Boolean).join(' '); cellsHtml += `<i class="${cls}" data-d="${iso}" title="${esc(fmtDay(iso))}"></i>`; }
   const months = [8, 9, 10, 11].map(m3 => { const start = `2026-${pad(m3)}-01`; const s = start < QSTART ? QSTART : start; const e = addDays(`2026-${pad(m3 + 1 > 12 ? 1 : m3 + 1)}-01`, -1); if (s > QEND || e < QSTART) return ''; const left = daysBetween(QSTART, s) / n * 100, w = (daysBetween(s, e > QEND ? QEND : e) + 1) / n * 100; return `<span class="tl-month" style="left:${left}%;width:${w}%">${MONTHS_FR[m3 - 1]}</span>`; }).join('');
   const b = (mode, label) => `<button class="btn ${VIEW.mode === mode ? 'on' : ''}" data-mode="${mode}">${label}</button>`;
-  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${mo ? 'Quartier de ' + mo.label : ''}</b>${cur ? ' · semaine ' + cur.label : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns">${b('month', 'Ce mois-ci')}${b('center', 'Centre-ville')}${b('all', 'Tout le village')}<button class="btn" data-lapse="1" title="Revoir le village se construire jour après jour">▶ Time-lapse</button><button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
+  el.innerHTML = `<div class="tl-head"><div class="tl-title"><b>${mo ? 'Quartier de ' + mo.label : ''}</b>${cur ? ' · semaine ' + cur.label : ''} · <b>${d === M.today ? 'aujourd\'hui' : esc(fmtDay(d))}</b></div><div class="tl-btns">${b('month', 'Ce mois-ci')}${b('center', 'Centre-ville')}${b('all', 'Tout le village')}<button class="btn" data-lapse="1" title="Revoir le village se construire jour après jour">▶ Time-lapse</button><button class="btn" data-gaz="1" title="Le journal de la semaine regardée">📰 Gazette</button><button class="btn" data-today="1" ${d === M.today ? 'disabled' : ''}>Aujourd'hui</button></div></div><div class="tl-months">${months}</div><div class="tl-strip">${cellsHtml}</div>`;
   el.querySelectorAll('[data-mode]').forEach(bt => bt.addEventListener('click', () => { VIEW.mode = bt.dataset.mode; selected = null; animateCam(camForMode()); renderTimeline(); renderLegend(); }));
-  el.querySelector('[data-lapse]').addEventListener('click', () => startLapse());
+  el.querySelector('[data-lapse]').addEventListener('click', () => startLapse()); el.querySelector('[data-gaz]').addEventListener('click', () => openGazette());
   el.querySelector('[data-today]').addEventListener('click', () => { VIEW.date = null; selected = null; buildScene(); });
   el.querySelector('.tl-strip').addEventListener('click', e => { const t = e.target.closest('.tl-day'); if (!t) return; VIEW.date = t.dataset.d === M.today ? null : t.dataset.d; selected = null; buildScene(); });
 }
@@ -1944,7 +2022,7 @@ let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setT
   rc.addEventListener('mousemove', e => { if (!room) return; const o = roomHit(e); if (o !== room.hov) { room.hov = o; rc.style.cursor = o ? 'pointer' : 'default'; } });
   rc.addEventListener('mouseleave', () => { if (room) room.hov = null; });
   rc.addEventListener('click', e => { if (!room) return; const o = roomHit(e); room.sel = o && o === room.sel ? null : o; roomText(); });
-  $('room-x').addEventListener('click', closeRoom); $('room').addEventListener('click', e => { if (e.target.id === 'room') closeRoom(); }); })();
+  $('room-x').addEventListener('click', closeRoom); $('room').addEventListener('click', e => { if (e.target.id === 'room') closeRoom(); }); $('gaz').addEventListener('click', e => { if (e.target.id === 'gaz') closeGazette(); }); })();
 async function liveWeather() { // Open-Meteo en direct ; si la page ne peut pas l'appeler, la prévision embarquée prend le relais
   if (!S.weather) return; try { const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 15000);
     const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.405&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,cloud_cover,precipitation&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,cloud_cover,precipitation&timezone=Europe%2FBerlin&forecast_days=3', {signal: ctl.signal}); clearTimeout(to);
