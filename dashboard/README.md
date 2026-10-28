@@ -29,7 +29,7 @@ Une île : une côte qui ondule, une plage tout autour, la mer animée à perte 
 semaines du mois se rangent par ordre de construction, les premières au plus près de la place ;
 chacune a son allée jusqu'à la rue et une plaque avec le lundi de sa semaine. La forêt recouvre ce
 qui n'est pas encore bâti. Un ruisseau né dans le marécage traverse le quartier de septembre (pont, grenouilles, oies), une rivière de quatre cases
-traverse novembre (ponts de pierre, capybaras) et s'ouvre en delta dans la mer, un marécage dort dans les bois au nord, la mer borde l'est avec sa plage ;
+traverse novembre (ponts de pierre, capybaras) et s'étale en éventail sur la plage jusqu'à la mer, un marécage dort dans les bois au nord, la mer borde l'est avec sa plage ;
 des chevaux de toutes les robes paissent au nord-est, des souris et des cochons traînent près de la grange, des abeilles tournent autour des ruches ; le sol a des taches de prairie
 et les routes quelques renflements. Vues : « Ce mois-ci », « Centre-ville », « Tout le village », et « ▶ Time-lapse » qui rejoue le
 trimestre jour par jour en plein écran (Échap ou Stop pour sortir). Un clic ouvre une bulle à côté de
@@ -104,7 +104,23 @@ zigzags, jusqu'au confluent (tracé 4-connexe peint au pinceau 2 x 2, donc sans 
 sous la place et longe l'avenue ; ils font la rivière, large de quatre cases, qui traverse novembre (trois ponts
 de pierre) et s'ouvre en trois bras pour entrer dans la mer. Toutes les eaux et la mer comptent comme une seule
 eau pour l'autotile : aucune berge entre elles, et sur le sable l'eau n'a pas de bord. Les chemins qui arrivent
-sur le sable s'y fondent de la même façon. Une montagne en terrasses au nord-ouest, un marécage
+sur le sable s'y fondent de la même façon. L'île elle-même est une superellipse à bosses et à baies (une baie à
+l'est pour le port, une au nord derrière la mairie, une à l'ouest), la forêt a des bois denses et des clairières
+(bruit continu), des bottes de foin dans les clairières, des rochers sur les plages et dans l'eau peu profonde.
+Les rues ondulent d'une case et s'élargissent par endroits, sauf aux ponts où elles restent droites. Une cascade
+tombe du premier palier de la montagne dans une vasque dont le bief rejoint le ruisseau.
+
+Le port : au bout de l'avenue d'octobre, un ponton de planches entre dans la mer, avec sa lanterne, ses caisses,
+une barque amarrée et un pêcheur ; une seconde barque fait la navette avec l'île de l'été.
+
+L'île de l'été (juin à août), à l'est : une maisonnette par mois (à étage quand la vie sociale moyenne dépassait
+5/10), des fleurs devant selon le bonheur, de la fumée quand l'énergie était là, une mare dont la taille suit les
+nuits, un puits, quatre stèles pour les caps de l'été (goals90, sans aucun montant), un ponton, un pêcheur et un
+habitant né le jour le plus heureux de l'été. Clic sur l'île pour la légende comparative.
+
+L'espace entre bâtiments : chaque rangée connaît ses emprises réservées (coin repas, ruisseau) ; une maison qui
+n'y tient plus passe dans une autre rangée plutôt que d'écraser un voisin. Des haies ferment l'arrière de chaque
+rangée de maisons bâties et séparent deux voisines. Une montagne en terrasses au nord-ouest, un marécage
 dans les bois du nord. Les pêcheurs suivent la règle du bouchon : il tombe 25 px à droite et 15 px sous les
 pieds, dans l'eau, les pieds sur la terre.
 
@@ -156,6 +172,12 @@ avec du turc, du russe, du polonais, de l'italien et un peu de français).
 Langue : le bouton EN / FR de la barre du haut bascule l'interface (dates, panneaux, légendes, fiches des
 habitants, Gazette) ; le choix est mémorisé dans le navigateur. Les enseignes du village restent en français, et
 ce que tu as écrit toi-même (objectifs, citations du journal) n'est pas traduit.
+
+## Interface
+
+Les cadres, boutons, rubans et icônes viennent du pack Cute Fantasy UI (`assets/ui_*.png`, injectés en variables
+CSS au chargement) : légende sur parchemin avec un ruban pour le titre, infobulle sur petit cadre, boutons pilule,
+icônes devant les jauges des habitants.
 
 ## Mise à jour
 
