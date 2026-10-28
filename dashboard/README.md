@@ -107,11 +107,14 @@ eau pour l'autotile : aucune berge entre elles, et sur le sable l'eau n'a pas de
 sur le sable s'y fondent de la même façon. L'île elle-même est une superellipse à bosses et à baies (une baie à
 l'est pour le port, une au nord derrière la mairie, une à l'ouest), la forêt a des bois denses et des clairières
 (bruit continu), des bottes de foin dans les clairières, des rochers sur les plages et dans l'eau peu profonde.
-Les rues ondulent d'une case et s'élargissent par endroits, sauf aux ponts où elles restent droites. Une cascade
-tombe du premier palier de la montagne dans une vasque dont le bief rejoint le ruisseau.
+Les rues ondulent d'une case tous les sept ou huit pas, toujours du côté opposé aux façades, et l'avenue
+s'élargit par endroits ; elles restent droites aux ponts, devant la petite place et à l'entrée de la grande. La montagne est faite de trois plateaux
+aux coins arrondis ; une cascade naît d'un bassin sur le premier plateau, tombe dans une vasque dont le bief
+rejoint le ruisseau.
 
-Le port : au bout de l'avenue d'octobre, un ponton de planches entre dans la mer, avec sa lanterne, ses caisses,
-une barque amarrée et un pêcheur ; une seconde barque fait la navette avec l'île de l'été.
+Le port : au bout de l'avenue d'octobre, un ponton de planches (dessiné dans le sol, rien ne passe dessous) entre
+dans la mer, avec sa lanterne, ses caisses, une barque amarrée et un pêcheur ; l'île de l'été a son propre ponton
+et sa barque. Aucune barque au large : une barque a un point d'amarrage.
 
 L'île de l'été (juin à août), à l'est : une maisonnette par mois (à étage quand la vie sociale moyenne dépassait
 5/10), des fleurs devant selon le bonheur, de la fumée quand l'énergie était là, une mare dont la taille suit les
@@ -119,8 +122,9 @@ nuits, un puits, quatre stèles pour les caps de l'été (goals90, sans aucun mo
 habitant né le jour le plus heureux de l'été. Clic sur l'île pour la légende comparative.
 
 L'espace entre bâtiments : chaque rangée connaît ses emprises réservées (coin repas, ruisseau) ; une maison qui
-n'y tient plus passe dans une autre rangée plutôt que d'écraser un voisin. Des haies ferment l'arrière de chaque
-rangée de maisons bâties et séparent deux voisines. Une montagne en terrasses au nord-ouest, un marécage
+n'y tient plus passe dans une autre rangée plutôt que d'écraser un voisin. Les cabanes annexes viennent après toutes
+les maisons, en bout de rue, s'il reste de la place. Des haies ferment l'arrière de chaque rangée de maisons
+bâties et séparent deux voisines. Une montagne en terrasses au nord-ouest, un marécage
 dans les bois du nord. Les pêcheurs suivent la règle du bouchon : il tombe 25 px à droite et 15 px sous les
 pieds, dans l'eau, les pieds sur la terre.
 
@@ -172,6 +176,19 @@ avec du turc, du russe, du polonais, de l'italien et un peu de français).
 Langue : le bouton EN / FR de la barre du haut bascule l'interface (dates, panneaux, légendes, fiches des
 habitants, Gazette) ; le choix est mémorisé dans le navigateur. Les enseignes du village restent en français, et
 ce que tu as écrit toi-même (objectifs, citations du journal) n'est pas traduit.
+
+## Son et mode jeu
+
+Le son est entièrement synthétisé (Web Audio, rien à charger) et ne joue que ce qui est à l'écran : vagues quand
+la mer est visible, ruisseau quand l'eau douce l'est, oiseaux dans les bois denses (jamais la nuit), coups de hache
+et de pioche des ouvriers visibles, feux d'artifice, portes à l'entrée et à la sortie des maisons. Bouton 🔈 / 🔊
+dans la barre du haut, choix mémorisé.
+
+Le bouton 🎮 Jouer pose un héros au nord de la place : flèches ou ZQSD pour marcher (collisions avec les
+bâtiments, l'eau et les haies), E ou Entrée pour parler à l'habitant d'à côté ou entrer dans la maison devant
+laquelle on se tient, Échap pour quitter. La fenêtre de dialogue propose Saluer, Provoquer, Demander : la réponse
+vient des données de l'habitant (jour de naissance, caractère, notes du jour déjà tamisées). Dans Claude, la
+capacité « sample » reformule cette réponse avec le modèle à partir de ces seules données, sans prénom ni somme.
 
 ## Interface
 
