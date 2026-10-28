@@ -190,6 +190,14 @@ laquelle on se tient, Échap pour quitter. La fenêtre de dialogue propose Salue
 vient des données de l'habitant (jour de naissance, caractère, notes du jour déjà tamisées). Dans Claude, la
 capacité « sample » reformule cette réponse avec le modèle à partir de ces seules données, sans prénom ni somme.
 
+## Deux colonnes : le village et « Novembre, la partie »
+
+La page est coupée en deux : le village à gauche (un tiers), la page « Novembre, la partie » à droite (deux
+tiers), pour garder le projet du moment sous les yeux. Le bouton ⛶ dans le village le met en plein écran, ✕ ou
+Échap le ramène dans sa colonne. La page de novembre est embarquée telle quelle dans un cadre (`novembre/index.html`,
+dossier non versionné : contenu personnel) ; ses images sont publiées avec l'artefact (`img/…`), et sa sauvegarde
+partagée (quêtes, ventes, rituel, compteurs) vit dans la base de cet artefact. Le lien ↗ ouvre la page seule.
+
 ## Interface
 
 Les cadres, boutons, rubans et icônes viennent du pack Cute Fantasy UI (`assets/ui_*.png`, injectés en variables

@@ -3,3 +3,5 @@ dashboard/data/snapshot.json
 dashboard/data/*.local.json
 dashboard/assets/
 dashboard/dist/
+
+dashboard/novembre/

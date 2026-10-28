@@ -107,6 +107,16 @@ button { font: inherit; cursor: pointer; }
 .talk { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 7; width: min(560px, calc(100% - 24px)); border: 0; border-image: var(--ui-frame) 11 fill / 22px / 0 stretch; background: none; color: #3b2a1a; padding: 18px 22px 16px; font-size: 13.5px; line-height: 1.45; image-rendering: pixelated; }
 .talk b { display: block; font-size: 13px; color: #7a3b14; margin: 0 0 4px; } .talk p { margin: 0 0 10px; white-space: pre-line; min-height: 40px; } .talk-btns { display: flex; gap: 8px; flex-wrap: wrap; } .talk-btns button { font: 700 12px 'Nunito', sans-serif; cursor: pointer; }
 .hero-cap { font-size: 10px; }
+/* ---- deux colonnes : le village à gauche, Novembre à droite ---- */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0; align-items: start; }
+.split .left { min-width: 0; } .split .right { min-width: 0; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; background: #262636; border-left: 3px solid var(--line); }
+.nov-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 12px; font: 10px 'Press Start 2P', monospace; color: #f6c84d; background: #1d1d2c; border-bottom: 2px solid #3a3a55; } .nov-head a { color: #f3edda; text-decoration: none; font-size: 14px; }
+#nov { flex: 1; width: 100%; border: 0; background: #262636; }
+.split .stage { grid-template-columns: 1fr; padding: 10px 10px 0; } .split .stage .side { contain: none; overflow: visible; } .split .hero { height: clamp(380px, 56vh, 760px); }
+.split .wrap { padding: 12px 10px 40px; } .split .row.grid4b { grid-template-columns: 1fr 1fr; } @media (max-width: 1500px) { .split .row.grid4b { grid-template-columns: 1fr; } }
+.split .right.hidden-right { display: none; } .split.solo { grid-template-columns: 1fr; }
+@media (max-width: 1100px) { .split { grid-template-columns: 1fr; } .split .right { position: static; height: 92vh; border-left: 0; border-top: 3px solid var(--line); } }
+.hero.full { height: 100vh !important; }
 .hidden { display: none !important; }
 .hero.full { position: fixed; inset: 0; z-index: 90; height: 100vh !important; width: 100vw; }
 .lapse-cap { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 6; background: rgba(24,18,36,.9); color: #f2c14e; border: 3px solid #f2c14e; padding: 8px 14px; font: 14px 'Press Start 2P', monospace; text-align: center; }
@@ -224,6 +234,8 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); font-siz
   <div class="questbar" id="questbar"></div>
   <div class="tb-right"><div class="wx px" id="wx">…</div><button class="upd" id="upd" title="Recharge les données Coda, Todoist et Agenda, puis la dernière version de l'app">⟳ Mettre à jour</button><button class="upd" id="lang" title="English / Français">EN</button><button class="upd" id="snd" title="Entendre le village">🔈</button><div class="sync" id="sync"></div></div>
 </div>
+<div class="split" id="split">
+<div class="left">
 <div class="stage">
   <div class="mid">
     <div class="hero" id="hero"><canvas id="scene" aria-label="Village pixel art reflétant l'état du trimestre"></canvas><div class="info hidden" id="info"></div><div class="tip hidden" id="tip"></div><div class="gaz hidden" id="gaz"><div class="gaz-paper"></div></div><div class="talk hidden" id="talk"><b id="talk-name"></b><p id="talk-text"></p><div class="talk-btns"><button data-k="greet">Saluer</button><button data-k="antagonize">Provoquer</button><button data-k="ask">Demander</button><button data-k="bye">Partir</button></div></div><div class="lapse-cap hero-cap hidden" id="hero-cap">Flèches ou ZQSD : marcher · E : parler, entrer · Échap : quitter</div><div class="room hidden" id="room"><div class="room-in"><div class="room-view"><canvas id="roomcv" aria-label="Intérieur de la maison"></canvas></div><div class="room-side"><button class="room-x" id="room-x">✕ Sortir</button><div id="room-txt"></div></div></div></div></div>
@@ -246,6 +258,9 @@ details summary { cursor: pointer; font-weight: 700; color: var(--ink); font-siz
     <div><button class="btn" id="refresh">Rafraîchir les données</button> <button class="btn" id="theme">Thème</button></div>
   </div>
   <div class="note" id="credits">Données : Coda (Daily Form, Weekly, Daily Review, All Money 2026, Income), Todoist, Google Calendar, Open-Meteo. Coda, Todoist et Google Calendar se rafraîchissent toutes les 24 h quand la page est ouverte dans Claude. Météo et YouTube sont ceux du dernier snapshot.</div>
+</div>
+</div>
+<div class="right" id="right"><div class="nov-head"><span>Novembre, la partie</span><a href="https://claude.ai/artifact/3DAshN4KLg8T51Hhx6qeRP" target="_blank" rel="noopener" title="Ouvrir la page seule">↗</a></div><iframe id="nov" title="Novembre, la partie" referrerpolicy="no-referrer"></iframe></div>
 </div>
 
 <script>
@@ -395,7 +410,7 @@ const EN_RULES = [
   ['Qualité / 10', 'Quality / 10'], ['pas noté cette semaine', 'not rated this week'], ['Protéines / jour', 'Protein / day'], ['kcal mangées', 'kcal eaten'], ['Verres d\'alcool', 'Glasses of alcohol'], ['sur 7 jours', 'over 7 days'], ['Cafés / jour', 'Coffees / day'], ['Jours non-vegan', 'Non-vegan days'], ['Pas / jour', 'Steps / day'], ['Tâches Todoist', 'Todoist tasks'], ['règles alimentaires suivies', 'food rules followed'], ['jeûne moyen ', 'average fast '], ['qualité ', 'quality '], ['cible ', 'target '], ['brûlées ', 'burned '],
   ['Objectif quotidien atteint. ', 'Daily goal reached. '], [/Objectif hebdo Todoist : (\d+)\. Série en cours :/g, 'Weekly Todoist goal: $1. Current streak:'], [/Objectif (\d+) cours par semaine\. (\d+) faits? \(Daily Form\)/g, 'Goal $1 classes a week. $2 done (Daily Form)'], [/Dernière Daily Review : /g, 'Last Daily Review: '], [/Compteur au (.+?)\./g, 'Counter as of $1.'], [/Météo : (.+?) du /g, 'Weather: $1 from '],
   ['Rien au calendrier aujourd\'hui.', 'Nothing in the calendar today.'], ['Rien de prévu sur 7 jours.', 'Nothing planned over 7 days.'], ['Cette semaine, pour toi :', 'This week, for you:'], [/pas commencées?/g, 'not started'], [/\bJ-(\d+)/g, 'D-$1'], ['Vidéos YouTube', 'YouTube videos'],
-  ['Ce mois-ci', 'This month'], ['Centre-ville', 'Town centre'], ['🎮 Jouer', '🎮 Play'], ['■ Quitter', '■ Quit'], ['Se promener dans le village et parler aux gens', 'Walk around the village and talk to people'], ['Flèches ou ZQSD : marcher · E : parler, entrer · Échap : quitter', 'Arrows or WASD: walk · E: talk, enter · Esc: quit'], ['Saluer', 'Greet'], ['Provoquer', 'Antagonize'], ['Demander', 'Ask'], ['Partir', 'Leave'], ['Entendre le village', 'Hear the village'], ['Couper le son', 'Mute'], ['Tout le village', 'Whole village'], [/\baujourd'hui\b/g, 'today'], [/Quartier (d'octobre|de septembre|de novembre)/g, 'District $1'],
+  ['Ce mois-ci', 'This month'], ['Centre-ville', 'Town centre'], ['Agrandir le village', 'Expand the village'], ['Réduire le village', 'Shrink the village'], ['Ouvrir la page seule', 'Open the page on its own'], ['🎮 Jouer', '🎮 Play'], ['■ Quitter', '■ Quit'], ['Se promener dans le village et parler aux gens', 'Walk around the village and talk to people'], ['Flèches ou ZQSD : marcher · E : parler, entrer · Échap : quitter', 'Arrows or WASD: walk · E: talk, enter · Esc: quit'], ['Saluer', 'Greet'], ['Provoquer', 'Antagonize'], ['Demander', 'Ask'], ['Partir', 'Leave'], ['Entendre le village', 'Hear the village'], ['Couper le son', 'Mute'], ['Tout le village', 'Whole village'], [/\baujourd'hui\b/g, 'today'], [/Quartier (d'octobre|de septembre|de novembre)/g, 'District $1'],
   // restes fréquents
   [/\bcette semaine-là\b/g, 'that week'], [/\bcette semaine\b/g, 'this week'], [/\bce mois-ci\b/g, 'this month'], [/\bce mois\b/g, 'this month'], [/\bce trimestre\b/g, 'this quarter'], [/\bdepuis le 1er septembre\b/g, 'since 1 September'], [/\bd'octobre\b/g, 'of October'], [/\bde septembre\b/g, 'of September'], [/\bde novembre\b/g, 'of November'],
   [/\bseptembre\b/g, 'September'], [/\boctobre\b/g, 'October'], [/\bnovembre\b/g, 'November'], [/\bdécembre\b/g, 'December'], [/\blundi\b/g, 'Monday'], [/\bSemaine\b/g, 'Week'], [/\bsemaine\b/g, 'week'], [/(\d+) (?:ventes)\b/g, '$1 sales'], [/\b1 vente\b/g, '1 sale'], [/(\d+) nuits?\b/g, '$1 nights'], [/(\d+) tâches?\b/g, '$1 tasks'], [/(\d+) jours?\b/g, '$1 days'], [/(\d+) poules?\b/g, '$1 hens'], [/(\d+) cafés?\b/g, '$1 coffees'], [/(\d+) moutons?\b/g, '$1 sheep'],
@@ -643,6 +658,7 @@ function renderAll() { deriveModel(); renderHUD(); renderQuestbar(); renderGoals
    marché, étang, moulin, grange, poulailler, serre et veillées, qui comptent le trimestre entier.
    Autour, un quartier par mois : maisons de chaque semaine, enclos, mare, champs, parc et poules. */
 const ASSETS = /*__ASSETS__*/{};
+const NOV_HTML = /*__NOV__*/"";
 (() => { const st = document.documentElement.style; [['ui-frame', 'ui_frame'], ['ui-frame2', 'ui_frame2'], ['ui-btn', 'ui_btn'], ['ui-btn-dark', 'ui_btn_dark'], ['ui-ribbon', 'ui_ribbon'], ['ui-icons', 'ui_icons']].forEach(([v, k]) => { if (ASSETS[k]) st.setProperty('--' + v, 'url("' + ASSETS[k] + '")'); }); })(); // les sprites du pack UI deviennent des variables CSS
 const IMG = {}; let assetsReady = false;
 function keyGrass() { // le vert uni que les tuiles de route, d'eau et de champs peignent sur leurs bords devient transparent : la texture de l'herbe passe dessous
@@ -2233,7 +2249,7 @@ function renderLegend() {
   info.innerHTML = `<button class="x" aria-label="Fermer">×</button><b>${esc(L[0])}</b>${L[2] || esc(L[1])}${when}`; info.classList.remove('hidden'); placeInfo();
   info.querySelector('.x').addEventListener('click', () => { selected = null; renderLegend(); });
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('gaz') && !$('gaz').classList.contains('hidden')) closeGazette(); else if (room) closeRoom(); else if (lapse) stopLapse(); else if (TALK) closeTalk(); else if (HERO) stopPlay(); else if (selected) { selected = null; renderLegend(); } return; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('gaz') && !$('gaz').classList.contains('hidden')) closeGazette(); else if (room) closeRoom(); else if (lapse) stopLapse(); else if (TALK) closeTalk(); else if (HERO) stopPlay(); else if ($('hero').classList.contains('full')) toggleFull(); else if (selected) { selected = null; renderLegend(); } return; }
   if (!HERO || room || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault(); if (e.key === 'e' || e.key === 'E' || e.key === 'Enter' || e.key === ' ') { heroInteract(); return; } HERO.keys[e.key] = true; });
 document.addEventListener('keyup', e => { if (HERO) HERO.keys[e.key] = false; });
 (() => { const snd = $('snd'); if (!snd) return; let want = false; try { want = localStorage.getItem('dash-sound') === '1'; } catch (e) {} if (want) { snd.textContent = '🔊'; const arm = () => { sndSet(true); document.removeEventListener('pointerdown', arm); document.removeEventListener('keydown', arm); }; document.addEventListener('pointerdown', arm); document.addEventListener('keydown', arm); } snd.addEventListener('click', () => sndSet(!SND.on));
@@ -2286,7 +2302,9 @@ cv.addEventListener('click', e => { if (moved) { moved = false; return; } { cons
 cv.addEventListener('dblclick', e => { const a = hitArea(toWorld(e)); if (!a) return; if (a.mo) goMonth(a.mo); else { VIEW.mode = 'center'; animateCam(camCenter()); renderTimeline(); } });
 // la molette fait défiler la page ; Ctrl + molette (ou le pincement du pavé tactile) zoome
 cv.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const rc = cv.getBoundingClientRect(); zoomBy(Math.pow(1.0015, -e.deltaY * (e.ctrlKey && Math.abs(e.deltaY) < 20 ? 6 : 1)), e.clientX - rc.left, e.clientY - rc.top); }, {passive: false});
-(function zoomButtons() { const z = document.createElement('div'); z.className = 'zoomctl'; z.innerHTML = '<button title="Zoomer" data-z="1.4">+</button><button title="Dézoomer" data-z="0.7">−</button>'; $('hero').appendChild(z); z.querySelectorAll('button').forEach(bt => bt.addEventListener('click', () => zoomBy(+bt.dataset.z, cv.width / 2, cv.height / 2))); })();
+(function zoomButtons() { const z = document.createElement('div'); z.className = 'zoomctl'; z.innerHTML = '<button title="Zoomer" data-z="1.4">+</button><button title="Dézoomer" data-z="0.7">−</button><button title="Agrandir le village" data-full="1">⛶</button>'; $('hero').appendChild(z); z.querySelectorAll('button[data-z]').forEach(bt => bt.addEventListener('click', () => zoomBy(+bt.dataset.z, cv.width / 2, cv.height / 2))); z.querySelector('[data-full]').addEventListener('click', toggleFull); })();
+function toggleFull() { const hero = $('hero'); const on = !hero.classList.contains('full'); hero.classList.toggle('full', on); const bt = hero.querySelector('[data-full]'); if (bt) { bt.textContent = on ? '✕' : '⛶'; bt.title = on ? 'Réduire le village' : 'Agrandir le village'; } setTimeout(() => { buildScene(); sizeRoom(); }, 30); } // un clic : le village prend tout l'écran, un autre : il revient dans sa colonne
+(() => { const f = $('nov'); if (f && NOV_HTML) f.srcdoc = NOV_HTML; else if (f) { $('right').classList.add('hidden-right'); $('split').classList.add('solo'); } })();
 // au doigt : un doigt fait défiler la page, deux doigts déplacent et zooment le village
 let touch = null; const tinfo = e => { const [a, b] = [e.touches[0], e.touches[1]]; const rc = cv.getBoundingClientRect(); return {d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), x: (a.clientX + b.clientX) / 2 - rc.left, y: (a.clientY + b.clientY) / 2 - rc.top}; };
 cv.addEventListener('touchstart', e => { if (e.touches.length === 2) { const i = tinfo(e); touch = {i, cam: {x: cam.x, y: cam.y, s: cam.s}}; camAnim = null; } }, {passive: true});

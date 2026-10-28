@@ -22,6 +22,14 @@ for f in sorted(glob.glob(os.path.join(HERE, 'assets', '*.png'))):
     assets[os.path.splitext(os.path.basename(f))[0]] = 'data:image/png;base64,' + base64.b64encode(open(f, 'rb').read()).decode('ascii')
 out = out.replace('/*__ASSETS__*/{}', json.dumps(assets), 1)
 if not assets: print('attention : aucun sprite dans assets/, la scène restera vide')
+# la page « Novembre, la partie » (dossier novembre/, non versionné : contenu personnel), embarquée telle quelle dans un cadre à droite
+nov_path = os.path.join(HERE, 'novembre', 'index.html')
+nov = open(nov_path, encoding='utf-8').read() if os.path.exists(nov_path) else ''
+if nov:
+    boot = '<script>try { if (window.parent && window.parent !== window && window.parent.claude) window.claude = window.parent.claude; } catch (e) {}</script>'
+    nov = nov.replace('<body>', '<body>' + boot, 1) if '<body>' in nov else boot + nov
+out = out.replace('/*__NOV__*/""', json.dumps(nov, ensure_ascii=False).replace('</', '<\\/'), 1)
+if not nov: print('attention : novembre/index.html absent, le cadre de droite restera vide')
 os.makedirs(os.path.join(HERE, 'dist'), exist_ok=True)
 dest = os.path.join(HERE, 'dist', 'index.html')
 open(dest, 'w', encoding='utf-8').write(out)
